@@ -14,7 +14,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
-/** Registers a new candidate account through the service layer. */
+/** Registers a new job-seeker or recruiter account through the service layer. */
 @WebServlet(name = "RegisterController", urlPatterns = "/register")
 public class RegisterController extends BaseController {
     private UserService userService;
@@ -48,13 +48,14 @@ public class RegisterController extends BaseController {
             String email = normalizeAndValidateEmail(RequestUtil.text(request, "email"));
             String password = validatePassword(RequestUtil.text(request, "password"));
             String confirmPassword = RequestUtil.text(request, "confirmPassword");
+            String accountType = validateAccountType(RequestUtil.text(request, "accountType"));
 
             // The current form does not require a confirmation input, but validate it when supplied.
             if (!confirmPassword.isEmpty() && !password.equals(confirmPassword)) {
                 throw new BusinessException("Xác nhận mật khẩu không khớp.");
             }
 
-            userService.registerCandidate(email, password, fullName);
+            userService.registerAccount(email, password, fullName, accountType);
             redirectWithSuccess(request, response, "/login", "Đăng ký thành công. Vui lòng đăng nhập để tiếp tục.");
         } catch (BusinessException ex) {
             redirectWithError(request, response, "/register", ex.getMessage());
@@ -108,6 +109,14 @@ public class RegisterController extends BaseController {
             throw new BusinessException("Mật khẩu không được vượt quá 72 byte.");
         }
         return password;
+    }
+
+    private String validateAccountType(String accountType) throws BusinessException {
+        String normalized = accountType == null ? "" : accountType.trim().toUpperCase(Locale.ROOT);
+        if (!"CANDIDATE".equals(normalized) && !"HR".equals(normalized)) {
+            throw new BusinessException("Vui lòng chọn loại tài khoản hợp lệ.");
+        }
+        return normalized;
     }
 
     private void setUtf8(HttpServletRequest request, HttpServletResponse response) throws IOException {

@@ -36,16 +36,6 @@
                 <div class="text-center mt-3">
                     <p class="text-muted">Chưa có tài khoản? <a href="${pageContext.request.contextPath}/register">Đăng ký ngay</a></p>
                 </div>
-                <hr>
-                <div class="text-center mt-3">
-                    <p class="small text-muted mb-2">TÀI KHOẢN DEMO (Mật khẩu: 123456)</p>
-                    <div class="row g-2">
-                        <div class="col-6"><span class="badge bg-danger w-100 py-2">admin@recruitflow.com</span></div>
-                        <div class="col-6"><span class="badge bg-primary w-100 py-2">hr@recruitflow.com</span></div>
-                        <div class="col-6"><span class="badge bg-warning text-dark w-100 py-2">interviewer@recruitflow.com</span></div>
-                        <div class="col-6"><span class="badge bg-success w-100 py-2">candidate@recruitflow.com</span></div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>

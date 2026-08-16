@@ -61,8 +61,16 @@ public class UserService {
     }
 
     public void registerCandidate(String email, String password, String fullName) throws BusinessException {
+        registerAccount(email, password, fullName, "CANDIDATE");
+    }
+
+    public void registerAccount(String email, String password, String fullName, String accountType) throws BusinessException {
         String normalizedEmail = normalizeEmail(email);
         validateRegistration(normalizedEmail, password, fullName);
+        String roleName = accountType == null ? "" : accountType.trim().toUpperCase(Locale.ROOT);
+        if (!"CANDIDATE".equals(roleName) && !"HR".equals(roleName)) {
+            throw new BusinessException("Loại tài khoản không hợp lệ.");
+        }
 
         try (Connection connection = DBUtil.getConnection()) {
             boolean originalAutoCommit = connection.getAutoCommit();
@@ -71,23 +79,25 @@ public class UserService {
                 if (userDAO.findByEmail(connection, normalizedEmail) != null) {
                     throw new BusinessException("Email này đã được đăng ký.");
                 }
-                Role candidateRole = roleDAO.findByName(connection, "CANDIDATE");
-                if (candidateRole == null) {
-                    throw new BusinessException("Vai trò CANDIDATE chưa được cấu hình trong cơ sở dữ liệu.");
+                Role selectedRole = roleDAO.findByName(connection, roleName);
+                if (selectedRole == null) {
+                    throw new BusinessException("Vai trò " + roleName + " chưa được cấu hình trong cơ sở dữ liệu.");
                 }
 
                 User user = new User();
                 user.setEmail(normalizedEmail);
                 user.setPasswordHash(PasswordUtil.hash(password));
                 user.setFullName(fullName.trim());
-                user.setRoleId(candidateRole.getId());
+                user.setRoleId(selectedRole.getId());
                 user.setStatus(UserStatus.ACTIVE.name());
                 userDAO.insert(connection, user);
 
-                CandidateProfile profile = new CandidateProfile();
-                profile.setUserId(user.getId());
-                profile.setExperienceYears(0);
-                candidateProfileDAO.insert(connection, profile);
+                if ("CANDIDATE".equals(roleName)) {
+                    CandidateProfile profile = new CandidateProfile();
+                    profile.setUserId(user.getId());
+                    profile.setExperienceYears(0);
+                    candidateProfileDAO.insert(connection, profile);
+                }
 
                 connection.commit();
             } catch (BusinessException exception) {
