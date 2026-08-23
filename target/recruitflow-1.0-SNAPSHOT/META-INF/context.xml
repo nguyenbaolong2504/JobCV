@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Tomcat 9 context configuration. Keep Secure dynamic so localhost HTTP still works. -->
+<Context>
+    <CookieProcessor sameSiteCookies="lax" />
+</Context>

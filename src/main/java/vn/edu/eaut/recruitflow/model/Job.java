@@ -14,6 +14,8 @@ public class Job {
     private String title;
     private int departmentId;
     private String departmentName;
+    private Integer categoryId;
+    private String categoryName;
     private String location;
     private String employmentType;
     private int numberOfPositions;
@@ -42,12 +44,29 @@ public class Job {
     public void setDepartmentId(int departmentId) { this.departmentId = departmentId; }
     public String getDepartmentName() { return departmentName; }
     public void setDepartmentName(String departmentName) { this.departmentName = departmentName; }
+    public Integer getCategoryId() { return categoryId; }
+    public void setCategoryId(Integer categoryId) { this.categoryId = categoryId; }
+    public String getCategoryName() { return categoryName; }
+    public void setCategoryName(String categoryName) { this.categoryName = categoryName; }
     public String getLocation() { return location; }
     public void setLocation(String location) { this.location = location; }
     public String getEmploymentType() { return employmentType; }
     public void setEmploymentType(String employmentType) { this.employmentType = employmentType; }
     public EmploymentType getEmploymentTypeEnum() { return EmploymentType.fromValue(employmentType); }
     public void setEmploymentType(EmploymentType employmentType) { this.employmentType = employmentType == null ? null : employmentType.name(); }
+    public String getEmploymentTypeLabel() {
+        if (employmentType == null) {
+            return "";
+        }
+        return switch (employmentType) {
+            case "FULL_TIME" -> "Toàn thời gian";
+            case "PART_TIME" -> "Bán thời gian";
+            case "INTERNSHIP" -> "Thực tập";
+            case "CONTRACT" -> "Hợp đồng";
+            case "REMOTE" -> "Từ xa";
+            default -> employmentType;
+        };
+    }
     public int getNumberOfPositions() { return numberOfPositions; }
     public void setNumberOfPositions(int numberOfPositions) { this.numberOfPositions = numberOfPositions; }
     public BigDecimal getSalaryMin() { return salaryMin; }

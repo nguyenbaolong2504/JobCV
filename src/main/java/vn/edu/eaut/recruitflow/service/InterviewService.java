@@ -22,6 +22,8 @@ import java.sql.Date;
 import java.sql.SQLException;
 import java.sql.Time;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -57,6 +59,9 @@ public class InterviewService {
             boolean originalAutoCommit = connection.getAutoCommit();
             connection.setAutoCommit(false);
             try {
+                if (!applicationDAO.lockById(connection, interview.getApplicationId())) {
+                    throw new BusinessException("Không tìm thấy đơn ứng tuyển.");
+                }
                 Application application = applicationDAO.findById(connection, interview.getApplicationId());
                 if (application == null) {
                     throw new BusinessException("Không tìm thấy đơn ứng tuyển.");
@@ -64,6 +69,9 @@ public class InterviewService {
                 ApplicationStatus applicationStatus = ApplicationStatus.fromValue(application.getStatus());
                 if (applicationStatus != ApplicationStatus.SHORTLISTED && applicationStatus != ApplicationStatus.INTERVIEW_SCHEDULED) {
                     throw new BusinessException("Chỉ có thể đặt lịch cho ứng viên đã được shortlist.");
+                }
+                if (interviewDAO.hasActiveInterviewForApplication(connection, interview.getApplicationId(), null)) {
+                    throw new BusinessException("Ứng viên đã có lịch phỏng vấn đang chờ xử lý. Vui lòng cập nhật hoặc hủy lịch hiện tại thay vì tạo lịch mới.");
                 }
                 validateInterviewer(connection, interview.getInterviewerId());
                 if (interviewDAO.checkScheduleConflict(connection, interview.getInterviewerId(), interview.getInterviewDate(),
@@ -102,6 +110,9 @@ public class InterviewService {
             boolean originalAutoCommit = connection.getAutoCommit();
             connection.setAutoCommit(false);
             try {
+                if (!interviewDAO.lockById(connection, submitted.getId())) {
+                    throw new BusinessException("Không tìm thấy lịch phỏng vấn.");
+                }
                 Interview existing = interviewDAO.findById(connection, submitted.getId());
                 if (existing == null) {
                     throw new BusinessException("Không tìm thấy lịch phỏng vấn.");
@@ -116,12 +127,19 @@ public class InterviewService {
                     throw new BusinessException("Interviewer đã có lịch phỏng vấn trùng thời gian này.");
                 }
                 submitted.setStatus(InterviewStatus.RESCHEDULED.name());
-                if (!interviewDAO.update(connection, submitted)) {
-                    throw new BusinessException("Không thể cập nhật lịch phỏng vấn.");
+                if (!interviewDAO.updateIfActive(connection, submitted)) {
+                    throw new BusinessException("Lịch phỏng vấn đã thay đổi, vui lòng tải lại trang và thử lại.");
                 }
                 Application application = applicationDAO.findById(connection, existing.getApplicationId());
+                if (application == null) {
+                    throw new BusinessException("Không tìm thấy đơn ứng tuyển của lịch phỏng vấn.");
+                }
                 notificationService.create(connection, application.getCandidateId(), "Lịch phỏng vấn được thay đổi",
                         "Lịch phỏng vấn cho vị trí " + application.getJobTitle() + " đã được cập nhật.");
+                if (existing.getInterviewerId() != submitted.getInterviewerId()) {
+                    notificationService.create(connection, existing.getInterviewerId(), "Đã thay đổi phân công phỏng vấn",
+                            "Bạn không còn được phân công phỏng vấn ứng viên " + application.getCandidateName() + ".");
+                }
                 notificationService.create(connection, submitted.getInterviewerId(), "Lịch phỏng vấn được thay đổi",
                         "Lịch phỏng vấn ứng viên " + application.getCandidateName() + " đã được cập nhật.");
                 connection.commit();
@@ -145,6 +163,9 @@ public class InterviewService {
             boolean originalAutoCommit = connection.getAutoCommit();
             connection.setAutoCommit(false);
             try {
+                if (!interviewDAO.lockById(connection, interviewId)) {
+                    throw new BusinessException("Không tìm thấy lịch phỏng vấn.");
+                }
                 Interview interview = interviewDAO.findById(connection, interviewId);
                 if (interview == null) {
                     throw new BusinessException("Không tìm thấy lịch phỏng vấn.");
@@ -152,8 +173,28 @@ public class InterviewService {
                 if (InterviewStatus.COMPLETED.name().equals(interview.getStatus())) {
                     throw new BusinessException("Không thể hủy lịch phỏng vấn đã hoàn tất.");
                 }
-                interviewDAO.cancel(connection, interviewId);
+                if (InterviewStatus.CANCELLED.name().equals(interview.getStatus())) {
+                    // Idempotent cancellation: a retry must not create duplicate notifications
+                    // or move the application state a second time.
+                    connection.commit();
+                    return;
+                }
+                if (!InterviewStatus.SCHEDULED.name().equals(interview.getStatus())
+                        && !InterviewStatus.RESCHEDULED.name().equals(interview.getStatus())) {
+                    throw new BusinessException("Lịch phỏng vấn này đã bị hủy hoặc thay đổi bởi thao tác khác.");
+                }
+                if (!interviewDAO.cancelIfActive(connection, interviewId)) {
+                    throw new BusinessException("Lịch phỏng vấn đã thay đổi, vui lòng tải lại trang và thử lại.");
+                }
                 Application application = applicationDAO.findById(connection, interview.getApplicationId());
+                if (application == null) {
+                    throw new BusinessException("Không tìm thấy đơn ứng tuyển của lịch phỏng vấn.");
+                }
+                if (ApplicationStatus.INTERVIEW_SCHEDULED.name().equals(application.getStatus())
+                        && !interviewDAO.hasActiveInterviewForApplication(connection, interview.getApplicationId(), null)) {
+                    applicationService.transition(connection, application, ApplicationStatus.SHORTLISTED, actorId,
+                            "Đã hủy lịch phỏng vấn; hồ sơ quay lại danh sách chờ lên lịch.");
+                }
                 notificationService.create(connection, application.getCandidateId(), "Lịch phỏng vấn đã bị hủy",
                         "Lịch phỏng vấn cho vị trí " + application.getJobTitle() + " đã bị hủy. HR sẽ liên hệ lại nếu có lịch mới.");
                 notificationService.create(connection, interview.getInterviewerId(), "Lịch phỏng vấn đã bị hủy",
@@ -179,6 +220,9 @@ public class InterviewService {
             boolean originalAutoCommit = connection.getAutoCommit();
             connection.setAutoCommit(false);
             try {
+                if (!interviewDAO.lockById(connection, interviewId)) {
+                    throw new BusinessException("Không tìm thấy lịch phỏng vấn.");
+                }
                 Interview interview = interviewDAO.findById(connection, interviewId);
                 if (interview == null || interview.getInterviewerId() != interviewerId) {
                     throw new BusinessException("Bạn chỉ có thể gửi đánh giá cho lịch phỏng vấn được phân công.");
@@ -186,14 +230,24 @@ public class InterviewService {
                 if (!(InterviewStatus.SCHEDULED.name().equals(interview.getStatus()) || InterviewStatus.RESCHEDULED.name().equals(interview.getStatus()))) {
                     throw new BusinessException("Lịch phỏng vấn này không thể nhận đánh giá.");
                 }
+                validateFeedbackTiming(interview);
+                if (interviewDAO.hasActiveInterviewForApplication(connection, interview.getApplicationId(), interviewId)) {
+                    throw new BusinessException("Ứng viên còn lịch phỏng vấn đang chờ xử lý. HR cần hủy hoặc hoàn tất lịch đó trước khi gửi feedback.");
+                }
                 if (feedbackDAO.findByInterviewId(connection, interviewId) != null) {
                     throw new BusinessException("Đánh giá cho lịch phỏng vấn này đã được gửi.");
                 }
                 feedback.setInterviewId(interviewId);
                 feedback.setOverallScore(average(feedback));
                 feedbackDAO.insert(connection, feedback);
-                interviewDAO.updateStatus(connection, interviewId, InterviewStatus.COMPLETED.name());
+                if (!interviewDAO.updateStatusIfCurrent(connection, interviewId, InterviewStatus.COMPLETED.name(),
+                        interview.getStatus())) {
+                    throw new BusinessException("Lịch phỏng vấn đã thay đổi, vui lòng tải lại trang và thử lại.");
+                }
                 Application application = applicationDAO.findById(connection, interview.getApplicationId());
+                if (application == null) {
+                    throw new BusinessException("Không tìm thấy đơn ứng tuyển của lịch phỏng vấn.");
+                }
                 applicationService.transition(connection, application, ApplicationStatus.INTERVIEWED, interviewerId,
                         "Interviewer đã gửi đánh giá: " + feedback.getRecommendation());
                 connection.commit();
@@ -294,8 +348,13 @@ public class InterviewService {
     }
 
     public List<Interview> findUpcomingForCandidate(int candidateId) throws BusinessException {
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Bangkok"));
+        java.time.LocalTime now = java.time.LocalTime.now(ZoneId.of("Asia/Bangkok"));
         return findForCandidate(candidateId).stream()
-                .filter(interview -> interview.getInterviewDate() != null && !interview.getInterviewDate().toLocalDate().isBefore(LocalDate.now()))
+                .filter(interview -> interview.getInterviewDate() != null && interview.getEndTime() != null)
+                .filter(interview -> interview.getInterviewDate().toLocalDate().isAfter(today)
+                        || (interview.getInterviewDate().toLocalDate().isEqual(today)
+                        && interview.getEndTime().toLocalTime().isAfter(now)))
                 .filter(interview -> InterviewStatus.SCHEDULED.name().equals(interview.getStatus()) || InterviewStatus.RESCHEDULED.name().equals(interview.getStatus()))
                 .sorted(Comparator.comparing(Interview::getInterviewDate).thenComparing(Interview::getStartTime))
                 .toList();
@@ -314,8 +373,12 @@ public class InterviewService {
         if (!interview.getStartTime().before(interview.getEndTime())) {
             throw new BusinessException("Giờ bắt đầu phải trước giờ kết thúc.");
         }
-        if (interview.getInterviewDate().toLocalDate().isBefore(LocalDate.now())) {
-            throw new BusinessException("Không thể đặt lịch phỏng vấn trong quá khứ.");
+        LocalDate scheduledDate = interview.getInterviewDate().toLocalDate();
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Bangkok"));
+        java.time.LocalTime now = java.time.LocalTime.now(ZoneId.of("Asia/Bangkok"));
+        if (scheduledDate.isBefore(today)
+                || (scheduledDate.isEqual(today) && !interview.getStartTime().toLocalTime().isAfter(now))) {
+            throw new BusinessException("Thời gian bắt đầu phỏng vấn phải ở tương lai.");
         }
         if (InterviewType.ONLINE.name().equals(interview.getInterviewType()) && (interview.getMeetingUrl() == null || interview.getMeetingUrl().isBlank())) {
             throw new BusinessException("Phỏng vấn online cần có đường dẫn cuộc họp.");
@@ -334,6 +397,19 @@ public class InterviewService {
             Recommendation.fromValue(feedback.getRecommendation());
         } catch (IllegalArgumentException exception) {
             throw new BusinessException("Khuyến nghị tuyển dụng không hợp lệ.");
+        }
+    }
+
+    /** Feedback is a post-interview decision; it must not advance an application before the meeting ends. */
+    private void validateFeedbackTiming(Interview interview) throws BusinessException {
+        if (interview.getInterviewDate() == null || interview.getEndTime() == null) {
+            throw new BusinessException("Lịch phỏng vấn thiếu thời gian kết thúc để gửi feedback.");
+        }
+        LocalDateTime interviewEndsAt = LocalDateTime.of(
+                interview.getInterviewDate().toLocalDate(), interview.getEndTime().toLocalTime());
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Bangkok"));
+        if (now.isBefore(interviewEndsAt)) {
+            throw new BusinessException("Chỉ có thể gửi feedback sau khi buổi phỏng vấn kết thúc.");
         }
     }
 
@@ -360,6 +436,9 @@ public class InterviewService {
     }
 
     private void validateInterviewer(Connection connection, int interviewerId) throws SQLException, BusinessException {
+        if (!userDAO.lockById(connection, interviewerId)) {
+            throw new BusinessException("Không tìm thấy interviewer được chọn.");
+        }
         User interviewer = userDAO.findById(connection, interviewerId);
         if (interviewer == null || !"INTERVIEWER".equals(interviewer.getRoleName()) || !"ACTIVE".equals(interviewer.getStatus())) {
             throw new BusinessException("Người được chọn không phải interviewer đang hoạt động.");

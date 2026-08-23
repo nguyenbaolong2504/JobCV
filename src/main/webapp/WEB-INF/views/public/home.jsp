@@ -1,4 +1,4 @@
-<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" session="false" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <c:set var="pageTitle" value="RecruitFlow | Tìm đúng công việc, xây đúng sự nghiệp" scope="request" />
@@ -41,9 +41,89 @@
                         <button class="btn btn-primary" type="submit"><i class="bi bi-search me-1"></i>Tìm việc</button>
                     </div>
                 </div>
+                <div class="d-flex justify-content-end mt-2">
+                    <a class="small text-decoration-none text-primary" href="${pageContext.request.contextPath}/jobs">
+                        <i class="bi bi-sliders me-1"></i>Tìm kiếm nâng cao theo lương, kinh nghiệm và nhiều tiêu chí
+                    </a>
+                </div>
             </form>
         </div>
     </section>
+
+    <c:if test="${not empty categoryRoots}">
+        <section class="py-5 bg-white border-bottom">
+            <div class="container">
+                <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
+                    <div>
+                        <p class="text-primary fw-semibold mb-1">DANH MỤC NGHỀ NGHIỆP</p>
+                        <h2 class="section-heading mb-0">Khám phá công việc theo chuyên môn</h2>
+                    </div>
+                    <a class="btn btn-outline-primary" href="${pageContext.request.contextPath}/jobs"><i class="bi bi-grid-3x3-gap me-1"></i>Xem tất cả danh mục</a>
+                </div>
+                <div class="row g-3">
+                    <c:forEach var="categoryRoot" items="${categoryRoots}">
+                        <c:url var="rootCategoryUrl" value="/jobs"><c:param name="categoryId" value="${categoryRoot.id}" /></c:url>
+                        <div class="col-sm-6 col-lg-4 col-xl-3">
+                            <article class="rf-card h-100 p-4">
+                                <div class="d-flex align-items-start justify-content-between gap-2 mb-3">
+                                    <span class="d-inline-flex rounded-circle bg-primary-subtle text-primary p-2"><i class="bi bi-folder2-open fs-5"></i></span>
+                                    <a class="text-primary" href="${rootCategoryUrl}" aria-label="Xem <c:out value='${categoryRoot.name}'/>"><i class="bi bi-arrow-up-right"></i></a>
+                                </div>
+                                <h3 class="h5 mb-2"><a class="text-decoration-none text-dark" href="${rootCategoryUrl}"><c:out value="${categoryRoot.name}" /></a></h3>
+                                <p class="small text-muted mb-3"><c:out value="${categoryRoot.description}" /></p>
+                                <div class="d-flex flex-column gap-1 mt-auto">
+                                    <c:forEach var="childCategory" items="${categoryRoot.children}" end="3">
+                                        <c:url var="childCategoryUrl" value="/jobs"><c:param name="categoryId" value="${childCategory.id}" /></c:url>
+                                        <a class="small text-decoration-none" href="${childCategoryUrl}"><i class="bi bi-arrow-right-short"></i><c:out value="${childCategory.name}" /></a>
+                                    </c:forEach>
+                                    <c:if test="${empty categoryRoot.children}"><span class="small text-muted">Danh mục đang được cập nhật.</span></c:if>
+                                </div>
+                            </article>
+                        </div>
+                    </c:forEach>
+                </div>
+            </div>
+        </section>
+    </c:if>
+
+    <c:if test="${requestScope.currentRole eq 'CANDIDATE'}">
+        <section class="py-4 bg-light border-bottom">
+            <div class="container">
+                <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
+                    <div>
+                        <p class="text-primary fw-semibold mb-1">KHÔNG GIAN TÌM VIỆC CỦA BẠN</p>
+                        <h2 class="h3 mb-0">Chào <c:out value="${requestScope.currentFullName}" />, bắt đầu từ bước phù hợp nhất</h2>
+                    </div>
+                    <a class="btn btn-outline-primary" href="${pageContext.request.contextPath}/candidate/dashboard">
+                        Mở bảng điều khiển <i class="bi bi-grid-1x2 ms-1"></i>
+                    </a>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <a class="rf-card text-decoration-none d-block h-100 p-4" href="${pageContext.request.contextPath}/candidate/cv-builder">
+                            <span class="d-inline-flex rounded-circle bg-primary-subtle text-primary p-3 mb-3"><i class="bi bi-magic fs-4"></i></span>
+                            <h3 class="h5 text-dark">Tạo CV theo mẫu</h3>
+                            <p class="text-muted mb-0">Chọn mẫu hiện đại, điền thông tin và tạo CV DOCX để dùng khi ứng tuyển.</p>
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a class="rf-card text-decoration-none d-block h-100 p-4" href="${pageContext.request.contextPath}/candidate/jobs">
+                            <span class="d-inline-flex rounded-circle bg-success-subtle text-success p-3 mb-3"><i class="bi bi-search-heart fs-4"></i></span>
+                            <h3 class="h5 text-dark">Tìm việc phù hợp</h3>
+                            <p class="text-muted mb-0">Lọc theo vị trí, địa điểm, mức lương, kinh nghiệm và mức độ phù hợp CV.</p>
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a class="rf-card text-decoration-none d-block h-100 p-4" href="${pageContext.request.contextPath}/candidate/applications">
+                            <span class="d-inline-flex rounded-circle bg-warning-subtle text-warning-emphasis p-3 mb-3"><i class="bi bi-send-check fs-4"></i></span>
+                            <h3 class="h5 text-dark">Theo dõi đơn ứng tuyển</h3>
+                            <p class="text-muted mb-0">Xem trạng thái hồ sơ, lịch phỏng vấn, offer và các bước tiếp theo.</p>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </c:if>
 
     <section class="py-5">
         <div class="container">
@@ -109,7 +189,12 @@
                 <h2 class="section-heading">Sẵn sàng cho cơ hội tiếp theo?</h2>
                 <p class="text-muted mb-4">Tạo hồ sơ, tải CV và nhận thông báo về các vị trí phù hợp với năng lực của bạn.</p>
                 <c:choose>
-                    <c:when test="${sessionScope.role eq 'CANDIDATE'}"><a class="btn btn-primary px-4" href="${pageContext.request.contextPath}/candidate/jobs">Khám phá việc làm</a></c:when>
+                    <c:when test="${requestScope.currentRole eq 'CANDIDATE'}">
+                        <div class="d-flex flex-wrap justify-content-center gap-2">
+                            <a class="btn btn-outline-primary px-4" href="${pageContext.request.contextPath}/candidate/cv-builder"><i class="bi bi-magic me-1"></i>Tạo CV theo mẫu</a>
+                            <a class="btn btn-primary px-4" href="${pageContext.request.contextPath}/candidate/jobs">Khám phá việc làm</a>
+                        </div>
+                    </c:when>
                     <c:otherwise><a class="btn btn-primary px-4" href="${pageContext.request.contextPath}/register">Tạo tài khoản ứng viên</a></c:otherwise>
                 </c:choose>
             </div>

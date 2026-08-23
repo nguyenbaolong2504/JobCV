@@ -25,6 +25,9 @@
                     <a class="${fn:contains(currentPath, '/hr/onboarding') ? 'active' : ''}"
                         href="${pageContext.request.contextPath}/hr/onboarding"><i class="bi bi-rocket-takeoff"></i>
                         Onboarding</a>
+                    <a class="${fn:contains(currentPath, '/hr/notifications') ? 'active' : ''}"
+                        href="${pageContext.request.contextPath}/hr/notifications"><i class="bi bi-bell"></i>
+                        Thông báo</a>
                     <a class="${fn:contains(currentPath, '/hr/reports') ? 'active' : ''}"
                         href="${pageContext.request.contextPath}/hr/reports"><i class="bi bi-bar-chart"></i> Báo cáo</a>
                 </nav>

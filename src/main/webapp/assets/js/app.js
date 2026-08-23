@@ -290,6 +290,53 @@
             });
         });
 
+        var registerForm = document.querySelector('form[data-register-form]');
+        if (registerForm) {
+            var recruiterFields = registerForm.querySelector('[data-recruiter-fields]');
+            var recruiterInputs = recruiterFields ? recruiterFields.querySelectorAll('input') : [];
+
+            function syncRegistrationType() {
+                var selected = registerForm.querySelector('input[name="accountType"]:checked');
+                var recruiter = selected && selected.value === 'HR';
+                if (recruiterFields) {
+                    recruiterFields.hidden = !recruiter;
+                    recruiterFields.setAttribute('aria-hidden', recruiter ? 'false' : 'true');
+                }
+                recruiterInputs.forEach(function (input) {
+                    input.required = !!recruiter;
+                });
+            }
+
+            registerForm.querySelectorAll('input[name="accountType"]').forEach(function (input) {
+                input.addEventListener('change', syncRegistrationType);
+            });
+            syncRegistrationType();
+        }
+
+        document.querySelectorAll('[data-password-toggle]').forEach(function (button) {
+            var inputId = button.getAttribute('aria-controls');
+            var input = inputId ? document.getElementById(inputId) : null;
+            if (!input || (input.type !== 'password' && input.type !== 'text')) {
+                return;
+            }
+
+            var icon = button.querySelector('i');
+            function setPasswordVisibility(visible) {
+                input.type = visible ? 'text' : 'password';
+                button.setAttribute('aria-pressed', String(visible));
+                button.setAttribute('aria-label', visible ? 'Ẩn mật khẩu' : 'Hiển thị mật khẩu');
+                button.setAttribute('title', visible ? 'Ẩn mật khẩu' : 'Hiển thị mật khẩu');
+                if (icon) {
+                    icon.className = visible ? 'bi bi-eye-slash' : 'bi bi-eye';
+                    icon.setAttribute('aria-hidden', 'true');
+                }
+            }
+
+            button.addEventListener('click', function () {
+                setPasswordVisibility(input.type === 'password');
+            });
+        });
+
         var chatToggle = document.getElementById('rfChatbotToggle');
         var chatPanel = document.getElementById('rfChatbotPanel');
         var chatClose = document.getElementById('rfChatbotClose');

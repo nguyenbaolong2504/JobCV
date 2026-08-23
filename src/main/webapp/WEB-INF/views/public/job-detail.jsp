@@ -1,4 +1,4 @@
-<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" session="false" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <c:set var="pageTitle" value="Chi tiết việc làm | RecruitFlow" scope="request" />
@@ -49,13 +49,13 @@
                                 <dt class="col-5 text-muted fw-normal">Hạn nộp</dt><dd class="col-7"><c:out value="${job.deadline}" /></dd>
                             </dl>
                             <c:choose>
-                                <c:when test="${sessionScope.role eq 'CANDIDATE'}">
+                                <c:when test="${requestScope.currentRole eq 'CANDIDATE'}">
                                     <form action="${pageContext.request.contextPath}/candidate/applications/apply" method="post" data-confirm="Bạn muốn ứng tuyển vị trí này bằng CV mặc định?">
                                         <input type="hidden" name="jobId" value="<c:out value='${job.id}'/>">
                                         <button class="btn btn-primary w-100" type="submit" data-loading-button><i class="bi bi-send me-1"></i>Ứng tuyển ngay</button>
                                     </form>
                                 </c:when>
-                                <c:when test="${empty sessionScope.userId}"><a class="btn btn-primary w-100" href="${pageContext.request.contextPath}/login"><i class="bi bi-box-arrow-in-right me-1"></i>Đăng nhập để ứng tuyển</a></c:when>
+                                <c:when test="${empty requestScope.currentUserId}"><a class="btn btn-primary w-100" href="${pageContext.request.contextPath}/login"><i class="bi bi-box-arrow-in-right me-1"></i>Đăng nhập để ứng tuyển</a></c:when>
                                 <c:otherwise><a class="btn btn-outline-primary w-100" href="${pageContext.request.contextPath}/candidate/jobs">Xem trong cổng ứng viên</a></c:otherwise>
                             </c:choose>
                             <a class="btn btn-link w-100 mt-2" href="${pageContext.request.contextPath}/jobs"><i class="bi bi-arrow-left me-1"></i>Quay lại danh sách</a>

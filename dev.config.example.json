@@ -1,0 +1,8 @@
+{
+  "tomcatHome": "C:\\tools\\apache-tomcat-9.0.x",
+  "databaseUrl": "jdbc:mysql://localhost:3306/recruitflow?useSSL=false&serverTimezone=Asia/Bangkok&allowPublicKeyRetrieval=true&characterEncoding=UTF-8",
+  "databaseUser": "root",
+  "mysqlService": "MySQL80",
+  "httpPort": 8080,
+  "contextPath": "/recruitflow"
+}

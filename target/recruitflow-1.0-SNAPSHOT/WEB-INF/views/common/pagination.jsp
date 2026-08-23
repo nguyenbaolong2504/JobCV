@@ -1,13 +1,21 @@
-<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" session="false" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 
 <c:if test="${not empty page and page.totalPages gt 1}">
     <c:set var="currentPage" value="${page.currentPage}" />
     <c:url var="firstUrl" value="${pageContext.request.requestURI}">
         <c:param name="keyword" value="${param.keyword}" />
+        <c:param name="title" value="${param.title}" />
         <c:param name="departmentId" value="${param.departmentId}" />
+        <c:param name="categoryId" value="${param.categoryId}" />
         <c:param name="location" value="${param.location}" />
         <c:param name="employmentType" value="${param.employmentType}" />
+        <c:param name="salaryMin" value="${param.salaryMin}" />
+        <c:param name="salaryMax" value="${param.salaryMax}" />
+        <c:param name="experienceMin" value="${param.experienceMin}" />
+        <c:param name="experienceMax" value="${param.experienceMax}" />
+        <c:param name="deadlineFrom" value="${param.deadlineFrom}" />
+        <c:param name="deadlineTo" value="${param.deadlineTo}" />
         <c:param name="status" value="${param.status}" />
         <c:param name="sort" value="${param.sort}" />
         <c:param name="pageSize" value="${empty param.pageSize ? page.pageSize : param.pageSize}" />
@@ -20,9 +28,17 @@
             <c:forEach var="pageNumber" begin="1" end="${page.totalPages}">
                 <c:url var="pageUrl" value="${pageContext.request.requestURI}">
                     <c:param name="keyword" value="${param.keyword}" />
+                    <c:param name="title" value="${param.title}" />
                     <c:param name="departmentId" value="${param.departmentId}" />
+                    <c:param name="categoryId" value="${param.categoryId}" />
                     <c:param name="location" value="${param.location}" />
                     <c:param name="employmentType" value="${param.employmentType}" />
+                    <c:param name="salaryMin" value="${param.salaryMin}" />
+                    <c:param name="salaryMax" value="${param.salaryMax}" />
+                    <c:param name="experienceMin" value="${param.experienceMin}" />
+                    <c:param name="experienceMax" value="${param.experienceMax}" />
+                    <c:param name="deadlineFrom" value="${param.deadlineFrom}" />
+                    <c:param name="deadlineTo" value="${param.deadlineTo}" />
                     <c:param name="status" value="${param.status}" />
                     <c:param name="sort" value="${param.sort}" />
                     <c:param name="pageSize" value="${empty param.pageSize ? page.pageSize : param.pageSize}" />
@@ -32,9 +48,17 @@
             </c:forEach>
             <c:url var="lastUrl" value="${pageContext.request.requestURI}">
                 <c:param name="keyword" value="${param.keyword}" />
+                <c:param name="title" value="${param.title}" />
                 <c:param name="departmentId" value="${param.departmentId}" />
+                <c:param name="categoryId" value="${param.categoryId}" />
                 <c:param name="location" value="${param.location}" />
                 <c:param name="employmentType" value="${param.employmentType}" />
+                <c:param name="salaryMin" value="${param.salaryMin}" />
+                <c:param name="salaryMax" value="${param.salaryMax}" />
+                <c:param name="experienceMin" value="${param.experienceMin}" />
+                <c:param name="experienceMax" value="${param.experienceMax}" />
+                <c:param name="deadlineFrom" value="${param.deadlineFrom}" />
+                <c:param name="deadlineTo" value="${param.deadlineTo}" />
                 <c:param name="status" value="${param.status}" />
                 <c:param name="sort" value="${param.sort}" />
                 <c:param name="pageSize" value="${empty param.pageSize ? page.pageSize : param.pageSize}" />

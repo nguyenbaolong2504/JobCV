@@ -11,6 +11,7 @@ public class Resume {
     private long fileSize;
     private String extractedText;
     private boolean defaultResume;
+    private boolean fileAvailable = true;
     private Timestamp uploadedAt;
 
     public int getId() { return id; }
@@ -33,6 +34,9 @@ public class Resume {
     public boolean getIsDefault() { return defaultResume; }
     public void setDefaultResume(boolean defaultResume) { this.defaultResume = defaultResume; }
     public void setDefault(boolean defaultResume) { this.defaultResume = defaultResume; }
+    /** Transient display/use guard; file content never comes from the database. */
+    public boolean isFileAvailable() { return fileAvailable; }
+    public void setFileAvailable(boolean fileAvailable) { this.fileAvailable = fileAvailable; }
     public Timestamp getUploadedAt() { return uploadedAt; }
     public void setUploadedAt(Timestamp uploadedAt) { this.uploadedAt = uploadedAt; }
 }

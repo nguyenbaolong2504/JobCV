@@ -3,13 +3,16 @@ package vn.edu.eaut.recruitflow.dao;
 import vn.edu.eaut.recruitflow.model.AuditLog;
 
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class AuditLogDAO extends DaoSupport {
     private static final String SELECT_LOG = "SELECT l.id, l.user_id, l.action, l.entity_name, l.entity_id, l.details, l.ip_address, l.created_at, "
@@ -69,10 +72,49 @@ public class AuditLogDAO extends DaoSupport {
         }
     }
 
+    /**
+     * Admin-facing audit search. All conditions are applied in SQL before LIMIT/OFFSET so
+     * the page content and total count always describe the same result set.
+     */
+    public List<AuditLog> search(String keyword, String entityName, LocalDate fromDate, int page, int pageSize)
+            throws SQLException {
+        StringBuilder sql = new StringBuilder(SELECT_LOG + "WHERE 1 = 1");
+        List<Object> parameters = new ArrayList<>();
+        appendAdminSearchFilters(sql, parameters, keyword, entityName, fromDate);
+        sql.append(" ORDER BY l.created_at DESC, l.id DESC LIMIT ? OFFSET ?");
+        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql.toString())) {
+            bind(statement, parameters);
+            int index = parameters.size() + 1;
+            statement.setInt(index++, pageSize(pageSize));
+            statement.setInt(index, offset(page, pageSize));
+            try (ResultSet resultSet = statement.executeQuery()) {
+                List<AuditLog> logs = new ArrayList<>();
+                while (resultSet.next()) {
+                    logs.add(map(resultSet));
+                }
+                return logs;
+            }
+        }
+    }
+
     public long count(Integer userId, String action, String entityName) throws SQLException {
         StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM audit_logs l WHERE 1 = 1");
         List<Object> parameters = new ArrayList<>();
         appendFilters(sql, parameters, userId, action, entityName);
+        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql.toString())) {
+            bind(statement, parameters);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                resultSet.next();
+                return resultSet.getLong(1);
+            }
+        }
+    }
+
+    /** Counter paired with the admin-facing search above. */
+    public long count(String keyword, String entityName, LocalDate fromDate) throws SQLException {
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM audit_logs l LEFT JOIN users u ON u.id = l.user_id WHERE 1 = 1");
+        List<Object> parameters = new ArrayList<>();
+        appendAdminSearchFilters(sql, parameters, keyword, entityName, fromDate);
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql.toString())) {
             bind(statement, parameters);
             try (ResultSet resultSet = statement.executeQuery()) {
@@ -97,11 +139,34 @@ public class AuditLogDAO extends DaoSupport {
         }
     }
 
+    private void appendAdminSearchFilters(StringBuilder sql, List<Object> parameters, String keyword,
+                                          String entityName, LocalDate fromDate) {
+        if (keyword != null && !keyword.isBlank()) {
+            sql.append(" AND (LOWER(COALESCE(u.full_name, '')) LIKE ? OR LOWER(COALESCE(u.email, '')) LIKE ? "
+                    + "OR LOWER(l.action) LIKE ? OR LOWER(COALESCE(l.details, '')) LIKE ?)");
+            String value = '%' + keyword.trim().toLowerCase(Locale.ROOT) + '%';
+            parameters.add(value);
+            parameters.add(value);
+            parameters.add(value);
+            parameters.add(value);
+        }
+        if (entityName != null && !entityName.isBlank()) {
+            sql.append(" AND LOWER(COALESCE(l.entity_name, '')) = ?");
+            parameters.add(entityName.trim().toLowerCase(Locale.ROOT));
+        }
+        if (fromDate != null) {
+            sql.append(" AND l.created_at >= ?");
+            parameters.add(Date.valueOf(fromDate));
+        }
+    }
+
     private void bind(PreparedStatement statement, List<Object> parameters) throws SQLException {
         for (int index = 0; index < parameters.size(); index++) {
             Object value = parameters.get(index);
             if (value instanceof Integer integer) {
                 statement.setInt(index + 1, integer);
+            } else if (value instanceof Date date) {
+                statement.setDate(index + 1, date);
             } else {
                 statement.setString(index + 1, (String) value);
             }

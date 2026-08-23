@@ -13,12 +13,15 @@
                     <a class="${fn:contains(currentPath, '/admin/users') ? 'active' : ''}"
                         href="${pageContext.request.contextPath}/admin/users"><i class="bi bi-people"></i> Người
                         dùng</a>
-                    <a class="${fn:contains(currentPath, '/admin/roles') ? 'active' : ''}"
-                        href="${pageContext.request.contextPath}/admin/roles"><i class="bi bi-shield-lock"></i> Phân
+                    <a class="${fn:contains(currentPath, '/admin/roles') or fn:contains(currentPath, '/admin/permissions') ? 'active' : ''}"
+                        href="${pageContext.request.contextPath}/admin/permissions"><i class="bi bi-shield-lock"></i> Phân
                         quyền</a>
                     <a class="${fn:contains(currentPath, '/admin/departments') ? 'active' : ''}"
                         href="${pageContext.request.contextPath}/admin/departments"><i class="bi bi-building"></i> Phòng
                         ban</a>
+                    <a class="${fn:contains(currentPath, '/admin/job-categories') ? 'active' : ''}"
+                        href="${pageContext.request.contextPath}/admin/job-categories"><i class="bi bi-diagram-3"></i>
+                        Danh mục nghề nghiệp</a>
                     <a class="${fn:contains(currentPath, '/admin/audit-logs') ? 'active' : ''}"
                         href="${pageContext.request.contextPath}/admin/audit-logs"><i class="bi bi-journal-text"></i>
                         Nhật ký hệ thống</a>

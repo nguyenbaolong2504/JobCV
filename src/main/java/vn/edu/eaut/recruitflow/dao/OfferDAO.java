@@ -7,6 +7,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -47,7 +49,8 @@ public class OfferDAO extends DaoSupport {
     }
 
     public List<Offer> findByCandidateId(int candidateId) throws SQLException {
-        String sql = SELECT_OFFER + "WHERE a.candidate_id = ? ORDER BY o.created_at DESC";
+        // Drafts are internal HR documents and must never be exposed in the candidate portal.
+        String sql = SELECT_OFFER + "WHERE a.candidate_id = ? AND o.status <> 'DRAFT' ORDER BY o.created_at DESC";
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, candidateId);
             try (ResultSet resultSet = statement.executeQuery()) {
@@ -80,7 +83,7 @@ public class OfferDAO extends DaoSupport {
             values.add(status.trim().toUpperCase());
         }
         if (expiryDate != null) {
-            sql.append(" AND o.expiry_date = ?");
+            sql.append(" AND o.expiry_date <= ?");
         }
         sql.append(" ORDER BY o.expiry_date ASC, o.created_at DESC");
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql.toString())) {
@@ -132,12 +135,34 @@ public class OfferDAO extends DaoSupport {
 
     public boolean update(Offer offer) throws SQLException {
         try (Connection connection = openConnection()) {
-            return update(connection, offer);
+            return updateDraft(connection, offer);
         }
     }
 
-    public boolean update(Connection connection, Offer offer) throws SQLException {
-        String sql = "UPDATE offers SET salary = ?, start_date = ?, probation_months = ?, location = ?, expiry_date = ?, note = ? WHERE id = ?";
+    /**
+     * The current data model represents a single employing organization. Once a candidate has
+     * accepted one offer, another offer must not create a second, hidden onboarding record.
+     */
+    public boolean hasAcceptedOfferForCandidate(Connection connection, int candidateId, int excludeOfferId)
+            throws SQLException {
+        String sql = "SELECT 1 FROM offers o JOIN applications a ON a.id = o.application_id "
+                + "WHERE a.candidate_id = ? AND o.status = 'ACCEPTED' AND o.id <> ? LIMIT 1";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, candidateId);
+            statement.setInt(2, excludeOfferId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next();
+            }
+        }
+    }
+
+    /**
+     * Updates offer terms only while the row is still a draft. The status predicate is
+     * deliberately in SQL so a concurrent send cannot be overwritten by a stale edit form.
+     */
+    public boolean updateDraft(Connection connection, Offer offer) throws SQLException {
+        String sql = "UPDATE offers SET salary = ?, start_date = ?, probation_months = ?, location = ?, expiry_date = ?, note = ? "
+                + "WHERE id = ? AND status = 'DRAFT'";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setBigDecimal(1, offer.getSalary());
             statement.setDate(2, offer.getStartDate());
@@ -148,6 +173,12 @@ public class OfferDAO extends DaoSupport {
             statement.setInt(7, offer.getId());
             return statement.executeUpdate() == 1;
         }
+    }
+
+    /** @deprecated Use {@link #updateDraft(Connection, Offer)} in a workflow transaction. */
+    @Deprecated
+    public boolean update(Connection connection, Offer offer) throws SQLException {
+        return updateDraft(connection, offer);
     }
 
     public boolean updateStatus(int offerId, String status) throws SQLException {
@@ -175,8 +206,95 @@ public class OfferDAO extends DaoSupport {
         }
     }
 
+    /** Marks every outstanding offer whose response deadline has passed as EXPIRED. */
+    public int expirePastDueSentOffers() throws SQLException {
+        try (Connection connection = openConnection()) {
+            return expirePastDueSentOffers(connection);
+        }
+    }
+
+    /** Atomically changes status only if it has not changed since the caller read the row. */
+    public boolean updateStatusIfCurrent(Connection connection, int offerId, String targetStatus, String expectedStatus)
+            throws SQLException {
+        String sql = "UPDATE offers SET status = ? WHERE id = ? AND status = ?";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, targetStatus);
+            statement.setInt(2, offerId);
+            statement.setString(3, expectedStatus);
+            return statement.executeUpdate() == 1;
+        }
+    }
+
+    public int expirePastDueSentOffers(Connection connection) throws SQLException {
+        String sql = "UPDATE offers SET status = 'EXPIRED' WHERE status = 'SENT' AND expiry_date < CURRENT_DATE";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            return statement.executeUpdate();
+        }
+    }
+
+    /**
+     * Reuses the one legal offer row for an application after that offer has expired. The
+     * unique application_id constraint remains intact, preventing parallel active offers.
+     */
+    public boolean replaceExpiredWithDraft(Connection connection, Offer offer) throws SQLException {
+        String sql = "UPDATE offers SET salary = ?, start_date = ?, probation_months = ?, location = ?, expiry_date = ?, "
+                + "status = 'DRAFT', note = ? WHERE id = ? AND status = 'EXPIRED'";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setBigDecimal(1, offer.getSalary());
+            statement.setDate(2, offer.getStartDate());
+            statement.setInt(3, offer.getProbationMonths());
+            statement.setString(4, offer.getLocation());
+            statement.setDate(5, offer.getExpiryDate());
+            statement.setString(6, offer.getNote());
+            statement.setInt(7, offer.getId());
+            return statement.executeUpdate() == 1;
+        }
+    }
+
+    /**
+     * Counts offers that have been sent (or have subsequently been answered/expired) for the
+     * same application-submission cohort used by the recruitment funnel report.
+     */
+    public long countIssuedByApplicationDateRange(LocalDate fromDate, LocalDate toDate) throws SQLException {
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM offers o JOIN applications a ON a.id = o.application_id "
+                + "WHERE o.status <> 'DRAFT'");
+        if (fromDate != null) {
+            sql.append(" AND a.applied_at >= ?");
+        }
+        if (toDate != null) {
+            sql.append(" AND a.applied_at < ?");
+        }
+        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql.toString())) {
+            int index = 1;
+            if (fromDate != null) {
+                statement.setTimestamp(index++, Timestamp.valueOf(fromDate.atStartOfDay()));
+            }
+            if (toDate != null) {
+                statement.setTimestamp(index, Timestamp.valueOf(toDate.plusDays(1).atStartOfDay()));
+            }
+            try (ResultSet resultSet = statement.executeQuery()) {
+                resultSet.next();
+                return resultSet.getLong(1);
+            }
+        }
+    }
+
     public long countByCandidateId(int candidateId) throws SQLException {
-        String sql = "SELECT COUNT(*) FROM offers o JOIN applications a ON a.id = o.application_id WHERE a.candidate_id = ?";
+        String sql = "SELECT COUNT(*) FROM offers o JOIN applications a ON a.id = o.application_id "
+                + "WHERE a.candidate_id = ? AND o.status <> 'DRAFT'";
+        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, candidateId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                resultSet.next();
+                return resultSet.getLong(1);
+            }
+        }
+    }
+
+    /** Number of candidate offers that still require a response. */
+    public long countPendingByCandidateId(int candidateId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM offers o JOIN applications a ON a.id = o.application_id "
+                + "WHERE a.candidate_id = ? AND o.status = 'SENT'";
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, candidateId);
             try (ResultSet resultSet = statement.executeQuery()) {

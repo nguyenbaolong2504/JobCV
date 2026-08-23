@@ -22,7 +22,7 @@ flowchart LR
 | Package | Trách nhiệm |
 | --- | --- |
 | controller | Nhận HTTP request, lấy session/parameter, gọi service, forward/redirect. |
-| controller.auth | Login, register, logout. |
+| controller.auth | Login/register/logout, Gmail OTP login/reset and Google OAuth callback. |
 | controller.candidate | Profile, CV, job, application, interview, offer, onboarding, notification. |
 | controller.hr | Dashboard, jobs, candidates/pipeline, interview, offer, onboarding, reports. |
 | controller.interviewer | Lịch interview và feedback. |
@@ -32,7 +32,7 @@ flowchart LR
 | model | Entity, PageResult, dashboard stats, matching result. |
 | enums | Role và state machine. |
 | filter | UTF-8, login/session, URL authorization. |
-| util | DBUtil, PasswordUtil, FlashMessage, UploadUtil, ResumeParser. |
+| util | DBUtil, BCrypt PasswordUtil, session/OTP/OAuth state, FlashMessage, UploadUtil, ResumeParser. |
 
 ## Quy tắc theo lớp
 
@@ -64,7 +64,7 @@ BusinessException là lỗi nghiệp vụ để controller trả flash/error rõ
 
 DAO chỉ chứa query, mapping và persistence. Input SQL luôn qua PreparedStatement. DAO có overload nhận Connection cho transaction đa bảng.
 
-DAO bao phủ: User/Role/CandidateProfile/Resume/Department, Job/JobSkill, Application/ApplicationStatusHistory, Interview/InterviewFeedback, Offer, Onboarding/OnboardingTask, Notification và AuditLog.
+DAO bao phủ: User/Role/CandidateProfile/RecruiterProfile/Resume/Department, Job/JobSkill, Application/ApplicationStatusHistory, Interview/InterviewFeedback, Offer, Onboarding/OnboardingTask, Notification, AuditLog, OTP và OAuth account link.
 
 ### JSP
 
@@ -72,7 +72,7 @@ JSP chỉ render view bằng EL/JSTL (c:if, c:forEach, c:out); không query data
 
 ~~~text
 WEB-INF/views/
-├── auth/          login, register
+├── auth/          login, register, OTP verify/reset, Google OAuth callback
 ├── public/        home, jobs, job detail, 403/404/500
 ├── candidate/     dashboard, profile, resumes, applications, interviews, offers, onboarding
 ├── hr/            dashboard, jobs, applications, interviews, offers, onboarding, reports
@@ -95,10 +95,19 @@ role
 | --- | --- |
 | /candidate/ | CANDIDATE |
 | /hr/ | HR hoặc ADMIN |
-| /interviewer/ | INTERVIEWER hoặc ADMIN |
+| /interviewer/ | INTERVIEWER |
 | /admin/ | ADMIN |
 
-Ngoài filter, service nhạy cảm kiểm tra ownership: interviewer được gán mới feedback, candidate chỉ phản hồi offer/task của mình, HR/Admin mới quản lý job/offer/onboarding.
+Ngoài filter, service nhạy cảm kiểm tra ownership: interviewer được gán mới feedback, candidate chỉ phản hồi offer/task của mình, HR/Admin mới quản lý job/offer/onboarding. Admin không vào workspace `/interviewer/` vì không có interview assignment; Admin dùng workspace quản trị hoặc HR.
+
+Mỗi request có session đăng nhập được đối chiếu lại `users.status` và role hiện tại trước khi tiếp tục. Nếu tài khoản bị lock/deactivate, bị xóa hoặc role đổi, session cũ bị hủy và user phải đăng nhập lại.
+
+## Auth và account lifecycle
+
+- Password login tạo session mới (chống session fixation) và Candidate luôn landing tại `/home`; dashboard vẫn là `/candidate/dashboard` theo lựa chọn của user.
+- `CANDIDATE` public registration tạo user `ACTIVE` và `candidate_profiles`. Public recruiter registration tạo `HR/INACTIVE` + `recruiter_profiles`; Admin nhìn thấy organization/job title/work phone rồi mới kích hoạt.
+- OTP password reset và OTP login dùng hai bảng riêng, BCrypt hash, expiry 10 phút, one-time consume, tối đa 5 lần thử và resend cooldown 60 giây. OTP login chỉ được ép khi cả SMTP và `RECRUITFLOW_AUTH_OTP_REQUIRED=true` đều có.
+- Google OAuth dùng Authorization Code + state session-bound. Server đổi code, xác minh ID token với Google (issuer/audience/email verified), chỉ tạo/liên kết Candidate theo provider subject; không lưu token OAuth.
 
 ## Database config
 
@@ -108,9 +117,9 @@ DBUtil nhận config theo thứ tự JVM property → environment variable → d
 | --- | --- | --- | --- |
 | JDBC URL | recruitflow.db.url | RECRUITFLOW_DB_URL | localhost:3306/recruitflow |
 | DB user | recruitflow.db.user | RECRUITFLOW_DB_USER | root |
-| DB password | recruitflow.db.password | RECRUITFLOW_DB_PASSWORD | root |
+| DB password | recruitflow.db.password | RECRUITFLOW_DB_PASSWORD | Không có fallback |
 
-Không commit DB secret thật vào source. Cách cấu hình cụ thể nằm trong [SETUP.md](SETUP.md).
+`schema.sql` và default JDBC URL đều dùng database `recruitflow`. Không commit DB secret thật vào source; nếu MySQL yêu cầu password, phải cung cấp qua JVM property hoặc environment variable. Cách cấu hình cụ thể nằm trong [SETUP.md](SETUP.md).
 
 ## Transaction
 
@@ -132,12 +141,13 @@ MatchingService chuẩn hóa CV text và skill, tính tổng weight skill match/
 
 ## Schema
 
-schema.sql tạo 16 bảng: roles, users, candidate_profiles, resumes, departments, jobs, job_skills, applications, application_status_history, interviews, interview_feedbacks, offers, onboardings, onboarding_tasks, notifications, audit_logs.
+schema.sql tạo 20 bảng: roles, users, candidate_profiles, recruiter_profiles, password_reset_otps, login_verification_otps, oauth_accounts, resumes, departments, jobs, job_skills, applications, application_status_history, interviews, interview_feedbacks, offers, onboardings, onboarding_tasks, notifications, audit_logs.
 
 Quan hệ chính:
 
 ~~~text
-roles → users → candidate_profiles / resumes
+roles → users → candidate_profiles / recruiter_profiles / resumes
+users → password_reset_otps / login_verification_otps / oauth_accounts
 departments → jobs → job_skills
 jobs + candidate + resume → applications → application_status_history
 applications → interviews → interview_feedbacks
@@ -154,4 +164,3 @@ users → notifications / audit_logs
 4. Tạo Servlet đúng namespace actor, để filter bảo vệ URL.
 5. Viết JSP dùng JSTL/EL; POST áp dụng PRG + flash.
 6. Build WAR và chạy manual test module bị ảnh hưởng.
-

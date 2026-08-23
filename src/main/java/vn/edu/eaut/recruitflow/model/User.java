@@ -11,6 +11,11 @@ public class User {
     private int roleId;
     private String roleName;
     private String status;
+    /**
+     * Increments whenever credentials are changed. Authenticated browser sessions store the
+     * value observed at sign-in so a password reset can invalidate every older session.
+     */
+    private int sessionVersion;
     private Timestamp createdAt;
     private Timestamp updatedAt;
 
@@ -39,6 +44,9 @@ public class User {
     public void setStatus(String status) { this.status = status; }
     public UserStatus getUserStatus() { return UserStatus.fromValue(status); }
     public void setStatus(UserStatus status) { this.status = status == null ? null : status.name(); }
+
+    public int getSessionVersion() { return sessionVersion; }
+    public void setSessionVersion(int sessionVersion) { this.sessionVersion = Math.max(0, sessionVersion); }
 
     public Timestamp getCreatedAt() { return createdAt; }
     public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }

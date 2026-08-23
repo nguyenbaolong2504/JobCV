@@ -1,4 +1,4 @@
-<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" session="false" %>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <div class="rf-chatbot" id="rfChatbot">
     <section class="rf-chatbot-panel" id="rfChatbotPanel" aria-label="Tr&#7907; l&#253; RecruitFlow" hidden>
@@ -22,7 +22,7 @@
         <i class="bi bi-chat-dots-fill"></i><span>1</span>
     </button>
 </div>
-<script src="${pageContext.request.contextPath}/assets/js/app.js?v=20260816-chatbot-v2"></script>
+<script src="${pageContext.request.contextPath}/assets/js/app.js?v=20260822-auth-cv-eye"></script>
 </body>
 
 </html>

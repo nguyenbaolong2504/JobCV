@@ -5,6 +5,7 @@ import vn.edu.eaut.recruitflow.enums.EmploymentType;
 import vn.edu.eaut.recruitflow.enums.JobStatus;
 import vn.edu.eaut.recruitflow.model.Job;
 import vn.edu.eaut.recruitflow.service.DepartmentService;
+import vn.edu.eaut.recruitflow.service.JobCategoryService;
 import vn.edu.eaut.recruitflow.service.JobService;
 import vn.edu.eaut.recruitflow.util.BusinessException;
 import vn.edu.eaut.recruitflow.util.RequestUtil;
@@ -21,11 +22,13 @@ import java.sql.Date;
 public class JobCreateController extends BaseController {
     private JobService jobService;
     private DepartmentService departmentService;
+    private JobCategoryService jobCategoryService;
 
     @Override
     public void init() throws ServletException {
         jobService = new JobService();
         departmentService = new DepartmentService();
+        jobCategoryService = new JobCategoryService();
     }
 
     @Override
@@ -33,10 +36,17 @@ public class JobCreateController extends BaseController {
             throws ServletException, IOException {
         try {
             request.setAttribute("departments", departmentService.getAllDepartments());
-            view(request, response, "/WEB-INF/views/hr/job-form.jsp", "Tạo tin tuyển dụng | RecruitFlow");
         } catch (BusinessException ex) {
             redirectWithError(request, response, "/hr/jobs", ex.getMessage());
+            return;
         }
+        try {
+            request.setAttribute("jobCategories", jobCategoryService.getActiveLeafCategories());
+        } catch (BusinessException ignored) {
+            // Category selection is optional; HR can still create an uncategorised job during a staged migration.
+            request.setAttribute("jobCategories", java.util.List.of());
+        }
+        view(request, response, "/WEB-INF/views/hr/job-form.jsp", "Tạo tin tuyển dụng | RecruitFlow");
     }
 
     @Override
@@ -70,6 +80,9 @@ public class JobCreateController extends BaseController {
         job.setJobCode(jobCode);
         job.setTitle(title);
         job.setDepartmentId(RequestUtil.requiredPositiveInt(request, "departmentId", "Phòng ban"));
+        String categoryId = RequestUtil.text(request, "categoryId");
+        job.setCategoryId(categoryId.isEmpty() ? null
+                : RequestUtil.requiredPositiveInt(request, "categoryId", "Danh mục nghề nghiệp"));
         job.setLocation(RequestUtil.text(request, "location"));
         job.setEmploymentType(EmploymentType.fromValue(RequestUtil.text(request, "employmentType")));
         job.setNumberOfPositions(RequestUtil.requiredPositiveInt(request, "numberOfPositions", "Số lượng tuyển"));

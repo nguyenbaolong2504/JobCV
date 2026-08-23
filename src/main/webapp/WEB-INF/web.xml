@@ -11,6 +11,14 @@
         <welcome-file>home</welcome-file>
     </welcome-file-list>
 
+    <!-- Keep session cookies inaccessible to JavaScript; enable Secure at the TLS terminator in production. -->
+    <session-config>
+        <session-timeout>30</session-timeout>
+        <cookie-config>
+            <http-only>true</http-only>
+        </cookie-config>
+    </session-config>
+
     <!-- Error pages -->
     <error-page>
         <error-code>404</error-code>

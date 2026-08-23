@@ -4,6 +4,7 @@ import vn.edu.eaut.recruitflow.dao.JobDAO;
 import vn.edu.eaut.recruitflow.dao.ResumeDAO;
 import vn.edu.eaut.recruitflow.model.Job;
 import vn.edu.eaut.recruitflow.model.JobMatchResult;
+import vn.edu.eaut.recruitflow.model.JobSearchCriteria;
 import vn.edu.eaut.recruitflow.model.JobSkill;
 import vn.edu.eaut.recruitflow.model.MatchResult;
 import vn.edu.eaut.recruitflow.model.Resume;
@@ -96,14 +97,13 @@ public class MatchingService {
         }
     }
 
-    public PageResult<JobMatchResult> searchPublishedJobsForCandidate(int candidateId, String keyword, Integer departmentId,
-                                                                       String location, String employmentType, int page,
-                                                                       int pageSize, String sort) throws BusinessException {
+    public PageResult<JobMatchResult> searchPublishedJobsForCandidate(int candidateId, JobSearchCriteria criteria,
+                                                                       int page, int pageSize, String sort)
+            throws BusinessException {
         try {
             Resume resume = resumeDAO.findDefaultByCandidateId(candidateId);
-            List<Job> summaries = jobDAO.search(keyword, departmentId, location, employmentType, "PUBLISHED",
-                    publicSort(sort), page, pageSize);
-            long total = jobDAO.count(keyword, departmentId, location, employmentType, "PUBLISHED");
+            List<Job> summaries = jobDAO.searchPublished(criteria, publicSort(sort), page, pageSize);
+            long total = jobDAO.countPublished(criteria);
             List<JobMatchResult> results = new ArrayList<>();
             for (Job summary : summaries) {
                 Job detailed = jobDAO.findById(summary.getId());
@@ -114,6 +114,18 @@ public class MatchingService {
         } catch (SQLException exception) {
             throw new BusinessException("Không thể tìm kiếm việc làm phù hợp.", exception);
         }
+    }
+
+    /** Compatibility entry point for the previous candidate-search contract. */
+    public PageResult<JobMatchResult> searchPublishedJobsForCandidate(int candidateId, String keyword, Integer departmentId,
+                                                                       String location, String employmentType, int page,
+                                                                       int pageSize, String sort) throws BusinessException {
+        JobSearchCriteria criteria = new JobSearchCriteria();
+        criteria.setKeyword(keyword);
+        criteria.setDepartmentId(departmentId);
+        criteria.setLocation(location);
+        criteria.setEmploymentType(employmentType);
+        return searchPublishedJobsForCandidate(candidateId, criteria, page, pageSize, sort);
     }
 
     private String normalize(String source) {
@@ -129,6 +141,7 @@ public class MatchingService {
         return switch (sort) {
             case "deadline" -> "deadline_asc";
             case "salary" -> "salary_desc";
+            case "experience" -> "experience_asc";
             default -> sort;
         };
     }

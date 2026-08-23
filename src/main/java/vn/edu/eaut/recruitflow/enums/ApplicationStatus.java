@@ -22,7 +22,9 @@ public enum ApplicationStatus {
             case SUBMITTED -> EnumSet.of(SCREENING, WITHDRAWN).contains(target);
             case SCREENING -> EnumSet.of(SHORTLISTED, REJECTED).contains(target);
             case SHORTLISTED -> EnumSet.of(INTERVIEW_SCHEDULED, REJECTED).contains(target);
-            case INTERVIEW_SCHEDULED -> EnumSet.of(INTERVIEWED, REJECTED).contains(target);
+            // A cancellation is a controlled HR operation that reopens scheduling. Generic
+            // status updates are still forbidden from using this reverse transition.
+            case INTERVIEW_SCHEDULED -> EnumSet.of(SHORTLISTED, INTERVIEWED, REJECTED).contains(target);
             case INTERVIEWED -> EnumSet.of(OFFERED, REJECTED).contains(target);
             case OFFERED -> EnumSet.of(HIRED, REJECTED).contains(target);
             case HIRED, REJECTED, WITHDRAWN -> false;

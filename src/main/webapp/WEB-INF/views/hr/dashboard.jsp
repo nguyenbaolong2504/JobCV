@@ -83,7 +83,7 @@
                             </div>
                             <div class="card-body px-4 pb-4">
                                 <div class="row g-2 text-center">
-                                    <div class="col"><div class="border rounded-3 p-3"><small class="text-muted d-block">Đã nộp</small><strong class="fs-4"><c:out value="${funnel['APPLIED']}" /></strong></div></div>
+                                    <div class="col"><div class="border rounded-3 p-3"><small class="text-muted d-block">Đã nộp</small><strong class="fs-4"><c:out value="${funnel['SUBMITTED']}" /></strong></div></div>
                                     <div class="col"><div class="border rounded-3 p-3"><small class="text-muted d-block">Sàng lọc</small><strong class="fs-4"><c:out value="${funnel['SCREENING']}" /></strong></div></div>
                                     <div class="col"><div class="border rounded-3 p-3"><small class="text-muted d-block">Phỏng vấn</small><strong class="fs-4"><c:out value="${funnel['INTERVIEW']}" /></strong></div></div>
                                     <div class="col"><div class="border rounded-3 p-3"><small class="text-muted d-block">Offer</small><strong class="fs-4"><c:out value="${funnel['OFFERED']}" /></strong></div></div>

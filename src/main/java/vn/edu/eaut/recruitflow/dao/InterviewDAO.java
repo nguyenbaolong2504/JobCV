@@ -55,7 +55,7 @@ public class InterviewDAO extends DaoSupport {
     }
 
     public List<Interview> findUpcoming(int interviewerId) throws SQLException {
-        String sql = SELECT_INTERVIEW + "WHERE i.interviewer_id = ? AND i.interview_date >= CURRENT_DATE "
+        String sql = SELECT_INTERVIEW + "WHERE i.interviewer_id = ? AND TIMESTAMP(i.interview_date, i.end_time) > CURRENT_TIMESTAMP "
                 + "AND i.status IN ('SCHEDULED', 'RESCHEDULED') ORDER BY i.interview_date, i.start_time";
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, interviewerId);
@@ -66,7 +66,8 @@ public class InterviewDAO extends DaoSupport {
     }
 
     public List<Interview> findUpcoming() throws SQLException {
-        String sql = SELECT_INTERVIEW + "WHERE i.interview_date >= CURRENT_DATE AND i.status IN ('SCHEDULED', 'RESCHEDULED') "
+        String sql = SELECT_INTERVIEW + "WHERE TIMESTAMP(i.interview_date, i.end_time) > CURRENT_TIMESTAMP "
+                + "AND i.status IN ('SCHEDULED', 'RESCHEDULED') "
                 + "ORDER BY i.interview_date, i.start_time";
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql); ResultSet resultSet = statement.executeQuery()) {
             return mapList(resultSet);
@@ -144,6 +145,39 @@ public class InterviewDAO extends DaoSupport {
         }
     }
 
+    /** Locks only the interview row before an update, cancellation, or feedback submission. */
+    public boolean lockById(Connection connection, int id) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("SELECT id FROM interviews WHERE id = ? FOR UPDATE")) {
+            statement.setInt(1, id);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next();
+            }
+        }
+    }
+
+    /**
+     * A recruitment application is handled as one active interview at a time. A cancelled
+     * schedule is historical and does not prevent HR from scheduling a replacement.
+     */
+    public boolean hasActiveInterviewForApplication(Connection connection, int applicationId,
+                                                     Integer excludeInterviewId) throws SQLException {
+        StringBuilder sql = new StringBuilder("SELECT 1 FROM interviews WHERE application_id = ? "
+                + "AND status IN ('SCHEDULED', 'RESCHEDULED')");
+        if (excludeInterviewId != null) {
+            sql.append(" AND id <> ?");
+        }
+        sql.append(" LIMIT 1");
+        try (PreparedStatement statement = connection.prepareStatement(sql.toString())) {
+            statement.setInt(1, applicationId);
+            if (excludeInterviewId != null) {
+                statement.setInt(2, excludeInterviewId);
+            }
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next();
+            }
+        }
+    }
+
     public int insert(Interview interview) throws SQLException {
         try (Connection connection = openConnection()) {
             return insert(connection, interview);
@@ -181,6 +215,17 @@ public class InterviewDAO extends DaoSupport {
         }
     }
 
+    /** Refuses to overwrite a completed or cancelled interview from a stale edit form. */
+    public boolean updateIfActive(Connection connection, Interview interview) throws SQLException {
+        String sql = "UPDATE interviews SET interviewer_id = ?, interview_type = ?, interview_date = ?, start_time = ?, end_time = ?, "
+                + "location = ?, meeting_url = ?, status = ?, note = ? "
+                + "WHERE id = ? AND status IN ('SCHEDULED', 'RESCHEDULED')";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            bindInterview(statement, interview, true);
+            return statement.executeUpdate() == 1;
+        }
+    }
+
     public boolean updateStatus(int interviewId, String status) throws SQLException {
         try (Connection connection = openConnection()) {
             return updateStatus(connection, interviewId, status);
@@ -195,12 +240,34 @@ public class InterviewDAO extends DaoSupport {
         }
     }
 
+    public boolean updateStatusIfCurrent(Connection connection, int interviewId, String targetStatus,
+                                         String expectedStatus) throws SQLException {
+        String sql = "UPDATE interviews SET status = ? WHERE id = ? AND status = ?";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, targetStatus);
+            statement.setInt(2, interviewId);
+            statement.setString(3, expectedStatus);
+            return statement.executeUpdate() == 1;
+        }
+    }
+
     public boolean cancel(Connection connection, int interviewId) throws SQLException {
         return updateStatus(connection, interviewId, "CANCELLED");
     }
 
+    /** Cancels exactly one still-active interview; completed rows can never be overwritten. */
+    public boolean cancelIfActive(Connection connection, int interviewId) throws SQLException {
+        String sql = "UPDATE interviews SET status = 'CANCELLED' WHERE id = ? "
+                + "AND status IN ('SCHEDULED', 'RESCHEDULED')";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, interviewId);
+            return statement.executeUpdate() == 1;
+        }
+    }
+
     public long countUpcoming() throws SQLException {
-        String sql = "SELECT COUNT(*) FROM interviews WHERE interview_date >= CURRENT_DATE AND status IN ('SCHEDULED', 'RESCHEDULED')";
+        String sql = "SELECT COUNT(*) FROM interviews WHERE TIMESTAMP(interview_date, end_time) > CURRENT_TIMESTAMP "
+                + "AND status IN ('SCHEDULED', 'RESCHEDULED')";
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql); ResultSet resultSet = statement.executeQuery()) {
             resultSet.next();
             return resultSet.getLong(1);
@@ -209,7 +276,8 @@ public class InterviewDAO extends DaoSupport {
 
     public long countUpcomingByCandidateId(int candidateId) throws SQLException {
         String sql = "SELECT COUNT(*) FROM interviews i JOIN applications a ON a.id = i.application_id "
-                + "WHERE a.candidate_id = ? AND i.interview_date >= CURRENT_DATE AND i.status IN ('SCHEDULED', 'RESCHEDULED')";
+                + "WHERE a.candidate_id = ? AND TIMESTAMP(i.interview_date, i.end_time) > CURRENT_TIMESTAMP "
+                + "AND i.status IN ('SCHEDULED', 'RESCHEDULED')";
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, candidateId);
             try (ResultSet resultSet = statement.executeQuery()) {

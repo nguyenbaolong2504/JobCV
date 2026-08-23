@@ -1,6 +1,7 @@
 package vn.edu.eaut.recruitflow.controller;
 
 import vn.edu.eaut.recruitflow.service.DepartmentService;
+import vn.edu.eaut.recruitflow.service.JobCategoryService;
 import vn.edu.eaut.recruitflow.service.JobService;
 import vn.edu.eaut.recruitflow.util.BusinessException;
 
@@ -18,11 +19,13 @@ public class HomeController extends BaseController {
 
     private JobService jobService;
     private DepartmentService departmentService;
+    private JobCategoryService jobCategoryService;
 
     @Override
     public void init() throws ServletException {
         jobService = new JobService();
         departmentService = new DepartmentService();
+        jobCategoryService = new JobCategoryService();
     }
 
     @Override
@@ -38,6 +41,12 @@ public class HomeController extends BaseController {
             request.setAttribute("featuredJobs", List.of());
             request.setAttribute("departments", List.of());
             request.setAttribute("error", ex.getMessage());
+        }
+        try {
+            request.setAttribute("categoryRoots", jobCategoryService.getPublicHierarchy());
+        } catch (BusinessException ignored) {
+            // The taxonomy is optional metadata. A delayed migration must not hide core public jobs.
+            request.setAttribute("categoryRoots", List.of());
         }
         view(request, response, "/WEB-INF/views/public/home.jsp", "RecruitFlow | Tuyển dụng và Onboarding");
     }

@@ -36,6 +36,20 @@ public class ApplicationDAO extends DaoSupport {
         }
     }
 
+    /**
+     * Serializes workflow operations for one application without taking locks on all of the
+     * joined display tables in {@link #findById(Connection, int)}.
+     */
+    public boolean lockById(Connection connection, int id) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT id FROM applications WHERE id = ? FOR UPDATE")) {
+            statement.setInt(1, id);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next();
+            }
+        }
+    }
+
     public Application findByCandidateAndJob(int candidateId, int jobId) throws SQLException {
         String sql = SELECT_APPLICATION + "WHERE a.candidate_id = ? AND a.job_id = ?";
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -135,6 +149,32 @@ public class ApplicationDAO extends DaoSupport {
         }
     }
 
+    /** Counts accepted hires for a job while its job row is locked by the caller. */
+    public long countByJobAndStatus(Connection connection, int jobId, String status) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM applications WHERE job_id = ? AND status = ?";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, jobId);
+            statement.setString(2, status);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                resultSet.next();
+                return resultSet.getLong(1);
+            }
+        }
+    }
+
+    /** A candidate may only enter onboarding for one accepted job in this single-employer system. */
+    public boolean hasHiredApplicationForCandidate(Connection connection, int candidateId, int excludeApplicationId)
+            throws SQLException {
+        String sql = "SELECT 1 FROM applications WHERE candidate_id = ? AND status = 'HIRED' AND id <> ? LIMIT 1";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, candidateId);
+            statement.setInt(2, excludeApplicationId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next();
+            }
+        }
+    }
+
     public long countAll() throws SQLException {
         try (Connection connection = openConnection();
              PreparedStatement statement = connection.prepareStatement("SELECT COUNT(*) FROM applications");
@@ -203,9 +243,6 @@ public class ApplicationDAO extends DaoSupport {
 
     /** Returns monthly application totals for the supplied inclusive range. */
     public Map<String, Long> countByMonth(LocalDate fromDate, LocalDate toDate) throws SQLException {
-        if (fromDate == null && toDate == null) {
-            return countByMonth(12);
-        }
         StringBuilder sql = new StringBuilder("SELECT DATE_FORMAT(applied_at, '%Y-%m') AS month_key, COUNT(*) AS total "
                 + "FROM applications WHERE 1 = 1");
         appendAppliedDateRange(sql, fromDate, toDate);
@@ -275,6 +312,21 @@ public class ApplicationDAO extends DaoSupport {
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, status);
             statement.setInt(2, applicationId);
+            return statement.executeUpdate() == 1;
+        }
+    }
+
+    /**
+     * Prevents a stale workflow request from overwriting a status that another transaction
+     * has already advanced.
+     */
+    public boolean updateStatusIfCurrent(Connection connection, int applicationId, String targetStatus,
+                                         String expectedStatus) throws SQLException {
+        String sql = "UPDATE applications SET status = ? WHERE id = ? AND status = ?";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, targetStatus);
+            statement.setInt(2, applicationId);
+            statement.setString(3, expectedStatus);
             return statement.executeUpdate() == 1;
         }
     }

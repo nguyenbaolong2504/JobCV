@@ -49,8 +49,14 @@ public class CsrfFilter implements Filter {
         String method = httpRequest.getMethod().toUpperCase();
         HttpSession session = httpRequest.getSession(false);
         if (SAFE_METHODS.contains(method)) {
-            session = session == null ? httpRequest.getSession(true) : session;
-            httpRequest.setAttribute(TOKEN_ATTRIBUTE, tokenFor(session));
+            // Most public GET pages (home, job discovery, assets) render no state-changing form.
+            // Do not allocate a JSESSIONID for those visitors. A token is needed only when a
+            // session already exists (authenticated navigation/logout), or for the three entry
+            // forms that must bootstrap an anonymous CSRF-bound session.
+            if (session != null || isAnonymousCsrfForm(path)) {
+                session = session == null ? httpRequest.getSession(true) : session;
+                httpRequest.setAttribute(TOKEN_ATTRIBUTE, tokenFor(session));
+            }
             chain.doFilter(request, response);
             return;
         }
@@ -89,5 +95,11 @@ public class CsrfFilter implements Filter {
     private boolean tokenMatches(String expected, String supplied) {
         return supplied != null && MessageDigest.isEqual(
                 expected.getBytes(StandardCharsets.UTF_8), supplied.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private boolean isAnonymousCsrfForm(String path) {
+        return "/login".equals(path)
+                || "/register".equals(path)
+                || "/forgot-password".equals(path);
     }
 }

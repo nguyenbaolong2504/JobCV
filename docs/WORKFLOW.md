@@ -10,6 +10,17 @@
 | INTERVIEWER | Lịch được phân công và feedback. |
 | ADMIN | User lock/unlock, department, audit log, dashboard. |
 
+## Account registration and sign-in rules
+
+| Rule | Expected behavior |
+| --- | --- |
+| Candidate self-registration | Create `CANDIDATE/ACTIVE` + candidate profile; first login lands at `/home`, with `/candidate/dashboard` available from the menu. |
+| Recruiter self-registration | Require organization, job title and work phone; create `HR/INACTIVE` + recruiter profile. Admin reviews the details and activates deliberately. |
+| Password policy | New/reset password has 8–72 bytes and includes at least one letter and one digit; persisted as BCrypt only. |
+| Password reset | Gmail OTP is hashed, single-use, valid 10 minutes, max 5 attempts and 60-second resend cooldown; unknown email gets the same generic send response. |
+| Login email OTP | Only enforced when SMTP is configured and `RECRUITFLOW_AUTH_OTP_REQUIRED=true`; account state is rechecked when the code is verified. |
+| Google sign-in | State-protected OAuth code flow; only creates or links verified-email Candidate accounts, never HR/Admin. |
+
 ## Luồng tuyển dụng
 
 ~~~mermaid
@@ -60,7 +71,7 @@ Mỗi update application status phải insert application_status_history: old/ne
 
 Interview status: SCHEDULED, COMPLETED, CANCELLED, RESCHEDULED.
 
-HR tạo lịch phải kiểm tra startTime < endTime, interviewer không trùng lịch và application hợp lệ; sau đó tạo notification cho Candidate/Interviewer và đưa application sang INTERVIEW_SCHEDULED.
+HR tạo lịch phải kiểm tra startTime < endTime, interviewer không trùng lịch, application hợp lệ và chưa có lịch `SCHEDULED`/`RESCHEDULED` khác; sau đó tạo notification cho Candidate/Interviewer và đưa application sang INTERVIEW_SCHEDULED. Nếu cần đổi lịch, HR cập nhật hoặc hủy lịch hiện tại rồi mới tạo lịch thay thế.
 
 ~~~text
 technicalScore
@@ -72,7 +83,7 @@ comment
 recommendation: STRONG_HIRE | HIRE | CONSIDER | NO_HIRE
 ~~~
 
-Chỉ interviewer được gán mới submit feedback. Submit thành công cùng transaction: feedback được lưu, interview thành COMPLETED, application thành INTERVIEWED, timeline được ghi.
+Chỉ interviewer được gán mới submit feedback, và chỉ sau thời điểm `endTime` của lịch. Submit thành công cùng transaction: feedback được lưu, interview thành COMPLETED, application thành INTERVIEWED, timeline được ghi.
 
 ## Offer
 
@@ -84,11 +95,12 @@ Chỉ interviewer được gán mới submit feedback. Submit thành công cùng
 | DECLINED | Candidate từ chối. |
 | EXPIRED | Hết hạn phản hồi. |
 
-Chỉ application INTERVIEWED mới tạo/gửi offer.
+Chỉ application `INTERVIEWED` mới tạo offer lần đầu. Candidate không nhìn thấy `DRAFT`.
 
 - Send: offer SENT, application OFFERED.
 - Accept: offer ACCEPTED, application HIRED, history, onboarding và notification.
 - Decline: offer DECLINED, application REJECTED theo workflow hiện tại.
+- Offer `SENT` có `expiryDate` trước ngày hiện tại được chuẩn hóa thành `EXPIRED` khi các luồng offer được truy cập. HR có thể tạo lại một `DRAFT` từ offer `EXPIRED`; hệ thống tái sử dụng cùng bản ghi offer để vẫn đảm bảo một offer active/application và application giữ `OFFERED` cho lần gửi lại.
 
 Candidate chỉ phản hồi offer của chính mình.
 
@@ -124,14 +136,14 @@ Ví dụ Java 5, JDBC 4, MySQL 4, Git 2; CV có Java/MySQL/Git đạt (5 + 4 + 2
 | BR04 | Candidate phải có CV thuộc mình. | ApplicationService.apply + ResumeDAO. |
 | BR05 | Chỉ HR/Admin tạo/chỉnh job. | Filter + JobService. |
 | BR06 | Interviewer chỉ feedback lịch được gán. | InterviewService. |
-| BR07 | Chỉ INTERVIEWED tạo offer. | OfferService. |
+| BR07 | Chỉ INTERVIEWED tạo offer lần đầu; chỉ offer EXPIRED của application OFFERED mới được reissue. | OfferService. |
 | BR08 | Candidate chỉ phản hồi offer của chính mình. | OfferService.respond. |
 | BR09 | Accept offer đưa application sang HIRED. | OfferService.respond. |
 | BR10 | HIRED tạo onboarding. | OfferService + OnboardingService. |
 | BR11 | Hoàn tất onboarding khi mọi required task DONE. | OnboardingService. |
 | BR12 | Không hard delete job đã có application. | JobService archive. |
+| BR13 | Mỗi application chỉ có một lịch phỏng vấn đang active; feedback chỉ gửi sau khi lịch kết thúc. | InterviewService + InterviewDAO. |
 
 ## Notification và audit
 
-Notification được tạo cho apply, lịch interview, offer, accept/decline offer và onboarding. Candidate xem tại /candidate/notifications. Action quản trị dùng AuditLogService để tạo audit log.
-
+Notification được tạo cho apply, lịch interview, offer, accept/decline offer và onboarding. Candidate xem tại `/candidate/notifications`; HR/Admin xem tại `/hr/notifications`; Interviewer xem tại `/interviewer/notifications`. Mỗi inbox cho phép đánh dấu từng thông báo hoặc tất cả đã đọc. Action quản trị dùng AuditLogService để tạo audit log.

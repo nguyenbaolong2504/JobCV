@@ -6,6 +6,8 @@
                 value="${fn:endsWith(candidatePath, '/candidate/dashboard') ? 'active' : ''}" />
             <c:set var="profileActive" value="${fn:endsWith(candidatePath, '/candidate/profile') ? 'active' : ''}" />
             <c:set var="resumesActive" value="${fn:endsWith(candidatePath, '/candidate/resumes') ? 'active' : ''}" />
+            <c:set var="cvBuilderActive"
+                value="${fn:contains(candidatePath, '/candidate/cv-builder') ? 'active' : ''}" />
             <c:set var="jobsActive" value="${fn:endsWith(candidatePath, '/candidate/jobs') ? 'active' : ''}" />
             <c:set var="applicationsActive"
                 value="${fn:contains(candidatePath, '/candidate/applications') ? 'active' : ''}" />
@@ -32,6 +34,9 @@
                     <a class="sidebar-link ${resumesActive}"
                         href="${pageContext.request.contextPath}/candidate/resumes"><i
                             class="bi bi-file-earmark-person"></i> CV của tôi</a>
+                    <a class="sidebar-link ${cvBuilderActive}"
+                        href="${pageContext.request.contextPath}/candidate/cv-builder"><i
+                            class="bi bi-magic"></i> Tạo CV theo mẫu</a>
                     <a class="sidebar-link ${jobsActive}" href="${pageContext.request.contextPath}/candidate/jobs"><i
                             class="bi bi-search"></i> Tìm việc làm</a>
                     <a class="sidebar-link ${applicationsActive}"

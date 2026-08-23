@@ -3,7 +3,6 @@ package vn.edu.eaut.recruitflow.service;
 import vn.edu.eaut.recruitflow.dao.ApplicationDAO;
 import vn.edu.eaut.recruitflow.dao.OfferDAO;
 import vn.edu.eaut.recruitflow.enums.ApplicationStatus;
-import vn.edu.eaut.recruitflow.enums.OfferStatus;
 import vn.edu.eaut.recruitflow.util.BusinessException;
 
 import java.math.BigDecimal;
@@ -44,12 +43,15 @@ public class ReportService {
             report.put("totalApplications", applied);
             report.put("applied", applied);
             report.put("submitted", byStatus.getOrDefault(ApplicationStatus.SUBMITTED.name(), 0L));
+            report.put("shortlisted", shortlisted);
             report.put("screening", screening);
             report.put("interview", interviewed);
             report.put("interviewed", interviewed);
             report.put("offered", offered);
             report.put("hired", hired);
-            report.put("offersSent", offerDAO.countByStatus(OfferStatus.SENT.name()));
+            // The report is an application-submission cohort. Keep this metric on that same
+            // cohort rather than counting every SENT offer in the entire database.
+            report.put("offersSent", offerDAO.countIssuedByApplicationDateRange(fromDate, toDate));
             report.put("shortlistRate", rate(shortlisted, applied));
             report.put("screeningRate", rate(screening, applied));
             report.put("interviewRate", rate(interviewed, applied));

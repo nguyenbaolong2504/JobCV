@@ -9,6 +9,7 @@ import vn.edu.eaut.recruitflow.util.UploadUtil;
 import javax.servlet.http.Part;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.List;
@@ -27,7 +28,9 @@ public class ResumeService {
 
     public List<Resume> getResumes(int candidateId) throws BusinessException {
         try {
-            return resumeDAO.findByCandidateId(candidateId);
+            List<Resume> resumes = resumeDAO.findByCandidateId(candidateId);
+            resumes.forEach(resume -> resume.setFileAvailable(isFileAvailable(resume)));
+            return resumes;
         } catch (SQLException exception) {
             throw new BusinessException("Không thể tải danh sách CV.", exception);
         }
@@ -39,6 +42,7 @@ public class ResumeService {
             if (resume == null || resume.getCandidateId() != candidateId) {
                 throw new BusinessException("Không tìm thấy CV thuộc tài khoản của bạn.");
             }
+            resume.setFileAvailable(isFileAvailable(resume));
             return resume;
         } catch (SQLException exception) {
             throw new BusinessException("Không thể tải CV.", exception);
@@ -60,7 +64,9 @@ public class ResumeService {
 
     public Resume getDefaultResume(int candidateId) throws BusinessException {
         try {
-            return resumeDAO.findDefaultByCandidateId(candidateId);
+            Resume resume = resumeDAO.findDefaultByCandidateId(candidateId);
+            if (resume != null) resume.setFileAvailable(isFileAvailable(resume));
+            return resume;
         } catch (SQLException exception) {
             throw new BusinessException("Không thể tải CV mặc định.", exception);
         }
@@ -103,6 +109,13 @@ public class ResumeService {
 
     public void setDefault(int candidateId, int resumeId) throws BusinessException {
         try {
+            Resume resume = resumeDAO.findById(resumeId);
+            if (resume == null || resume.getCandidateId() != candidateId) {
+                throw new BusinessException("Không tìm thấy CV thuộc tài khoản của bạn.");
+            }
+            if (!isFileAvailable(resume)) {
+                throw new BusinessException("Tệp của CV này không còn trên máy chủ. Vui lòng tải CV mới trước khi đặt mặc định.");
+            }
             if (!resumeDAO.setDefault(candidateId, resumeId)) {
                 throw new BusinessException("Không tìm thấy CV thuộc tài khoản của bạn.");
             }
@@ -124,6 +137,20 @@ public class ResumeService {
             Files.deleteIfExists(Path.of(resume.getFilePath()));
         } catch (IOException ignored) {
             // Metadata has been deleted successfully; an administrator can clean an orphan file later.
+        }
+    }
+
+    /**
+     * A metadata row is not usable for applications/downloads when its managed file was lost.
+     * This never follows a symlink or exposes a path; it only gives the UI a safe availability flag.
+     */
+    public boolean isFileAvailable(Resume resume) {
+        if (resume == null || resume.getFilePath() == null || resume.getFilePath().isBlank()) return false;
+        try {
+            Path stored = Path.of(resume.getFilePath()).toAbsolutePath().normalize();
+            return Files.isRegularFile(stored) && Files.isReadable(stored);
+        } catch (InvalidPathException | SecurityException exception) {
+            return false;
         }
     }
 }

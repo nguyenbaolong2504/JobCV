@@ -9,6 +9,7 @@ import vn.edu.eaut.recruitflow.dao.ResumeDAO;
 import vn.edu.eaut.recruitflow.dao.UserDAO;
 import vn.edu.eaut.recruitflow.enums.ApplicationStatus;
 import vn.edu.eaut.recruitflow.enums.JobStatus;
+import vn.edu.eaut.recruitflow.enums.OfferStatus;
 import vn.edu.eaut.recruitflow.model.Application;
 import vn.edu.eaut.recruitflow.model.ApplicationStatusHistory;
 import vn.edu.eaut.recruitflow.model.Interview;
@@ -65,6 +66,9 @@ public class ApplicationService {
             boolean originalAutoCommit = connection.getAutoCommit();
             connection.setAutoCommit(false);
             try {
+                if (!jobDAO.lockById(connection, jobId)) {
+                    throw new BusinessException("Không tìm thấy tin tuyển dụng.");
+                }
                 Job job = jobDAO.findById(connection, jobId);
                 if (job == null) {
                     throw new BusinessException("Không tìm thấy tin tuyển dụng.");
@@ -83,6 +87,9 @@ public class ApplicationService {
                         ? resumeDAO.findDefaultByCandidateId(candidateId) : resumeDAO.findById(connection, requestedResumeId);
                 if (resume == null || resume.getCandidateId() != candidateId) {
                     throw new BusinessException("Bạn cần chọn một CV thuộc tài khoản của mình trước khi ứng tuyển.");
+                }
+                if (!new ResumeService().isFileAvailable(resume)) {
+                    throw new BusinessException("Tệp CV đã chọn không còn trên máy chủ. Vui lòng tải CV mới trước khi ứng tuyển.");
                 }
 
                 MatchResult match = matchingService.calculate(resume, job.getSkills());
@@ -208,6 +215,7 @@ public class ApplicationService {
 
     public Offer getOffer(int applicationId) throws BusinessException {
         try {
+            offerDAO.expirePastDueSentOffers();
             return offerDAO.findByApplicationId(applicationId);
         } catch (SQLException exception) {
             throw new BusinessException("Không thể tải offer.", exception);
@@ -216,7 +224,8 @@ public class ApplicationService {
 
     public Offer getOfferForCandidate(int candidateId, int applicationId) throws BusinessException {
         getForCandidate(applicationId, candidateId);
-        return getOffer(applicationId);
+        Offer offer = getOffer(applicationId);
+        return offer != null && OfferStatus.DRAFT.name().equals(offer.getStatus()) ? null : offer;
     }
 
     public List<Application> findShortlisted() throws BusinessException {
@@ -238,10 +247,40 @@ public class ApplicationService {
     public void transitionStatus(int applicationId, String targetStatus, String remarks, int actorId) throws BusinessException {
         validateHrActor(actorId);
         ApplicationStatus target = parseStatus(targetStatus);
-        if (target == ApplicationStatus.HIRED) {
-            throw new BusinessException("Chỉ thao tác chấp nhận offer mới được chuyển ứng viên sang HIRED.");
+        validateHrManagedTarget(target);
+        try (Connection connection = DBUtil.getConnection()) {
+            boolean originalAutoCommit = connection.getAutoCommit();
+            connection.setAutoCommit(false);
+            try {
+                if (!applicationDAO.lockById(connection, applicationId)) {
+                    throw new BusinessException("Không tìm thấy đơn ứng tuyển.");
+                }
+                Application application = applicationDAO.findById(connection, applicationId);
+                if (application == null) {
+                    throw new BusinessException("Không tìm thấy đơn ứng tuyển.");
+                }
+                ApplicationStatus current = parseStatus(application.getStatus());
+                if (current == ApplicationStatus.INTERVIEW_SCHEDULED && target == ApplicationStatus.SHORTLISTED) {
+                    throw new BusinessException("Hãy hủy lịch phỏng vấn đang hiệu lực để đưa hồ sơ về danh sách chờ lên lịch.");
+                }
+                if (target == ApplicationStatus.REJECTED && current == ApplicationStatus.INTERVIEW_SCHEDULED
+                        && interviewDAO.hasActiveInterviewForApplication(connection, applicationId, null)) {
+                    throw new BusinessException("Hãy hủy lịch phỏng vấn đang hiệu lực trước khi từ chối hồ sơ.");
+                }
+                transition(connection, application, target, actorId, cleanRemarks(remarks));
+                connection.commit();
+            } catch (BusinessException exception) {
+                connection.rollback();
+                throw exception;
+            } catch (SQLException exception) {
+                connection.rollback();
+                throw new BusinessException("Không thể cập nhật trạng thái đơn ứng tuyển.", exception);
+            } finally {
+                connection.setAutoCommit(originalAutoCommit);
+            }
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể kết nối cơ sở dữ liệu để cập nhật đơn ứng tuyển.", exception);
         }
-        transition(applicationId, target, actorId, remarks, true);
     }
 
     public void withdraw(int applicationId, int candidateId, String remarks) throws BusinessException {
@@ -254,16 +293,23 @@ public class ApplicationService {
 
     void transition(Connection connection, Application application, ApplicationStatus target, int actorId, String remarks)
             throws SQLException, BusinessException {
-        ApplicationStatus current = parseStatus(application.getStatus());
+        if (application == null || !applicationDAO.lockById(connection, application.getId())) {
+            throw new BusinessException("Không tìm thấy đơn ứng tuyển.");
+        }
+        Application lockedApplication = applicationDAO.findById(connection, application.getId());
+        if (lockedApplication == null) {
+            throw new BusinessException("Không tìm thấy đơn ứng tuyển.");
+        }
+        ApplicationStatus current = parseStatus(lockedApplication.getStatus());
         if (!current.canTransitionTo(target)) {
             throw new BusinessException("Không thể chuyển trạng thái đơn từ " + current + " sang " + target + ".");
         }
-        if (!applicationDAO.updateStatus(connection, application.getId(), target.name())) {
-            throw new BusinessException("Không thể cập nhật trạng thái đơn ứng tuyển.");
+        if (!applicationDAO.updateStatusIfCurrent(connection, lockedApplication.getId(), target.name(), current.name())) {
+            throw new BusinessException("Trạng thái đơn đã thay đổi, vui lòng tải lại trang và thử lại.");
         }
-        insertHistory(connection, application.getId(), current.name(), target, actorId, remarks);
-        notificationService.create(connection, application.getCandidateId(), "Cập nhật đơn ứng tuyển",
-                "Đơn ứng tuyển vị trí " + application.getJobTitle() + " đã chuyển sang " + target.name() + ".");
+        insertHistory(connection, lockedApplication.getId(), current.name(), target, actorId, remarks);
+        notificationService.create(connection, lockedApplication.getCandidateId(), "Cập nhật đơn ứng tuyển",
+                "Đơn ứng tuyển vị trí " + lockedApplication.getJobTitle() + " đã chuyển sang " + target.name() + ".");
     }
 
     private void transition(int applicationId, ApplicationStatus target, int actorId, String remarks, boolean notify)
@@ -316,10 +362,34 @@ public class ApplicationService {
 
     private ApplicationStatus parseStatus(String value) throws BusinessException {
         try {
-            return ApplicationStatus.fromValue(value);
+            ApplicationStatus status = ApplicationStatus.fromValue(value);
+            if (status == null) {
+                throw new IllegalArgumentException("missing status");
+            }
+            return status;
         } catch (IllegalArgumentException exception) {
             throw new BusinessException("Trạng thái đơn ứng tuyển không hợp lệ.");
         }
+    }
+
+    /**
+     * The generic HR endpoint handles review decisions only. Milestone states are owned by
+     * their specialised workflows so a forged form cannot create an interview, offer, or hire.
+     */
+    private void validateHrManagedTarget(ApplicationStatus target) throws BusinessException {
+        if (target == ApplicationStatus.SCREENING || target == ApplicationStatus.SHORTLISTED
+                || target == ApplicationStatus.REJECTED) {
+            return;
+        }
+        throw new BusinessException(switch (target) {
+            case INTERVIEW_SCHEDULED -> "Lịch phỏng vấn chỉ được tạo từ chức năng lên lịch phỏng vấn.";
+            case INTERVIEWED -> "Chỉ feedback của interviewer mới có thể hoàn tất bước phỏng vấn.";
+            case OFFERED -> "Chỉ thao tác gửi offer mới được chuyển ứng viên sang OFFERED.";
+            case HIRED -> "Chỉ ứng viên chấp nhận offer mới được chuyển sang HIRED.";
+            case WITHDRAWN -> "Chỉ ứng viên mới có thể rút đơn ứng tuyển.";
+            case SUBMITTED -> "Không thể đưa đơn ứng tuyển trở lại trạng thái SUBMITTED.";
+            default -> "Trạng thái đơn ứng tuyển không được cập nhật từ màn hình xử lý hồ sơ.";
+        });
     }
 
     private String cleanRemarks(String remarks) {

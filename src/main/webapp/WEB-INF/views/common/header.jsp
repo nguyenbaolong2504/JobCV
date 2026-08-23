@@ -1,4 +1,4 @@
-<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" session="false" %>
     <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
         <!DOCTYPE html>
         <html lang="vi">
@@ -13,7 +13,7 @@
             <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
             <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
                 rel="stylesheet">
-            <link href="${pageContext.request.contextPath}/assets/css/app.css?v=20260816-chatbot" rel="stylesheet">
+            <link href="${pageContext.request.contextPath}/assets/css/app.css?v=20260822-auth-cv" rel="stylesheet">
         </head>
 
         <body data-csrf-token="<c:out value='${requestScope.csrfToken}'/>" data-context-path="${pageContext.request.contextPath}">

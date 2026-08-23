@@ -1,13 +1,14 @@
 package vn.edu.eaut.recruitflow.controller;
 
-import vn.edu.eaut.recruitflow.enums.EmploymentType;
-import vn.edu.eaut.recruitflow.enums.JobStatus;
 import vn.edu.eaut.recruitflow.model.Job;
+import vn.edu.eaut.recruitflow.model.JobSearchCriteria;
 import vn.edu.eaut.recruitflow.model.PageResult;
 import vn.edu.eaut.recruitflow.service.DepartmentService;
+import vn.edu.eaut.recruitflow.service.JobCategoryService;
 import vn.edu.eaut.recruitflow.service.JobService;
 import vn.edu.eaut.recruitflow.service.MatchingService;
 import vn.edu.eaut.recruitflow.util.BusinessException;
+import vn.edu.eaut.recruitflow.util.JobSearchCriteriaFactory;
 import vn.edu.eaut.recruitflow.util.RequestUtil;
 
 import javax.servlet.ServletException;
@@ -17,23 +18,24 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.Locale;
+import java.util.List;
 import java.util.Set;
 
 /** Serves only publicly visible, published job advertisements. */
 @WebServlet(name = "PublicJobController", urlPatterns = {"/jobs", "/jobs/detail"})
 public class PublicJobController extends BaseController {
-    private static final Set<String> ALLOWED_SORTS = Set.of("newest", "deadline", "salary");
-    private static final int MAX_KEYWORD_LENGTH = 150;
-    private static final int MAX_LOCATION_LENGTH = 100;
+    private static final Set<String> ALLOWED_SORTS = Set.of("newest", "deadline", "salary", "experience");
 
     private JobService jobService;
     private DepartmentService departmentService;
+    private JobCategoryService jobCategoryService;
     private MatchingService matchingService;
 
     @Override
     public void init() throws ServletException {
         jobService = new JobService();
         departmentService = new DepartmentService();
+        jobCategoryService = new JobCategoryService();
         matchingService = new MatchingService();
     }
 
@@ -53,25 +55,19 @@ public class PublicJobController extends BaseController {
     private void showList(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         try {
-            String keyword = validateSearchText(RequestUtil.text(request, "keyword"), "Từ khóa", MAX_KEYWORD_LENGTH);
-            Integer departmentId = optionalPositiveInt(request, "departmentId", "Phòng ban");
-            String location = validateSearchText(RequestUtil.text(request, "location"), "Địa điểm", MAX_LOCATION_LENGTH);
-            String employmentType = optionalEmploymentType(RequestUtil.text(request, "employmentType"));
+            JobSearchCriteria criteria = JobSearchCriteriaFactory.fromRequest(request);
             String sort = allowedSort(RequestUtil.text(request, "sort"));
             int page = RequestUtil.page(request);
             int pageSize = RequestUtil.pageSize(request);
 
-            // The service contract performs a published-only search; no general job query is used here.
-            PageResult<Job> pageResult = jobService.searchPublishedJobs(
-                    keyword, departmentId, location, employmentType, page, pageSize, sort);
+            // The service contract performs a currently-open, published-only search.
+            PageResult<Job> pageResult = jobService.searchPublishedJobs(criteria, page, pageSize, sort);
 
             request.setAttribute("page", pageResult);
             request.setAttribute("departments", departmentService.getAllDepartments());
-            request.setAttribute("keyword", keyword);
-            request.setAttribute("departmentId", departmentId);
-            request.setAttribute("location", location);
-            request.setAttribute("employmentType", employmentType);
+            request.setAttribute("criteria", criteria);
             request.setAttribute("sort", sort);
+            attachCategoryMetadata(request);
             view(request, response, "/WEB-INF/views/public/jobs.jsp", "Việc làm đang tuyển | RecruitFlow");
         } catch (BusinessException ex) {
             // Invalid query input must never reach DAO SQL construction.
@@ -90,15 +86,12 @@ public class PublicJobController extends BaseController {
         }
 
         try {
-            // This service method is intentionally public-only; it will not return draft, closed, or archived jobs.
+            // This service method is intentionally public-only; it will not return expired, draft, closed, or archived jobs.
             Job job = jobService.getPublishedJobById(jobId);
-            if (job == null || !JobStatus.PUBLISHED.name().equals(job.getStatus())) {
-                response.sendError(HttpServletResponse.SC_NOT_FOUND);
-                return;
-            }
 
             request.setAttribute("job", job);
-            request.setAttribute("skills", jobService.getSkills(jobId));
+            request.setAttribute("skills", job.getSkills());
+            attachCategoryMenu(request);
             attachCandidateMatchWhenAvailable(request, jobId);
             view(request, response, "/WEB-INF/views/public/job-detail.jsp", "Chi tiết việc làm | RecruitFlow");
         } catch (BusinessException ex) {
@@ -120,22 +113,23 @@ public class PublicJobController extends BaseController {
         }
     }
 
-    private Integer optionalPositiveInt(HttpServletRequest request, String parameter, String label)
-            throws BusinessException {
-        return RequestUtil.text(request, parameter).isEmpty()
-                ? null
-                : RequestUtil.requiredPositiveInt(request, parameter, label);
+    private void attachCategoryMenu(HttpServletRequest request) {
+        try {
+            request.setAttribute("categoryRoots", jobCategoryService.getPublicHierarchy());
+        } catch (BusinessException ignored) {
+            // A public job detail page is still useful when optional menu metadata is temporarily unavailable.
+            request.setAttribute("categoryRoots", List.of());
+        }
     }
 
-    private String optionalEmploymentType(String rawEmploymentType) throws BusinessException {
-        if (rawEmploymentType == null || rawEmploymentType.isEmpty()) {
-            return null;
-        }
-        String normalized = rawEmploymentType.trim().toUpperCase(Locale.ROOT);
+    private void attachCategoryMetadata(HttpServletRequest request) {
+        request.setAttribute("categoryRoots", List.of());
+        request.setAttribute("jobCategories", List.of());
         try {
-            return EmploymentType.valueOf(normalized).name();
-        } catch (IllegalArgumentException ex) {
-            throw new BusinessException("Loại hình làm việc không hợp lệ.");
+            request.setAttribute("categoryRoots", jobCategoryService.getPublicHierarchy());
+            request.setAttribute("jobCategories", jobCategoryService.getActiveLeafCategories());
+        } catch (BusinessException ignored) {
+            // The job finder remains available even before the optional category migration is applied.
         }
     }
 
@@ -144,11 +138,4 @@ public class PublicJobController extends BaseController {
         return ALLOWED_SORTS.contains(normalized) ? normalized : "newest";
     }
 
-    private String validateSearchText(String value, String label, int maxLength) throws BusinessException {
-        String normalized = value == null ? "" : value.trim();
-        if (normalized.length() > maxLength) {
-            throw new BusinessException(label + " không được vượt quá " + maxLength + " ký tự.");
-        }
-        return normalized;
-    }
 }

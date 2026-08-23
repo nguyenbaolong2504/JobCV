@@ -4,6 +4,7 @@ import vn.edu.eaut.recruitflow.controller.BaseController;
 import vn.edu.eaut.recruitflow.model.Job;
 import vn.edu.eaut.recruitflow.model.JobSkill;
 import vn.edu.eaut.recruitflow.service.DepartmentService;
+import vn.edu.eaut.recruitflow.service.JobCategoryService;
 import vn.edu.eaut.recruitflow.service.JobService;
 import vn.edu.eaut.recruitflow.util.BusinessException;
 import vn.edu.eaut.recruitflow.util.RequestUtil;
@@ -19,11 +20,13 @@ import java.util.stream.Collectors;
 public class JobEditController extends BaseController {
     private JobService jobService;
     private DepartmentService departmentService;
+    private JobCategoryService jobCategoryService;
 
     @Override
     public void init() throws ServletException {
         jobService = new JobService();
         departmentService = new DepartmentService();
+        jobCategoryService = new JobCategoryService();
     }
 
     @Override
@@ -37,10 +40,16 @@ public class JobEditController extends BaseController {
                     .map(this::toSkillInput)
                     .collect(Collectors.joining(", ")));
             request.setAttribute("departments", departmentService.getAllDepartments());
-            view(request, response, "/WEB-INF/views/hr/job-form.jsp", "Chỉnh sửa tin tuyển dụng | RecruitFlow");
         } catch (BusinessException | IllegalArgumentException ex) {
             redirectWithError(request, response, "/hr/jobs", ex.getMessage());
+            return;
         }
+        try {
+            request.setAttribute("jobCategories", jobCategoryService.getActiveLeafCategories());
+        } catch (BusinessException ignored) {
+            request.setAttribute("jobCategories", java.util.List.of());
+        }
+        view(request, response, "/WEB-INF/views/hr/job-form.jsp", "Chỉnh sửa tin tuyển dụng | RecruitFlow");
     }
 
     private String toSkillInput(JobSkill skill) {

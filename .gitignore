@@ -1,0 +1,10 @@
+# Local developer settings may name local paths but must never contain database or mail secrets.
+dev.config.json
+.recruitflow/
+.env
+.env.*
+!.env.example
+
+# Local crash diagnostics
+hs_err_pid*.log
+replay_pid*.log
