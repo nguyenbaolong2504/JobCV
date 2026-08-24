@@ -2,7 +2,216 @@
     'use strict';
 
     document.addEventListener('DOMContentLoaded', function () {
+        var routeProgress = document.createElement('div');
+        routeProgress.className = 'rf-route-progress';
+        routeProgress.setAttribute('aria-hidden', 'true');
+        document.body.appendChild(routeProgress);
+        function showRouteProgress() { document.documentElement.classList.add('rf-is-navigating'); }
+        function hideRouteProgress() { document.documentElement.classList.remove('rf-is-navigating'); }
+        window.addEventListener('pageshow', hideRouteProgress);
+        document.addEventListener('click', function (event) {
+            var link = event.target.closest('a[href]');
+            if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey
+                    || link.target === '_blank' || link.hasAttribute('download') || link.hasAttribute('data-bs-toggle')) return;
+            var href = link.getAttribute('href') || '';
+            if (!href || href.charAt(0) === '#' || href.indexOf('javascript:') === 0) return;
+            try {
+                var target = new URL(link.href, window.location.href);
+                if (target.origin === window.location.origin && target.href !== window.location.href) showRouteProgress();
+            } catch (ignored) { /* Ignore malformed third-party links. */ }
+        });
         var csrfToken = document.body ? document.body.dataset.csrfToken : '';
+
+        var portalSidebar = document.querySelector('.app-sidebar, .candidate-sidebar, aside.sidebar');
+        var portalNavToggle = document.getElementById('portalNavToggle');
+        var portalNavBackdrop = document.getElementById('portalNavBackdrop');
+        var portalMobileQuery = window.matchMedia('(max-width: 991.98px)');
+
+        function setPortalNavigation(open) {
+            if (!portalSidebar || !portalNavToggle) {
+                return;
+            }
+            if (!open && portalSidebar.contains(document.activeElement)) {
+                portalNavToggle.focus();
+            }
+            document.body.classList.toggle('portal-nav-open', open);
+            portalNavToggle.setAttribute('aria-expanded', String(open));
+            portalNavToggle.setAttribute('aria-label', open ? '\u0110\u00F3ng menu ch\u1EE9c n\u0103ng' : 'M\u1EDF menu ch\u1EE9c n\u0103ng');
+            portalNavToggle.innerHTML = open ? '<i class="bi bi-x-lg" aria-hidden="true"></i>' : '<i class="bi bi-list" aria-hidden="true"></i>';
+            if (portalMobileQuery.matches) {
+                portalSidebar.setAttribute('aria-hidden', String(!open));
+                portalSidebar.toggleAttribute('inert', !open);
+            } else {
+                portalSidebar.removeAttribute('aria-hidden');
+                portalSidebar.removeAttribute('inert');
+            }
+        }
+
+        if (portalSidebar && portalNavToggle && portalNavBackdrop) {
+            if (!portalSidebar.id) {
+                portalSidebar.id = 'portalSidebar';
+            }
+            document.body.classList.add('has-portal-sidebar');
+            portalNavToggle.setAttribute('aria-controls', portalSidebar.id);
+            portalNavToggle.addEventListener('click', function () {
+                setPortalNavigation(!document.body.classList.contains('portal-nav-open'));
+            });
+            portalNavBackdrop.addEventListener('click', function () { setPortalNavigation(false); });
+            portalSidebar.querySelectorAll('a').forEach(function (link) {
+                link.addEventListener('click', function () { setPortalNavigation(false); });
+            });
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape') {
+                    setPortalNavigation(false);
+                }
+            });
+            if (portalMobileQuery.addEventListener) {
+                portalMobileQuery.addEventListener('change', function () { setPortalNavigation(false); });
+            }
+            setPortalNavigation(false);
+        }
+
+        var interfaceLabels = {
+            SUBMITTED: 'M\u1EDBi nh\u1EADn', SCREENING: '\u0110ang s\u00E0ng l\u1ECDc', SHORTLISTED: 'Danh s\u00E1ch ng\u1EAFn',
+            INTERVIEW_SCHEDULED: '\u0110\u00E3 h\u1EB9n ph\u1ECFng v\u1EA5n', INTERVIEWED: '\u0110\u00E3 ph\u1ECFng v\u1EA5n', OFFERED: '\u0110\u00E3 g\u1EEDi th\u01B0 m\u1EDDi',
+            HIRED: '\u0110\u00E3 tuy\u1EC3n', REJECTED: '\u0110\u00E3 t\u1EEB ch\u1ED1i', WITHDRAWN: '\u0110\u00E3 r\u00FAt \u0111\u01A1n',
+            DRAFT: 'B\u1EA3n nh\u00E1p', SENT: '\u0110\u00E3 g\u1EEDi', ACCEPTED: '\u0110\u00E3 ch\u1EA5p nh\u1EADn', DECLINED: '\u0110\u00E3 t\u1EEB ch\u1ED1i', EXPIRED: '\u0110\u00E3 h\u1EBFt h\u1EA1n',
+            SCHEDULED: '\u0110\u00E3 l\u00EAn l\u1ECBch', RESCHEDULED: '\u0110\u00E3 \u0111\u1ED5i l\u1ECBch', COMPLETED: 'Ho\u00E0n th\u00E0nh', CANCELLED: '\u0110\u00E3 h\u1EE7y',
+            NOT_STARTED: 'Ch\u01B0a b\u1EAFt \u0111\u1EA7u', IN_PROGRESS: '\u0110ang th\u1EF1c hi\u1EC7n', TODO: 'C\u1EA7n l\u00E0m', DONE: 'Ho\u00E0n th\u00E0nh',
+            FULL_TIME: 'To\u00E0n th\u1EDDi gian', PART_TIME: 'B\u00E1n th\u1EDDi gian', INTERNSHIP: 'Th\u1EF1c t\u1EADp', CONTRACT: 'H\u1EE3p \u0111\u1ED3ng', REMOTE: 'L\u00E0m t\u1EEB xa',
+            ONLINE: 'Tr\u1EF1c tuy\u1EBFn', OFFLINE: 'Tr\u1EF1c ti\u1EBFp', ONSITE: 'Tr\u1EF1c ti\u1EBFp', PHONE: '\u0110i\u1EC7n tho\u1EA1i',
+            STRONG_HIRE: 'R\u1EA5t ph\u00F9 h\u1EE3p', HIRE: 'N\u00EAn tuy\u1EC3n', CONSIDER: 'C\u00E2n nh\u1EAFc', NO_HIRE: 'Kh\u00F4ng ph\u00F9 h\u1EE3p',
+            PUBLISHED: '\u0110ang \u0111\u0103ng tuy\u1EC3n', CLOSED: '\u0110\u00E3 \u0111\u00F3ng', ARCHIVED: '\u0110\u00E3 l\u01B0u tr\u1EEF',
+            ACTIVE: '\u0110ang ho\u1EA1t \u0111\u1ED9ng', LOCKED: '\u0110\u00E3 kh\u00F3a', INACTIVE: 'Ng\u1EEBng ho\u1EA1t \u0111\u1ED9ng',
+            ADMIN: 'Qu\u1EA3n tr\u1ECB vi\u00EAn', HR: 'Nh\u00E2n s\u1EF1', INTERVIEWER: 'Ng\u01B0\u1EDDi ph\u1ECFng v\u1EA5n', CANDIDATE: '\u1EE8ng vi\u00EAn',
+            MALE: 'Nam', FEMALE: 'N\u1EEF', OTHER: 'Kh\u00E1c'
+        };
+
+        document.querySelectorAll('.status-badge, [data-enum-label]').forEach(function (element) {
+            var key = (element.dataset.enumLabel || element.textContent || '').trim().toUpperCase();
+            if (interfaceLabels[key]) {
+                element.textContent = interfaceLabels[key];
+            }
+        });
+
+        // Translate only standalone enum labels. Never rewrite names or user-entered content
+        // such as "HR Manager", because those values belong to the user/database.
+        var textWalker = document.createTreeWalker(document.body, window.NodeFilter.SHOW_TEXT);
+        var textNode;
+        while ((textNode = textWalker.nextNode())) {
+            var parentTag = textNode.parentElement ? textNode.parentElement.tagName : '';
+            if (parentTag === 'SCRIPT' || parentTag === 'STYLE' || parentTag === 'CODE' || parentTag === 'PRE') {
+                continue;
+            }
+            var enumValue = textNode.nodeValue.trim();
+            var enumKey = enumValue.toUpperCase();
+            if (enumValue && interfaceLabels[enumKey]) {
+                textNode.nodeValue = textNode.nodeValue.replace(enumValue, interfaceLabels[enumKey]);
+            }
+        }
+
+        var employerShowcase = document.querySelector('[data-employer-showcase]');
+        if (employerShowcase) {
+            var employerGrid = employerShowcase.querySelector('[data-employer-grid]');
+            var employerCards = Array.prototype.slice.call(employerShowcase.querySelectorAll('[data-employer-industry]'));
+            var employerFilters = Array.prototype.slice.call(employerShowcase.querySelectorAll('[data-employer-filter]'));
+            var employerAutoplayButton = employerShowcase.querySelector('[data-employer-autoplay]');
+            var employerReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            var employerAutoplayEnabled = !employerReducedMotion;
+            var employerInteractionPaused = false;
+            var employerTouchResumeTimer;
+
+            function advanceEmployerGrid(direction) {
+                if (!employerGrid) {
+                    return;
+                }
+                var maximumScroll = Math.max(0, employerGrid.scrollWidth - employerGrid.clientWidth);
+                if (maximumScroll < 8) {
+                    return;
+                }
+                if (direction > 0 && employerGrid.scrollLeft >= maximumScroll - 8) {
+                    employerGrid.scrollTo({ left: 0, behavior: 'smooth' });
+                    return;
+                }
+                if (direction < 0 && employerGrid.scrollLeft <= 8) {
+                    employerGrid.scrollTo({ left: maximumScroll, behavior: 'smooth' });
+                    return;
+                }
+                employerGrid.scrollBy({ left: direction * Math.max(280, employerGrid.clientWidth * .82), behavior: 'smooth' });
+            }
+
+            function updateEmployerAutoplayButton() {
+                if (!employerAutoplayButton) {
+                    return;
+                }
+                employerAutoplayButton.classList.toggle('is-playing', employerAutoplayEnabled);
+                employerAutoplayButton.setAttribute('aria-pressed', String(employerAutoplayEnabled));
+                employerAutoplayButton.setAttribute('aria-label', employerAutoplayEnabled
+                    ? 'T\u1EA1m d\u1EEBng t\u1EF1 \u0111\u1ED9ng tr\u01B0\u1EE3t'
+                    : 'B\u1EADt t\u1EF1 \u0111\u1ED9ng tr\u01B0\u1EE3t');
+                employerAutoplayButton.innerHTML = employerAutoplayEnabled
+                    ? '<i class="bi bi-pause-fill" aria-hidden="true"></i>'
+                    : '<i class="bi bi-play-fill" aria-hidden="true"></i>';
+            }
+
+            function filterEmployers(filterValue) {
+                employerFilters.forEach(function (button) {
+                    var selected = button.dataset.employerFilter === filterValue;
+                    button.classList.toggle('active', selected);
+                    button.setAttribute('aria-pressed', String(selected));
+                });
+                employerCards.forEach(function (card) {
+                    card.hidden = filterValue !== 'all' && card.dataset.employerIndustry !== filterValue;
+                });
+                if (employerGrid) {
+                    employerGrid.scrollTo({ left: 0, behavior: 'smooth' });
+                }
+            }
+
+            employerFilters.forEach(function (button) {
+                button.addEventListener('click', function () {
+                    filterEmployers(button.dataset.employerFilter || 'all');
+                });
+            });
+
+            employerShowcase.querySelectorAll('[data-employer-scroll]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    var direction = button.dataset.employerScroll === 'previous' ? -1 : 1;
+                    advanceEmployerGrid(direction);
+                });
+            });
+
+            if (employerAutoplayButton) {
+                employerAutoplayButton.addEventListener('click', function () {
+                    employerAutoplayEnabled = !employerAutoplayEnabled;
+                    updateEmployerAutoplayButton();
+                });
+            }
+
+            employerShowcase.addEventListener('mouseenter', function () { employerInteractionPaused = true; });
+            employerShowcase.addEventListener('mouseleave', function () { employerInteractionPaused = false; });
+            employerShowcase.addEventListener('focusin', function () { employerInteractionPaused = true; });
+            employerShowcase.addEventListener('focusout', function () {
+                window.setTimeout(function () {
+                    employerInteractionPaused = employerShowcase.contains(document.activeElement);
+                }, 0);
+            });
+            employerShowcase.addEventListener('touchstart', function () {
+                employerInteractionPaused = true;
+                window.clearTimeout(employerTouchResumeTimer);
+            }, { passive: true });
+            employerShowcase.addEventListener('touchend', function () {
+                window.clearTimeout(employerTouchResumeTimer);
+                employerTouchResumeTimer = window.setTimeout(function () { employerInteractionPaused = false; }, 5000);
+            }, { passive: true });
+
+            window.setInterval(function () {
+                if (employerAutoplayEnabled && !employerInteractionPaused && !document.hidden) {
+                    advanceEmployerGrid(1);
+                }
+            }, 3600);
+            updateEmployerAutoplayButton();
+        }
 
         if (csrfToken) {
             document.querySelectorAll('form').forEach(function (form) {
@@ -42,7 +251,7 @@
                 if (!validSize || !validType) {
                     input.value = '';
                     if (feedback) {
-                        feedback.textContent = 'Chỉ nhận tệp PDF, DOC hoặc DOCX có dung lượng tối đa 5 MB.';
+                        feedback.textContent = 'Ch\u1EC9 nh\u1EADn t\u1EC7p PDF, DOC ho\u1EB7c DOCX c\u00F3 dung l\u01B0\u1EE3ng t\u1ED1i \u0111a 5 MB.';
                         feedback.classList.remove('d-none');
                     }
                     return;
@@ -51,6 +260,74 @@
                 if (feedback) {
                     feedback.textContent = '';
                     feedback.classList.add('d-none');
+                }
+            });
+        });
+
+        document.querySelectorAll('[data-avatar-image]').forEach(function (image) {
+            function showAvatarFallback() {
+                image.classList.add('d-none');
+                var fallback = document.getElementById(image.dataset.fallbackTarget);
+                if (fallback) {
+                    fallback.classList.remove('d-none');
+                }
+            }
+            image.addEventListener('error', showAvatarFallback);
+            if (image.complete && image.naturalWidth === 0) {
+                showAvatarFallback();
+            }
+        });
+
+        document.querySelectorAll('input[type="file"][data-avatar-upload]').forEach(function (input) {
+            input.addEventListener('change', function () {
+                var file = input.files && input.files[0];
+                var preview = document.getElementById(input.dataset.previewTarget);
+                var fallback = document.getElementById(input.dataset.fallbackTarget);
+                var feedback = document.getElementById(input.dataset.feedbackTarget);
+                var fileName = document.getElementById(input.dataset.nameTarget);
+                var saveButton = document.getElementById(input.dataset.saveTarget);
+                var allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+                var allowedExtensions = /\.(jpe?g|png|webp)$/i;
+
+                if (saveButton) {
+                    saveButton.disabled = true;
+                }
+                if (!file) {
+                    return;
+                }
+
+                var validSize = file.size <= 2 * 1024 * 1024;
+                var validType = allowedTypes.indexOf(file.type) !== -1 && allowedExtensions.test(file.name);
+                if (!validSize || !validType) {
+                    input.value = '';
+                    if (feedback) {
+                        feedback.textContent = 'Ch\u1EC9 nh\u1EADn \u1EA3nh JPG, PNG ho\u1EB7c WEBP c\u00F3 dung l\u01B0\u1EE3ng t\u1ED1i \u0111a 2 MB.';
+                        feedback.classList.remove('d-none');
+                    }
+                    return;
+                }
+
+                if (feedback) {
+                    feedback.textContent = '';
+                    feedback.classList.add('d-none');
+                }
+                if (fileName) {
+                    fileName.textContent = file.name;
+                }
+                if (preview) {
+                    if (preview.dataset.objectUrl) {
+                        window.URL.revokeObjectURL(preview.dataset.objectUrl);
+                    }
+                    var objectUrl = window.URL.createObjectURL(file);
+                    preview.dataset.objectUrl = objectUrl;
+                    preview.src = objectUrl;
+                    preview.classList.remove('d-none');
+                }
+                if (fallback) {
+                    fallback.classList.add('d-none');
+                }
+                if (saveButton) {
+                    saveButton.disabled = false;
                 }
             });
         });
@@ -132,10 +409,10 @@
                 if (score === null || score === undefined || score === '') {
                     score = review.score;
                 }
-                var resumeName = review.resumeName || fallbackResumeName || 'CV đã chọn';
+                var resumeName = review.resumeName || fallbackResumeName || 'CV \u0111\u00E3 ch\u1ECDn';
                 var summary = review.summary || '';
                 var rewrittenSummary = review.rewrittenSummary || '';
-                var disclaimer = review.disclaimer || 'AI chỉ phân tích nội dung CV đã chọn; không tự thay đổi hoặc gửi CV thay bạn.';
+                var disclaimer = review.disclaimer || 'AI ch\u1EC9 ph\u00E2n t\u00EDch n\u1ED9i dung CV \u0111\u00E3 ch\u1ECDn; kh\u00F4ng t\u1EF1 thay \u0111\u1ED5i ho\u1EB7c g\u1EEDi CV thay b\u1EA1n.';
                 var scoreBox = document.getElementById('aiReviewScoreBox');
                 var scoreValue = document.getElementById('aiReviewScore');
                 var resultName = document.getElementById('aiReviewResumeName');
@@ -183,7 +460,7 @@
             aiReviewModal.addEventListener('show.bs.modal', function (event) {
                 var trigger = event.relatedTarget;
                 var resumeId = trigger ? (trigger.getAttribute('data-resume-id') || '') : '';
-                var resumeName = trigger ? (trigger.getAttribute('data-resume-name') || 'CV của bạn') : 'CV của bạn';
+                var resumeName = trigger ? (trigger.getAttribute('data-resume-name') || 'CV c\u1EE7a b\u1EA1n') : 'CV c\u1EE7a b\u1EA1n';
 
                 aiReviewForm.reset();
                 aiReviewForm.classList.remove('was-validated');
@@ -196,7 +473,7 @@
                 }
                 if (aiSubmit) {
                     aiSubmit.disabled = false;
-                    aiSubmit.innerHTML = '<i class="bi bi-stars me-1"></i>Nhận gợi ý từ AI';
+                    aiSubmit.innerHTML = '<i class="bi bi-stars me-1"></i>Nh\u1EADn g\u1EE3i \u00FD t\u1EEB AI';
                 }
             });
 
@@ -212,7 +489,7 @@
                     return;
                 }
                 if (!aiResumeIdInput || !aiResumeIdInput.value) {
-                    showAiFeedback('Vui lòng chọn một CV trước khi yêu cầu đánh giá.');
+                    showAiFeedback('Vui l\u00F2ng ch\u1ECDn m\u1ED9t CV tr\u01B0\u1EDBc khi y\u00EAu c\u1EA7u \u0111\u00E1nh gi\u00E1.');
                     return;
                 }
 
@@ -227,7 +504,7 @@
 
                 if (aiSubmit) {
                     aiSubmit.disabled = true;
-                    aiSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>Đang phân tích…';
+                    aiSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>\u0110ang ph\u00E2n t\u00EDch\u2026';
                 }
 
                 window.fetch(aiReviewForm.action, {
@@ -246,17 +523,17 @@
                         try {
                             payload = body ? JSON.parse(body) : {};
                         } catch (error) {
-                            throw new Error('Máy chủ không trả về kết quả AI hợp lệ. Vui lòng thử lại.');
+                            throw new Error('M\u00E1y ch\u1EE7 kh\u00F4ng tr\u1EA3 v\u1EC1 k\u1EBFt qu\u1EA3 AI h\u1EE3p l\u1EC7. Vui l\u00F2ng th\u1EED l\u1EA1i.');
                         }
                         if (!response.ok || payload.ok === false) {
-                            throw new Error(payload.message || payload.error || 'Không thể phân tích CV vào lúc này. Vui lòng thử lại.');
+                            throw new Error(payload.message || payload.error || 'Kh\u00F4ng th\u1EC3 ph\u00E2n t\u00EDch CV v\u00E0o l\u00FAc n\u00E0y. Vui l\u00F2ng th\u1EED l\u1EA1i.');
                         }
                         return payload;
                     });
                 }).then(function (payload) {
                     var review = payload.review || payload;
                     if (!review || typeof review !== 'object') {
-                        throw new Error('Không nhận được nội dung đánh giá từ AI.');
+                        throw new Error('Kh\u00F4ng nh\u1EADn \u0111\u01B0\u1EE3c n\u1ED9i dung \u0111\u00E1nh gi\u00E1 t\u1EEB AI.');
                     }
                     var selectedName = aiSelectedName ? aiSelectedName.textContent : '';
                     if (window.bootstrap && window.bootstrap.Modal) {
@@ -267,14 +544,87 @@
                     }
                     renderAiReview(review, selectedName);
                 }).catch(function (error) {
-                    showAiFeedback(error && error.message ? error.message : 'Không thể kết nối đến dịch vụ AI. Vui lòng thử lại.');
+                    showAiFeedback(error && error.message ? error.message : 'Kh\u00F4ng th\u1EC3 k\u1EBFt n\u1ED1i \u0111\u1EBFn d\u1ECBch v\u1EE5 AI. Vui l\u00F2ng th\u1EED l\u1EA1i.');
                 }).finally(function () {
                     if (aiSubmit) {
                         aiSubmit.disabled = false;
-                        aiSubmit.innerHTML = '<i class="bi bi-stars me-1"></i>Nhận gợi ý từ AI';
+                        aiSubmit.innerHTML = '<i class="bi bi-stars me-1"></i>Nh\u1EADn g\u1EE3i \u00FD t\u1EEB AI';
                     }
                 });
             });
+        }
+
+        document.querySelectorAll('[data-character-counter]').forEach(function (field) {
+            var counter = document.getElementById(field.getAttribute('data-character-counter'));
+            var refreshCounter = function () {
+                if (counter) counter.textContent = field.value.length + '/' + (field.maxLength || 0);
+            };
+            field.addEventListener('input', refreshCounter);
+            refreshCounter();
+        });
+
+        document.querySelectorAll('[data-password-toggle]').forEach(function (toggle) {
+            toggle.addEventListener('click', function () {
+                var field = document.getElementById(toggle.getAttribute('data-password-toggle'));
+                if (!field) return;
+                var revealing = field.type === 'password';
+                field.type = revealing ? 'text' : 'password';
+                toggle.setAttribute('aria-label', revealing ? '\u1EA8n m\u1EADt kh\u1EA9u' : 'Hi\u1EC7n m\u1EADt kh\u1EA9u');
+                var icon = toggle.querySelector('i');
+                if (icon) icon.className = revealing ? 'bi bi-eye-slash' : 'bi bi-eye';
+            });
+        });
+
+        var newPassword = document.getElementById('password');
+        var confirmPassword = document.getElementById('confirmPassword');
+        var strength = document.querySelector('[data-password-strength]');
+        function updatePasswordUi() {
+            if (confirmPassword && newPassword) {
+                confirmPassword.setCustomValidity(confirmPassword.value && confirmPassword.value !== newPassword.value
+                    ? 'M\u1EADt kh\u1EA9u x\u00E1c nh\u1EADn kh\u00F4ng kh\u1EDBp.' : '');
+            }
+            if (!strength || !newPassword) return;
+            var value = newPassword.value;
+            var score = 0;
+            if (value.length >= 6) score++;
+            if (value.length >= 10) score++;
+            if (/[A-Z]/.test(value) && /[a-z]/.test(value)) score++;
+            if (/\d/.test(value) && /[^A-Za-z0-9]/.test(value)) score++;
+            strength.setAttribute('data-score', String(score));
+            var label = strength.querySelector('small');
+            if (label) label.textContent = value ? ['R\u1EA5t y\u1EBFu', 'Y\u1EBFu', 'Trung b\u00ECnh', 'T\u1ED1t', 'M\u1EA1nh'][score] : '\u0110\u1ED9 m\u1EA1nh m\u1EADt kh\u1EA9u';
+        }
+        if (newPassword) newPassword.addEventListener('input', updatePasswordUi);
+        if (confirmPassword) confirmPassword.addEventListener('input', updatePasswordUi);
+
+        var rememberedEmailField = document.getElementById('email');
+        var rememberEmail = document.querySelector('input[name="rememberEmail"]');
+        if (rememberEmail && rememberedEmailField) {
+            try {
+                var storedEmail = window.localStorage.getItem('recruitflowRememberedEmail');
+                if (storedEmail) { rememberedEmailField.value = storedEmail; rememberEmail.checked = true; }
+            } catch (ignored) { /* Local storage can be disabled by the browser. */ }
+            rememberEmail.form.addEventListener('submit', function () {
+                try {
+                    if (rememberEmail.checked) window.localStorage.setItem('recruitflowRememberedEmail', rememberedEmailField.value.trim());
+                    else window.localStorage.removeItem('recruitflowRememberedEmail');
+                } catch (ignored) { /* Login remains available without storage. */ }
+            });
+        }
+
+        document.querySelectorAll('[data-validate-form]').forEach(function (form) {
+            form.addEventListener('submit', function () {
+                form.classList.add('was-validated');
+            });
+        });
+
+        if (window.location.hash === '#apply-now') {
+            var applyModalElement = document.getElementById('applyJobModal');
+            if (applyModalElement && window.bootstrap && window.bootstrap.Modal) {
+                window.setTimeout(function () {
+                    window.bootstrap.Modal.getOrCreateInstance(applyModalElement).show();
+                }, 250);
+            }
         }
 
         document.querySelectorAll('form').forEach(function (form) {
@@ -282,9 +632,16 @@
                 if (event.defaultPrevented || !form.checkValidity()) {
                     return;
                 }
+                form.classList.add('rf-form-submitting');
                 form.querySelectorAll('[data-loading-button]').forEach(function (button) {
                     window.setTimeout(function () {
                         button.disabled = true;
+                        if (!button.querySelector('.spinner-border')) {
+                            var spinner = document.createElement('span');
+                            spinner.className = 'spinner-border spinner-border-sm me-1';
+                            spinner.setAttribute('aria-hidden', 'true');
+                            button.prepend(spinner);
+                        }
                     }, 0);
                 });
             });

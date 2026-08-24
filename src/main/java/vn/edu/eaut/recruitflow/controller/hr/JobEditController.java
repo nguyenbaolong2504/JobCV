@@ -31,7 +31,7 @@ public class JobEditController extends BaseController {
             throws ServletException, IOException {
         try {
             int jobId = RequestUtil.requiredPositiveInt(request, "id", "Tin tuyển dụng");
-            Job job = jobService.getJobById(jobId);
+            Job job = jobService.getJobForManagement(jobId, RequestUtil.currentUserId(request));
             request.setAttribute("job", job);
             request.setAttribute("skillsText", job.getSkills().stream()
                     .map(this::toSkillInput)

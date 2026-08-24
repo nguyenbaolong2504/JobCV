@@ -55,9 +55,14 @@ public class JobDAO extends DaoSupport {
 
     public List<Job> search(String keyword, Integer departmentId, String location, String employmentType, String status,
                             String sort, int page, int pageSize) throws SQLException {
+        return search(keyword, departmentId, location, employmentType, status, null, sort, page, pageSize);
+    }
+
+    public List<Job> search(String keyword, Integer departmentId, String location, String employmentType, String status,
+                            Integer createdBy, String sort, int page, int pageSize) throws SQLException {
         StringBuilder sql = new StringBuilder(SELECT_JOB + "WHERE 1 = 1");
         List<Object> parameters = new ArrayList<>();
-        appendFilters(sql, parameters, keyword, departmentId, location, employmentType, status);
+        appendFilters(sql, parameters, keyword, departmentId, location, employmentType, status, createdBy);
         sql.append(orderBy(sort)).append(" LIMIT ? OFFSET ?");
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql.toString())) {
             bind(statement, parameters);
@@ -71,9 +76,15 @@ public class JobDAO extends DaoSupport {
     }
 
     public long count(String keyword, Integer departmentId, String location, String employmentType, String status) throws SQLException {
-        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM jobs j WHERE 1 = 1");
+        return count(keyword, departmentId, location, employmentType, status, null);
+    }
+
+    public long count(String keyword, Integer departmentId, String location, String employmentType, String status,
+                      Integer createdBy) throws SQLException {
+        StringBuilder sql = new StringBuilder(
+                "SELECT COUNT(*) FROM jobs j JOIN departments d ON d.id = j.department_id WHERE 1 = 1");
         List<Object> parameters = new ArrayList<>();
-        appendFilters(sql, parameters, keyword, departmentId, location, employmentType, status);
+        appendFilters(sql, parameters, keyword, departmentId, location, employmentType, status, createdBy);
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql.toString())) {
             bind(statement, parameters);
             try (ResultSet resultSet = statement.executeQuery()) {
@@ -168,12 +179,17 @@ public class JobDAO extends DaoSupport {
     }
 
     private void appendFilters(StringBuilder sql, List<Object> parameters, String keyword, Integer departmentId,
-                               String location, String employmentType, String status) {
+                               String location, String employmentType, String status, Integer createdBy) {
         if (keyword != null && !keyword.isBlank()) {
-            sql.append(" AND (LOWER(j.title) LIKE ? OR LOWER(j.job_code) LIKE ?)");
+            sql.append(" AND (LOWER(j.title) LIKE ? OR LOWER(j.job_code) LIKE ?"
+                    + " OR LOWER(d.name) LIKE ? OR LOWER(d.description) LIKE ?"
+                    + " OR LOWER(j.description) LIKE ? OR LOWER(j.requirements) LIKE ?"
+                    + " OR EXISTS (SELECT 1 FROM job_skills keyword_skill"
+                    + " WHERE keyword_skill.job_id = j.id AND LOWER(keyword_skill.skill_name) LIKE ?))");
             String value = '%' + keyword.trim().toLowerCase() + '%';
-            parameters.add(value);
-            parameters.add(value);
+            for (int index = 0; index < 7; index++) {
+                parameters.add(value);
+            }
         }
         if (departmentId != null && departmentId > 0) {
             sql.append(" AND j.department_id = ?");
@@ -190,6 +206,10 @@ public class JobDAO extends DaoSupport {
         if (status != null && !status.isBlank()) {
             sql.append(" AND j.status = ?");
             parameters.add(status.trim().toUpperCase());
+        }
+        if (createdBy != null && createdBy > 0) {
+            sql.append(" AND j.created_by = ?");
+            parameters.add(createdBy);
         }
     }
 

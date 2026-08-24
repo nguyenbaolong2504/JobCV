@@ -40,9 +40,9 @@ public class Job {
     public void setTitle(String title) { this.title = title; }
     public int getDepartmentId() { return departmentId; }
     public void setDepartmentId(int departmentId) { this.departmentId = departmentId; }
-    public String getDepartmentName() { return departmentName; }
+    public String getDepartmentName() { return localizeDepartment(departmentName); }
     public void setDepartmentName(String departmentName) { this.departmentName = departmentName; }
-    public String getLocation() { return location; }
+    public String getLocation() { return localizeLocation(location); }
     public void setLocation(String location) { this.location = location; }
     public String getEmploymentType() { return employmentType; }
     public void setEmploymentType(String employmentType) { this.employmentType = employmentType; }
@@ -74,4 +74,30 @@ public class Job {
     public void setUpdatedAt(Timestamp updatedAt) { this.updatedAt = updatedAt; }
     public List<JobSkill> getSkills() { return skills; }
     public void setSkills(List<JobSkill> skills) { this.skills = skills == null ? new ArrayList<>() : new ArrayList<>(skills); }
+
+    private String localizeDepartment(String value) {
+        if (value == null) return null;
+        return switch (value) {
+            case "Information Technology" -> "Công nghệ thông tin";
+            case "Human Resources" -> "Nhân sự";
+            case "Customer Service" -> "Chăm sóc khách hàng";
+            case "Finance" -> "Tài chính";
+            case "Sales" -> "Kinh doanh";
+            case "Design" -> "Thiết kế";
+            case "Operations" -> "Vận hành";
+            case "Construction" -> "Xây dựng";
+            default -> value;
+        };
+    }
+
+    private String localizeLocation(String value) {
+        if (value == null) return null;
+        return switch (value) {
+            case "Hanoi" -> "Hà Nội";
+            case "Ho Chi Minh City" -> "TP. Hồ Chí Minh";
+            case "Da Nang" -> "Đà Nẵng";
+            case "Remote" -> "Làm việc từ xa";
+            default -> value;
+        };
+    }
 }

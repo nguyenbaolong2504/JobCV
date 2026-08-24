@@ -173,7 +173,7 @@ public class AdminService {
             long total = auditLogDAO.count(null, action, entityName);
             return new PageResult<>(logs, page, pageSize, total);
         } catch (SQLException exception) {
-            throw new BusinessException("Không thể tải audit logs.", exception);
+            throw new BusinessException("Không thể tải nhật ký hệ thống.", exception);
         }
     }
 

@@ -5,12 +5,14 @@ import vn.edu.eaut.recruitflow.model.Resume;
 import vn.edu.eaut.recruitflow.util.BusinessException;
 import vn.edu.eaut.recruitflow.util.ResumeParser;
 import vn.edu.eaut.recruitflow.util.UploadUtil;
+import vn.edu.eaut.recruitflow.util.DBUtil;
 
 import javax.servlet.http.Part;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
+import java.sql.Connection;
 import java.util.List;
 
 /** Keeps file-system and database resume metadata consistent as far as possible. */
@@ -81,7 +83,7 @@ public class ResumeService {
             storedFile = UploadUtil.storeResume(part, candidateId, uploadDirectory);
             Resume resume = new Resume();
             resume.setCandidateId(candidateId);
-            resume.setFileName(storedFile.getFileName().toString());
+            resume.setFileName(originalFileName(part.getSubmittedFileName(), extension));
             resume.setFilePath(storedFile.toAbsolutePath().toString());
             resume.setFileType(extension);
             resume.setFileSize(part.getSize());
@@ -113,9 +115,28 @@ public class ResumeService {
 
     public void delete(int candidateId, int resumeId) throws BusinessException {
         Resume resume = getResumeForCandidate(candidateId, resumeId);
-        try {
-            if (!resumeDAO.delete(resumeId, candidateId)) {
-                throw new BusinessException("Không thể xóa CV.");
+        try (Connection connection = DBUtil.getConnection()) {
+            boolean originalAutoCommit = connection.getAutoCommit();
+            connection.setAutoCommit(false);
+            try {
+                if (!resumeDAO.delete(connection, resumeId, candidateId)) {
+                    throw new BusinessException("Không thể xóa CV.");
+                }
+                if (resume.isDefaultResume()) {
+                    Resume replacement = resumeDAO.findNewestByCandidateId(connection, candidateId);
+                    if (replacement != null && !resumeDAO.setDefault(connection, candidateId, replacement.getId())) {
+                        throw new BusinessException("Không thể chọn CV mặc định thay thế.");
+                    }
+                }
+                connection.commit();
+            } catch (BusinessException exception) {
+                connection.rollback();
+                throw exception;
+            } catch (SQLException exception) {
+                connection.rollback();
+                throw new BusinessException("CV đã được dùng cho đơn ứng tuyển nên không thể xóa.", exception);
+            } finally {
+                connection.setAutoCommit(originalAutoCommit);
             }
         } catch (SQLException exception) {
             throw new BusinessException("CV đã được dùng cho đơn ứng tuyển nên không thể xóa.", exception);
@@ -125,5 +146,14 @@ public class ResumeService {
         } catch (IOException ignored) {
             // Metadata has been deleted successfully; an administrator can clean an orphan file later.
         }
+    }
+
+    private String originalFileName(String submittedFileName, String extension) {
+        String value = submittedFileName == null ? "" : submittedFileName.replace('\\', '/');
+        value = value.substring(value.lastIndexOf('/') + 1).replaceAll("[\\r\\n\\t]", "_").trim();
+        if (value.isBlank()) {
+            return "resume." + extension;
+        }
+        return value.length() <= 255 ? value : value.substring(value.length() - 255);
     }
 }

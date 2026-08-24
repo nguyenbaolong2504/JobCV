@@ -49,6 +49,13 @@ CREATE TABLE IF NOT EXISTS candidate_profiles (
     experience_years INT NOT NULL DEFAULT 0,
     skills TEXT NULL,
     summary TEXT NULL,
+    avatar_path VARCHAR(255) NULL,
+    phone VARCHAR(20) NULL,
+    target_position VARCHAR(150) NULL,
+    target_location VARCHAR(100) NULL,
+    expected_salary DECIMAL(15,2) NULL,
+    career_goal TEXT NULL,
+    certificates TEXT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
@@ -122,6 +129,37 @@ CREATE TABLE IF NOT EXISTS job_skills (
     CONSTRAINT fk_job_skills_job FOREIGN KEY (job_id) REFERENCES jobs (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS saved_jobs (
+    candidate_id INT NOT NULL,
+    job_id INT NOT NULL,
+    saved_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (candidate_id, job_id),
+    KEY idx_saved_jobs_candidate_saved_at (candidate_id, saved_at),
+    KEY idx_saved_jobs_job (job_id),
+    CONSTRAINT fk_saved_jobs_candidate FOREIGN KEY (candidate_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_saved_jobs_job FOREIGN KEY (job_id) REFERENCES jobs (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS job_alerts (
+    id INT NOT NULL AUTO_INCREMENT,
+    candidate_id INT NOT NULL,
+    name VARCHAR(80) NOT NULL,
+    keyword VARCHAR(150) NULL,
+    department_id INT NULL,
+    location VARCHAR(100) NULL,
+    employment_type ENUM('FULL_TIME', 'PART_TIME', 'INTERNSHIP', 'CONTRACT', 'REMOTE') NULL,
+    frequency ENUM('DAILY', 'WEEKLY') NOT NULL DEFAULT 'DAILY',
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    last_notified_at TIMESTAMP NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_job_alerts_candidate_active (candidate_id, is_active),
+    KEY idx_job_alerts_department (department_id),
+    CONSTRAINT fk_job_alerts_candidate FOREIGN KEY (candidate_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_job_alerts_department FOREIGN KEY (department_id) REFERENCES departments (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS applications (
     id INT NOT NULL AUTO_INCREMENT,
     job_id INT NOT NULL,
@@ -129,6 +167,7 @@ CREATE TABLE IF NOT EXISTS applications (
     resume_id INT NOT NULL,
     status ENUM('SUBMITTED', 'SCREENING', 'SHORTLISTED', 'INTERVIEW_SCHEDULED', 'INTERVIEWED', 'OFFERED', 'HIRED', 'REJECTED', 'WITHDRAWN') NOT NULL DEFAULT 'SUBMITTED',
     match_score DECIMAL(5,2) NOT NULL DEFAULT 0.00,
+    cover_letter VARCHAR(2000) NULL,
     applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
@@ -293,7 +332,11 @@ INSERT INTO departments (name, description) VALUES
     ('Human Resources', 'HR and Recruitment'),
     ('Marketing', 'Marketing and PR'),
     ('Finance', 'Finance and Accounting'),
-    ('Sales', 'Sales and Account Management')
+    ('Sales', 'Sales and Account Management'),
+    ('Customer Service', 'Customer care and customer success'),
+    ('Design', 'Graphic, product and motion design'),
+    ('Construction', 'Construction, civil engineering and site management'),
+    ('Operations', 'Business operations and project coordination')
 ON DUPLICATE KEY UPDATE description = VALUES(description);
 
 INSERT INTO users (email, password_hash, full_name, role_id, status)

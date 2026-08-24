@@ -15,12 +15,17 @@ import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.Locale;
 import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 
 /** Handles authentication only; credential verification is delegated to {@link UserService}. */
 @WebServlet(name = "LoginController", urlPatterns = "/login")
 public class LoginController extends BaseController {
     private static final Set<String> VALID_ROLES = Set.of("ADMIN", "HR", "INTERVIEWER", "CANDIDATE");
     private static final int SESSION_TIMEOUT_SECONDS = 30 * 60;
+    private static final int MAX_FAILED_ATTEMPTS = 5;
+    private static final long LOCK_MILLIS = 15L * 60L * 1000L;
+    private static final Map<String, LoginAttempt> LOGIN_ATTEMPTS = new HashMap<>();
 
     private UserService userService;
 
@@ -51,9 +56,15 @@ public class LoginController extends BaseController {
         try {
             String email = normalizeAndValidateEmail(RequestUtil.text(request, "email"));
             String password = validatePassword(RequestUtil.text(request, "password"));
+            String attemptKey = clientAddress(request) + '|' + email;
+            if (isTemporarilyLocked(attemptKey)) {
+                redirectWithError(request, response, "/login", "Đăng nhập bị tạm khóa do thử sai quá nhiều lần. Vui lòng thử lại sau 15 phút.");
+                return;
+            }
             User user = userService.authenticate(email, password);
 
             if (user == null) {
+                recordFailure(attemptKey);
                 redirectWithError(request, response, "/login", "Email hoặc mật khẩu không chính xác, hoặc tài khoản không hoạt động.");
                 return;
             }
@@ -66,6 +77,7 @@ public class LoginController extends BaseController {
             }
 
             establishAuthenticatedSession(request, user, role);
+            clearFailures(attemptKey);
             FlashMessage.success(request.getSession(false), "Đăng nhập thành công.");
             redirectByRole(request, response, role);
         } catch (BusinessException ex) {
@@ -103,7 +115,7 @@ public class LoginController extends BaseController {
                 redirect(request, response, "/interviewer/dashboard");
                 break;
             case "CANDIDATE":
-                redirect(request, response, "/candidate/dashboard");
+                redirect(request, response, "/home");
                 break;
             default:
                 redirect(request, response, "/home");
@@ -133,6 +145,49 @@ public class LoginController extends BaseController {
 
     private String normalizeRole(String role) {
         return role == null ? "" : role.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private String clientAddress(HttpServletRequest request) {
+        // Do not trust X-Forwarded-For here unless a trusted reverse proxy is configured to sanitize it.
+        String address = request.getRemoteAddr();
+        return address == null ? "unknown" : address;
+    }
+
+    private static synchronized boolean isTemporarilyLocked(String key) {
+        LoginAttempt attempt = LOGIN_ATTEMPTS.get(key);
+        if (attempt == null) return false;
+        if (attempt.lockedUntil <= System.currentTimeMillis()) {
+            LOGIN_ATTEMPTS.remove(key);
+            return false;
+        }
+        return attempt.failures >= MAX_FAILED_ATTEMPTS;
+    }
+
+    private static synchronized void recordFailure(String key) {
+        long now = System.currentTimeMillis();
+        LoginAttempt current = LOGIN_ATTEMPTS.get(key);
+        int failures = current == null || current.lockedUntil <= now ? 1 : current.failures + 1;
+        LOGIN_ATTEMPTS.put(key, new LoginAttempt(failures, now + LOCK_MILLIS));
+        if (LOGIN_ATTEMPTS.size() > 10_000) {
+            LOGIN_ATTEMPTS.entrySet().removeIf(entry -> entry.getValue().lockedUntil <= now);
+            while (LOGIN_ATTEMPTS.size() > 10_000) {
+                LOGIN_ATTEMPTS.remove(LOGIN_ATTEMPTS.keySet().iterator().next());
+            }
+        }
+    }
+
+    private static synchronized void clearFailures(String key) {
+        LOGIN_ATTEMPTS.remove(key);
+    }
+
+    private static final class LoginAttempt {
+        private final int failures;
+        private final long lockedUntil;
+
+        private LoginAttempt(int failures, long lockedUntil) {
+            this.failures = failures;
+            this.lockedUntil = lockedUntil;
+        }
     }
 
     private void setUtf8(HttpServletRequest request, HttpServletResponse response) throws IOException {

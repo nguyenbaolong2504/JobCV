@@ -49,16 +49,17 @@ public class OfferService {
     public void create(Offer offer, int actorId) throws BusinessException {
         validateHrActor(actorId);
         validateOffer(offer);
+        applicationService.getForHr(offer.getApplicationId(), actorId);
         try (Connection connection = DBUtil.getConnection()) {
             boolean originalAutoCommit = connection.getAutoCommit();
             connection.setAutoCommit(false);
             try {
                 Application application = applicationDAO.findById(connection, offer.getApplicationId());
                 if (application == null || !ApplicationStatus.INTERVIEWED.name().equals(application.getStatus())) {
-                    throw new BusinessException("Chỉ ứng viên đã INTERVIEWED mới có thể tạo offer.");
+                    throw new BusinessException("Chỉ ứng viên đã hoàn thành phỏng vấn mới có thể tạo thư mời.");
                 }
                 if (offerDAO.findByApplicationId(connection, offer.getApplicationId()) != null) {
-                    throw new BusinessException("Đơn ứng tuyển này đã có offer.");
+                    throw new BusinessException("Đơn ứng tuyển này đã có thư mời.");
                 }
                 offer.setStatus(OfferStatus.DRAFT.name());
                 offerDAO.insert(connection, offer);
@@ -68,12 +69,12 @@ public class OfferService {
                 throw exception;
             } catch (SQLException exception) {
                 connection.rollback();
-                throw new BusinessException("Không thể tạo offer.", exception);
+                throw new BusinessException("Không thể tạo thư mời.", exception);
             } finally {
                 connection.setAutoCommit(originalAutoCommit);
             }
         } catch (SQLException exception) {
-            throw new BusinessException("Không thể kết nối cơ sở dữ liệu để tạo offer.", exception);
+            throw new BusinessException("Không thể kết nối cơ sở dữ liệu để tạo thư mời.", exception);
         }
     }
 
@@ -83,17 +84,18 @@ public class OfferService {
         try {
             Offer existing = offerDAO.findById(submitted.getId());
             if (existing == null) {
-                throw new BusinessException("Không tìm thấy offer.");
+                throw new BusinessException("Không tìm thấy thư mời.");
             }
+            applicationService.getForHr(existing.getApplicationId(), actorId);
             if (!OfferStatus.DRAFT.name().equals(existing.getStatus())) {
-                throw new BusinessException("Chỉ có thể chỉnh sửa offer ở trạng thái DRAFT.");
+                throw new BusinessException("Chỉ có thể chỉnh sửa thư mời ở trạng thái bản nháp.");
             }
             submitted.setApplicationId(existing.getApplicationId());
             if (!offerDAO.update(submitted)) {
-                throw new BusinessException("Không thể cập nhật offer.");
+                throw new BusinessException("Không thể cập nhật thư mời.");
             }
         } catch (SQLException exception) {
-            throw new BusinessException("Không thể cập nhật offer.", exception);
+            throw new BusinessException("Không thể cập nhật thư mời.", exception);
         }
     }
 
@@ -103,33 +105,34 @@ public class OfferService {
             boolean originalAutoCommit = connection.getAutoCommit();
             connection.setAutoCommit(false);
             try {
-                Offer offer = offerDAO.findById(connection, offerId);
+                Offer offer = offerDAO.findByIdForUpdate(connection, offerId);
                 if (offer == null || !OfferStatus.DRAFT.name().equals(offer.getStatus())) {
-                    throw new BusinessException("Chỉ có thể gửi offer ở trạng thái DRAFT.");
+                    throw new BusinessException("Chỉ có thể gửi thư mời ở trạng thái bản nháp.");
                 }
                 if (offer.getExpiryDate() == null || offer.getExpiryDate().toLocalDate().isBefore(LocalDate.now())) {
-                    throw new BusinessException("Hạn phản hồi offer phải từ hôm nay trở đi.");
+                    throw new BusinessException("Hạn phản hồi thư mời phải từ hôm nay trở đi.");
                 }
-                Application application = applicationDAO.findById(connection, offer.getApplicationId());
+                Application application = applicationDAO.findByIdForUpdate(connection, offer.getApplicationId());
                 if (application == null || !ApplicationStatus.INTERVIEWED.name().equals(application.getStatus())) {
-                    throw new BusinessException("Đơn ứng tuyển không còn đủ điều kiện gửi offer.");
+                    throw new BusinessException("Đơn ứng tuyển không còn đủ điều kiện gửi thư mời.");
                 }
+                applicationService.getForHr(application.getId(), actorId);
                 offerDAO.updateStatus(connection, offerId, OfferStatus.SENT.name());
-                applicationService.transition(connection, application, ApplicationStatus.OFFERED, actorId, "Đã gửi offer.");
-                notificationService.create(connection, application.getCandidateId(), "Bạn nhận được offer mới",
-                        "Offer cho vị trí " + application.getJobTitle() + " đang chờ phản hồi trước ngày " + offer.getExpiryDate() + ".");
+                applicationService.transition(connection, application, ApplicationStatus.OFFERED, actorId, "Đã gửi thư mời.");
+                notificationService.create(connection, application.getCandidateId(), "Bạn nhận được thư mời mới",
+                        "Thư mời cho vị trí " + application.getJobTitle() + " đang chờ phản hồi trước ngày " + offer.getExpiryDate() + ".");
                 connection.commit();
             } catch (BusinessException exception) {
                 connection.rollback();
                 throw exception;
             } catch (SQLException exception) {
                 connection.rollback();
-                throw new BusinessException("Không thể gửi offer.", exception);
+                throw new BusinessException("Không thể gửi thư mời.", exception);
             } finally {
                 connection.setAutoCommit(originalAutoCommit);
             }
         } catch (SQLException exception) {
-            throw new BusinessException("Không thể kết nối cơ sở dữ liệu để gửi offer.", exception);
+            throw new BusinessException("Không thể kết nối cơ sở dữ liệu để gửi thư mời.", exception);
         }
     }
 
@@ -138,37 +141,37 @@ public class OfferService {
             boolean originalAutoCommit = connection.getAutoCommit();
             connection.setAutoCommit(false);
             try {
-                Offer offer = offerDAO.findById(connection, offerId);
+                Offer offer = offerDAO.findByIdForUpdate(connection, offerId);
                 if (offer == null || offer.getCandidateId() != candidateId) {
-                    throw new BusinessException("Bạn chỉ có thể phản hồi offer của chính mình.");
+                    throw new BusinessException("Bạn chỉ có thể phản hồi thư mời của chính mình.");
                 }
                 if (!OfferStatus.SENT.name().equals(offer.getStatus())) {
-                    throw new BusinessException("Offer này không còn chờ phản hồi.");
+                    throw new BusinessException("Thư mời này không còn chờ phản hồi.");
                 }
-                Application application = applicationDAO.findById(connection, offer.getApplicationId());
+                Application application = applicationDAO.findByIdForUpdate(connection, offer.getApplicationId());
                 if (application == null || !ApplicationStatus.OFFERED.name().equals(application.getStatus())) {
-                    throw new BusinessException("Đơn ứng tuyển không còn phù hợp để phản hồi offer.");
+                    throw new BusinessException("Đơn ứng tuyển không còn phù hợp để phản hồi thư mời.");
                 }
                 if (offer.getExpiryDate() == null || offer.getExpiryDate().toLocalDate().isBefore(LocalDate.now())) {
                     offerDAO.updateStatus(connection, offerId, OfferStatus.EXPIRED.name());
                     connection.commit();
-                    throw new BusinessException("Offer đã hết hạn phản hồi.");
+                    throw new BusinessException("Thư mời đã hết hạn phản hồi.");
                 }
                 if (accepted) {
                     offerDAO.updateStatus(connection, offerId, OfferStatus.ACCEPTED.name());
-                    applicationService.transition(connection, application, ApplicationStatus.HIRED, candidateId, "Ứng viên chấp nhận offer.");
+                    applicationService.transition(connection, application, ApplicationStatus.HIRED, candidateId, "Ứng viên chấp nhận thư mời.");
                     onboardingService.createForHired(connection, application);
                     notificationService.create(connection, candidateId, "Chào mừng bạn gia nhập RecruitFlow",
-                            "Onboarding cho vị trí " + application.getJobTitle() + " đã được khởi tạo.");
+                            "Quy trình tiếp nhận cho vị trí " + application.getJobTitle() + " đã được khởi tạo.");
                     int hrId = jobDAO.findById(connection, application.getJobId()).getCreatedBy();
-                    notificationService.create(connection, hrId, "Ứng viên đã chấp nhận offer",
-                            application.getCandidateName() + " đã chấp nhận offer cho vị trí " + application.getJobTitle() + ".");
+                    notificationService.create(connection, hrId, "Ứng viên đã chấp nhận thư mời",
+                            application.getCandidateName() + " đã chấp nhận thư mời cho vị trí " + application.getJobTitle() + ".");
                 } else {
                     offerDAO.updateStatus(connection, offerId, OfferStatus.DECLINED.name());
-                    applicationService.transition(connection, application, ApplicationStatus.REJECTED, candidateId, "Ứng viên từ chối offer.");
+                    applicationService.transition(connection, application, ApplicationStatus.REJECTED, candidateId, "Ứng viên từ chối thư mời.");
                     int hrId = jobDAO.findById(connection, application.getJobId()).getCreatedBy();
-                    notificationService.create(connection, hrId, "Ứng viên từ chối offer",
-                            application.getCandidateName() + " đã từ chối offer cho vị trí " + application.getJobTitle() + ".");
+                    notificationService.create(connection, hrId, "Ứng viên từ chối thư mời",
+                            application.getCandidateName() + " đã từ chối thư mời cho vị trí " + application.getJobTitle() + ".");
                 }
                 connection.commit();
             } catch (BusinessException exception) {
@@ -176,12 +179,12 @@ public class OfferService {
                 throw exception;
             } catch (SQLException exception) {
                 connection.rollback();
-                throw new BusinessException("Không thể phản hồi offer.", exception);
+                throw new BusinessException("Không thể phản hồi thư mời.", exception);
             } finally {
                 connection.setAutoCommit(originalAutoCommit);
             }
         } catch (SQLException exception) {
-            throw new BusinessException("Không thể kết nối cơ sở dữ liệu để phản hồi offer.", exception);
+            throw new BusinessException("Không thể kết nối cơ sở dữ liệu để phản hồi thư mời.", exception);
         }
     }
 
@@ -189,7 +192,7 @@ public class OfferService {
         try {
             return offerDAO.findByCandidateId(candidateId);
         } catch (SQLException exception) {
-            throw new BusinessException("Không thể tải danh sách offer.", exception);
+            throw new BusinessException("Không thể tải danh sách thư mời.", exception);
         }
     }
 
@@ -197,21 +200,22 @@ public class OfferService {
         try {
             Offer offer = offerDAO.findById(offerId);
             if (offer == null || offer.getCandidateId() != candidateId) {
-                throw new BusinessException("Bạn không có quyền xem offer này.");
+                throw new BusinessException("Bạn không có quyền xem thư mời này.");
             }
             return offer;
         } catch (SQLException exception) {
-            throw new BusinessException("Không thể tải offer.", exception);
+            throw new BusinessException("Không thể tải thư mời.", exception);
         }
     }
 
-    public Offer getForHr(int offerId) throws BusinessException {
+    public Offer getForHr(int offerId, int actorId) throws BusinessException {
         try {
             Offer offer = offerDAO.findById(offerId);
-            if (offer == null) throw new BusinessException("Không tìm thấy offer.");
+            if (offer == null) throw new BusinessException("Không tìm thấy thư mời.");
+            applicationService.getForHr(offer.getApplicationId(), actorId);
             return offer;
         } catch (SQLException exception) {
-            throw new BusinessException("Không thể tải offer.", exception);
+            throw new BusinessException("Không thể tải thư mời.", exception);
         }
     }
 
@@ -219,7 +223,17 @@ public class OfferService {
         try {
             return offerDAO.search(keyword, status, expiryDate);
         } catch (SQLException exception) {
-            throw new BusinessException("Không thể tải danh sách offer.", exception);
+            throw new BusinessException("Không thể tải danh sách thư mời.", exception);
+        }
+    }
+
+    public List<Offer> searchForHr(String keyword, String status, Date expiryDate, int actorId) throws BusinessException {
+        User actor = requireHrActor(actorId);
+        Integer ownerId = "ADMIN".equals(actor.getRoleName()) ? null : actorId;
+        try {
+            return offerDAO.search(keyword, status, expiryDate, ownerId);
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể tải danh sách thư mời.", exception);
         }
     }
 
@@ -227,13 +241,13 @@ public class OfferService {
         if (offer == null || offer.getApplicationId() <= 0 || offer.getSalary() == null || offer.getSalary().compareTo(BigDecimal.ZERO) <= 0
                 || offer.getStartDate() == null || offer.getExpiryDate() == null || offer.getProbationMonths() < 0 || offer.getProbationMonths() > 36
                 || offer.getLocation() == null || offer.getLocation().isBlank()) {
-            throw new BusinessException("Thông tin offer không hợp lệ.");
+            throw new BusinessException("Thông tin thư mời không hợp lệ.");
         }
         if (offer.getStartDate().toLocalDate().isBefore(LocalDate.now())) {
             throw new BusinessException("Ngày bắt đầu làm việc không được ở quá khứ.");
         }
         if (offer.getExpiryDate().toLocalDate().isBefore(LocalDate.now())) {
-            throw new BusinessException("Hạn phản hồi offer không được ở quá khứ.");
+            throw new BusinessException("Hạn phản hồi thư mời không được ở quá khứ.");
         }
         if (offer.getLocation() != null && offer.getLocation().length() > 255) {
             throw new BusinessException("Địa điểm làm việc không được quá 255 ký tự.");
@@ -241,11 +255,16 @@ public class OfferService {
     }
 
     private void validateHrActor(int actorId) throws BusinessException {
+        requireHrActor(actorId);
+    }
+
+    private User requireHrActor(int actorId) throws BusinessException {
         try {
             User user = userDAO.findById(actorId);
             if (user == null || !("HR".equals(user.getRoleName()) || "ADMIN".equals(user.getRoleName()))) {
-                throw new BusinessException("Chỉ HR hoặc Admin được phép quản lý offer.");
+                throw new BusinessException("Chỉ Nhân sự hoặc Quản trị viên được phép quản lý thư mời.");
             }
+            return user;
         } catch (SQLException exception) {
             throw new BusinessException("Không thể xác thực quyền người dùng.", exception);
         }

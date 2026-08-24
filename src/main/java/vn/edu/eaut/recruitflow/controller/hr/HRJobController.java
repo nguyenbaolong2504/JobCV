@@ -42,7 +42,8 @@ public class HRJobController extends BaseController {
                     status,
                     RequestUtil.text(request, "sort"),
                     RequestUtil.page(request),
-                    RequestUtil.pageSize(request)
+                    RequestUtil.pageSize(request),
+                    RequestUtil.currentUserId(request)
             );
             request.setAttribute("jobs", page.getItems());
             request.setAttribute("page", page);

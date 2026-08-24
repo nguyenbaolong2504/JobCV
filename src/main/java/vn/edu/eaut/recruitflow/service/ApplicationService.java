@@ -61,6 +61,12 @@ public class ApplicationService {
 
     /** Implements BR01–BR04 and the required apply transaction. */
     public Application apply(int candidateId, int jobId, Integer requestedResumeId) throws BusinessException {
+        return apply(candidateId, jobId, requestedResumeId, null);
+    }
+
+    /** Applies with an explicitly selected CV and an optional recruiter-facing introduction. */
+    public Application apply(int candidateId, int jobId, Integer requestedResumeId, String coverLetter) throws BusinessException {
+        String normalizedCoverLetter = cleanCoverLetter(coverLetter);
         try (Connection connection = DBUtil.getConnection()) {
             boolean originalAutoCommit = connection.getAutoCommit();
             connection.setAutoCommit(false);
@@ -92,6 +98,7 @@ public class ApplicationService {
                 application.setResumeId(resume.getId());
                 application.setStatus(ApplicationStatus.SUBMITTED.name());
                 application.setMatchScore(match.getMatchScore());
+                application.setCoverLetter(normalizedCoverLetter);
                 applicationDAO.create(connection, application);
                 insertHistory(connection, application.getId(), null, ApplicationStatus.SUBMITTED, candidateId,
                         "Ứng viên nộp hồ sơ.");
@@ -119,15 +126,44 @@ public class ApplicationService {
         return apply(candidateId, jobId, Integer.valueOf(resumeId));
     }
 
+    public boolean hasApplied(int candidateId, int jobId) throws BusinessException {
+        try {
+            return applicationDAO.findByCandidateAndJob(candidateId, jobId) != null;
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể kiểm tra trạng thái ứng tuyển.", exception);
+        }
+    }
+
     public Application getForCandidate(int applicationId, int candidateId) throws BusinessException {
-        Application application = getForHr(applicationId);
+        Application application = loadApplication(applicationId);
         if (application.getCandidateId() != candidateId) {
             throw new BusinessException("Bạn không có quyền xem đơn ứng tuyển này.");
         }
         return application;
     }
 
-    public Application getForHr(int applicationId) throws BusinessException {
+    public Application getForHr(int applicationId, int actorId) throws BusinessException {
+        User actor = requireHrActor(actorId);
+        Application application = loadApplication(applicationId);
+        requireOwnership(application, actor);
+        return application;
+    }
+
+    public Application getForInterviewer(int applicationId, int interviewerId) throws BusinessException {
+        Application application = loadApplication(applicationId);
+        try {
+            boolean assigned = interviewDAO.findByApplication(applicationId).stream()
+                    .anyMatch(interview -> interview.getInterviewerId() == interviewerId);
+            if (!assigned) {
+                throw new BusinessException("Bạn không có quyền xem hồ sơ ứng tuyển này.");
+            }
+            return application;
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể xác thực quyền xem hồ sơ ứng tuyển.", exception);
+        }
+    }
+
+    private Application loadApplication(int applicationId) throws BusinessException {
         try {
             Application application = applicationDAO.findById(applicationId);
             if (application == null) {
@@ -180,6 +216,20 @@ public class ApplicationService {
         }
     }
 
+    public PageResult<Application> searchForHr(String keyword, Integer jobId, String status, BigDecimal minMatchScore,
+                                                int page, int pageSize, int actorId) throws BusinessException {
+        User actor = requireHrActor(actorId);
+        Integer ownerId = "ADMIN".equals(actor.getRoleName()) ? null : actorId;
+        try {
+            List<Application> applications = applicationDAO.search(
+                    keyword, jobId, status, minMatchScore, ownerId, page, pageSize);
+            long total = applicationDAO.count(keyword, jobId, status, minMatchScore, ownerId);
+            return new PageResult<>(applications, page, pageSize, total);
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể tìm kiếm đơn ứng tuyển.", exception);
+        }
+    }
+
     public List<ApplicationStatusHistory> getHistory(int applicationId) throws BusinessException {
         try {
             return historyDAO.findByApplicationId(applicationId);
@@ -190,6 +240,11 @@ public class ApplicationService {
 
     public List<ApplicationStatusHistory> getHistoryForCandidate(int candidateId, int applicationId) throws BusinessException {
         getForCandidate(applicationId, candidateId);
+        return getHistory(applicationId);
+    }
+
+    public List<ApplicationStatusHistory> getHistoryForHr(int applicationId, int actorId) throws BusinessException {
+        getForHr(applicationId, actorId);
         return getHistory(applicationId);
     }
 
@@ -206,6 +261,11 @@ public class ApplicationService {
         return getInterviews(applicationId);
     }
 
+    public List<Interview> getInterviewsForHr(int applicationId, int actorId) throws BusinessException {
+        getForHr(applicationId, actorId);
+        return getInterviews(applicationId);
+    }
+
     public Offer getOffer(int applicationId) throws BusinessException {
         try {
             return offerDAO.findByApplicationId(applicationId);
@@ -219,12 +279,25 @@ public class ApplicationService {
         return getOffer(applicationId);
     }
 
+    public Offer getOfferForHr(int applicationId, int actorId) throws BusinessException {
+        getForHr(applicationId, actorId);
+        return getOffer(applicationId);
+    }
+
     public List<Application> findShortlisted() throws BusinessException {
         return findByStatus(ApplicationStatus.SHORTLISTED.name());
     }
 
+    public List<Application> findShortlisted(int actorId) throws BusinessException {
+        return searchForHr(null, null, ApplicationStatus.SHORTLISTED.name(), null, 1, 100, actorId).getItems();
+    }
+
     public List<Application> findInterviewed() throws BusinessException {
         return findByStatus(ApplicationStatus.INTERVIEWED.name());
+    }
+
+    public List<Application> findInterviewed(int actorId) throws BusinessException {
+        return searchForHr(null, null, ApplicationStatus.INTERVIEWED.name(), null, 1, 100, actorId).getItems();
     }
 
     public List<Application> findByStatus(String status) throws BusinessException {
@@ -236,10 +309,10 @@ public class ApplicationService {
     }
 
     public void transitionStatus(int applicationId, String targetStatus, String remarks, int actorId) throws BusinessException {
-        validateHrActor(actorId);
+        getForHr(applicationId, actorId);
         ApplicationStatus target = parseStatus(targetStatus);
         if (target == ApplicationStatus.HIRED) {
-            throw new BusinessException("Chỉ thao tác chấp nhận offer mới được chuyển ứng viên sang HIRED.");
+            throw new BusinessException("Chỉ thao tác chấp nhận thư mời mới được chuyển ứng viên sang trạng thái đã tuyển.");
         }
         transition(applicationId, target, actorId, remarks, true);
     }
@@ -272,7 +345,7 @@ public class ApplicationService {
             boolean originalAutoCommit = connection.getAutoCommit();
             connection.setAutoCommit(false);
             try {
-                Application application = applicationDAO.findById(connection, applicationId);
+                Application application = applicationDAO.findByIdForUpdate(connection, applicationId);
                 if (application == null) {
                     throw new BusinessException("Không tìm thấy đơn ứng tuyển.");
                 }
@@ -303,14 +376,29 @@ public class ApplicationService {
         historyDAO.insert(connection, history);
     }
 
-    private void validateHrActor(int actorId) throws BusinessException {
+    private User requireHrActor(int actorId) throws BusinessException {
         try {
             User user = userDAO.findById(actorId);
             if (user == null || !("HR".equals(user.getRoleName()) || "ADMIN".equals(user.getRoleName()))) {
                 throw new BusinessException("Chỉ HR hoặc Admin được phép xử lý đơn ứng tuyển.");
             }
+            return user;
         } catch (SQLException exception) {
             throw new BusinessException("Không thể xác thực quyền người dùng.", exception);
+        }
+    }
+
+    private void requireOwnership(Application application, User actor) throws BusinessException {
+        if ("ADMIN".equals(actor.getRoleName())) {
+            return;
+        }
+        try {
+            Job job = jobDAO.findById(application.getJobId());
+            if (job == null || job.getCreatedBy() != actor.getId()) {
+                throw new BusinessException("Bạn chỉ được xử lý ứng viên của tin tuyển dụng do mình tạo.");
+            }
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể xác thực quyền xử lý đơn ứng tuyển.", exception);
         }
     }
 
@@ -328,5 +416,19 @@ public class ApplicationService {
         }
         String cleaned = remarks.trim();
         return cleaned.length() <= 4000 ? cleaned : cleaned.substring(0, 4000);
+    }
+
+    private String cleanCoverLetter(String coverLetter) throws BusinessException {
+        if (coverLetter == null || coverLetter.isBlank()) {
+            return null;
+        }
+        String cleaned = coverLetter.trim().replace("\r\n", "\n");
+        if (cleaned.length() < 20) {
+            throw new BusinessException("Lời giới thiệu cần có ít nhất 20 ký tự.");
+        }
+        if (cleaned.length() > 2000) {
+            throw new BusinessException("Lời giới thiệu không được vượt quá 2.000 ký tự.");
+        }
+        return cleaned;
     }
 }

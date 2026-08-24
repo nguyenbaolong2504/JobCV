@@ -31,7 +31,8 @@ public class HRInterviewController extends BaseController {
             String status = RequestUtil.text(request, "status").isEmpty()
                     ? null : InterviewStatus.fromValue(RequestUtil.text(request, "status")).name();
             request.setAttribute("interviews", interviewService.searchForHr(
-                    RequestUtil.text(request, "keyword"), date, status));
+                    RequestUtil.text(request, "keyword"), date, status,
+                    RequestUtil.currentUserId(request)));
         } catch (BusinessException | IllegalArgumentException ex) {
             request.setAttribute("error", ex.getMessage());
         }

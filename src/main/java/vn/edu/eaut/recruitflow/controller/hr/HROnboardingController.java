@@ -24,15 +24,16 @@ public class HROnboardingController extends BaseController {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         try {
-            request.setAttribute("onboardings", onboardingService.findForHr());
+            int actorId = RequestUtil.currentUserId(request);
+            request.setAttribute("onboardings", onboardingService.findForHr(actorId));
             String onboardingId = RequestUtil.text(request, "id");
             if (!onboardingId.isEmpty()) {
-                request.setAttribute("tasks", onboardingService.getTasks(
-                        RequestUtil.requiredPositiveInt(request, "id", "Onboarding")));
+                request.setAttribute("tasks", onboardingService.getTasksForHr(
+                        RequestUtil.requiredPositiveInt(request, "id", "Quy trình tiếp nhận"), actorId));
             }
         } catch (BusinessException | IllegalArgumentException ex) {
             request.setAttribute("error", ex.getMessage());
         }
-        view(request, response, "/WEB-INF/views/hr/onboarding.jsp", "Onboarding | RecruitFlow");
+        view(request, response, "/WEB-INF/views/hr/onboarding.jsp", "Tiếp nhận nhân sự | RecruitFlow");
     }
 }

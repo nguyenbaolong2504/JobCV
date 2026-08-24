@@ -76,6 +76,22 @@ public class JobService {
         }
     }
 
+    /** Returns a job only when the current staff member owns it or is an administrator. */
+    public Job getJobForManagement(int id, int actorId) throws BusinessException {
+        User actor = requireHrActor(actorId);
+        Job job = getJobById(id);
+        requireOwnership(job, actor);
+        return job;
+    }
+
+    public long countPublishedJobs() throws BusinessException {
+        try {
+            return jobDAO.countActiveJobs();
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể thống kê tin tuyển dụng đang mở.", exception);
+        }
+    }
+
     public PageResult<Job> searchPublishedJobs(String keyword, Integer departmentId, String location,
                                                 String employmentType, int page, int pageSize, String sort)
             throws BusinessException {
@@ -107,8 +123,26 @@ public class JobService {
                 status == null ? null : status.name(), sort, page, pageSize);
     }
 
+    public PageResult<Job> searchForHr(String keyword, Integer departmentId, String location, EmploymentType employmentType,
+                                       JobStatus status, String sort, int page, int pageSize, int actorId)
+            throws BusinessException {
+        User actor = requireHrActor(actorId);
+        Integer ownerId = "ADMIN".equals(actor.getRoleName()) ? null : actorId;
+        try {
+            List<Job> jobs = jobDAO.search(keyword, departmentId, location,
+                    employmentType == null ? null : employmentType.name(),
+                    status == null ? null : status.name(), ownerId, sort, page, pageSize);
+            long total = jobDAO.count(keyword, departmentId, location,
+                    employmentType == null ? null : employmentType.name(),
+                    status == null ? null : status.name(), ownerId);
+            return new PageResult<>(jobs, page, pageSize, total);
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể tải danh sách tin tuyển dụng.", exception);
+        }
+    }
+
     public void createJob(Job job, String skillsText, int actorId) throws BusinessException {
-        validateHrActor(actorId);
+        requireHrActor(actorId);
         validateJob(job);
         job.setCreatedBy(actorId);
         job.setStatus(JobStatus.DRAFT.name());
@@ -132,11 +166,12 @@ public class JobService {
     }
 
     public void updateJob(Job submitted, String skillsText, int actorId) throws BusinessException {
-        validateHrActor(actorId);
+        User actor = requireHrActor(actorId);
         if (submitted == null || submitted.getId() <= 0) {
             throw new BusinessException("Tin tuyển dụng không hợp lệ.");
         }
         Job existing = getJobById(submitted.getId());
+        requireOwnership(existing, actor);
         submitted.setCreatedBy(existing.getCreatedBy());
         submitted.setStatus(existing.getStatus());
         validateJob(submitted);
@@ -165,8 +200,9 @@ public class JobService {
     }
 
     public void changeStatus(int jobId, String targetStatus, int actorId) throws BusinessException {
-        validateHrActor(actorId);
+        User actor = requireHrActor(actorId);
         Job job = getJobById(jobId);
+        requireOwnership(job, actor);
         JobStatus target;
         try {
             target = JobStatus.fromValue(targetStatus);
@@ -232,14 +268,21 @@ public class JobService {
         return result;
     }
 
-    private void validateHrActor(int actorId) throws BusinessException {
+    private User requireHrActor(int actorId) throws BusinessException {
         try {
             User actor = userDAO.findById(actorId);
             if (actor == null || !("HR".equals(actor.getRoleName()) || "ADMIN".equals(actor.getRoleName()))) {
                 throw new BusinessException("Chỉ HR hoặc Admin được phép quản lý tin tuyển dụng.");
             }
+            return actor;
         } catch (SQLException exception) {
             throw new BusinessException("Không thể xác thực quyền người dùng.", exception);
+        }
+    }
+
+    private void requireOwnership(Job job, User actor) throws BusinessException {
+        if (!"ADMIN".equals(actor.getRoleName()) && job.getCreatedBy() != actor.getId()) {
+            throw new BusinessException("Bạn chỉ được quản lý tin tuyển dụng do mình tạo.");
         }
     }
 

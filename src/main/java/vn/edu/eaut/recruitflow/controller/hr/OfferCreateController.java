@@ -29,13 +29,14 @@ public class OfferCreateController extends BaseController {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         try {
+            int actorId = RequestUtil.currentUserId(request);
             String applicationId = RequestUtil.text(request, "applicationId");
             if (!applicationId.isEmpty()) {
                 request.setAttribute("application", applicationService.getForHr(
-                        RequestUtil.requiredPositiveInt(request, "applicationId", "Đơn ứng tuyển")));
+                        RequestUtil.requiredPositiveInt(request, "applicationId", "Đơn ứng tuyển"), actorId));
             }
-            request.setAttribute("applications", applicationService.findInterviewed());
-            view(request, response, "/WEB-INF/views/hr/offer-form.jsp", "Tạo offer | RecruitFlow");
+            request.setAttribute("applications", applicationService.findInterviewed(actorId));
+            view(request, response, "/WEB-INF/views/hr/offer-form.jsp", "Tạo thư mời | RecruitFlow");
         } catch (BusinessException | IllegalArgumentException ex) {
             redirectWithError(request, response, "/hr/offers", ex.getMessage());
         }
@@ -46,7 +47,7 @@ public class OfferCreateController extends BaseController {
             throws ServletException, IOException {
         try {
             offerService.create(bindOffer(request), RequestUtil.currentUserId(request));
-            redirectWithSuccess(request, response, "/hr/offers", "Đã tạo offer ở trạng thái bản nháp.");
+            redirectWithSuccess(request, response, "/hr/offers", "Đã tạo thư mời ở trạng thái bản nháp.");
         } catch (BusinessException | IllegalArgumentException ex) {
             redirectWithError(request, response, "/hr/offers/create", ex.getMessage());
         }

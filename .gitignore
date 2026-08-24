@@ -1,0 +1,9 @@
+target/
+.m2repo/
+*.class
+*.war
+hs_err_pid*.log
+replay_pid*.log
+.idea/
+.vscode/
+*.iml

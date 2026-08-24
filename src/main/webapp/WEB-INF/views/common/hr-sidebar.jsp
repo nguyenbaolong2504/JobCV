@@ -21,10 +21,10 @@
                         Phỏng vấn</a>
                     <a class="${fn:contains(currentPath, '/hr/offers') ? 'active' : ''}"
                         href="${pageContext.request.contextPath}/hr/offers"><i class="bi bi-envelope-paper"></i>
-                        Offer</a>
+                        Thư mời nhận việc</a>
                     <a class="${fn:contains(currentPath, '/hr/onboarding') ? 'active' : ''}"
                         href="${pageContext.request.contextPath}/hr/onboarding"><i class="bi bi-rocket-takeoff"></i>
-                        Onboarding</a>
+                        Tiếp nhận nhân sự</a>
                     <a class="${fn:contains(currentPath, '/hr/reports') ? 'active' : ''}"
                         href="${pageContext.request.contextPath}/hr/reports"><i class="bi bi-bar-chart"></i> Báo cáo</a>
                 </nav>

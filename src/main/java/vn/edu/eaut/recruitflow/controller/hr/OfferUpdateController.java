@@ -26,9 +26,9 @@ public class OfferUpdateController extends BaseController {
             throws ServletException, IOException {
         try {
             Offer offer = OfferCreateController.bindOffer(request);
-            offer.setId(RequestUtil.requiredPositiveInt(request, "id", "Offer"));
+            offer.setId(RequestUtil.requiredPositiveInt(request, "id", "Thư mời"));
             offerService.update(offer, RequestUtil.currentUserId(request));
-            redirectWithSuccess(request, response, "/hr/offers", "Đã cập nhật offer.");
+            redirectWithSuccess(request, response, "/hr/offers", "Đã cập nhật thư mời.");
         } catch (BusinessException | IllegalArgumentException ex) {
             redirectWithError(request, response, "/hr/offers", ex.getMessage());
         }

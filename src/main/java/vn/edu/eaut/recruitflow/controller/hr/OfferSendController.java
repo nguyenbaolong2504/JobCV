@@ -24,9 +24,9 @@ public class OfferSendController extends BaseController {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         try {
-            int offerId = RequestUtil.requiredPositiveInt(request, "id", "Offer");
+            int offerId = RequestUtil.requiredPositiveInt(request, "id", "Thư mời");
             offerService.send(offerId, RequestUtil.currentUserId(request));
-            redirectWithSuccess(request, response, "/hr/offers", "Đã gửi offer cho ứng viên.");
+            redirectWithSuccess(request, response, "/hr/offers", "Đã gửi thư mời cho ứng viên.");
         } catch (BusinessException | IllegalArgumentException ex) {
             redirectWithError(request, response, "/hr/offers", ex.getMessage());
         }

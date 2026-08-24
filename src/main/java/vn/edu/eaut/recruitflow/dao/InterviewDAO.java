@@ -66,14 +66,28 @@ public class InterviewDAO extends DaoSupport {
     }
 
     public List<Interview> findUpcoming() throws SQLException {
+        return findUpcoming(null);
+    }
+
+    public List<Interview> findUpcoming(Integer jobOwnerId) throws SQLException {
         String sql = SELECT_INTERVIEW + "WHERE i.interview_date >= CURRENT_DATE AND i.status IN ('SCHEDULED', 'RESCHEDULED') "
+                + (jobOwnerId == null ? "" : "AND j.created_by = ? ")
                 + "ORDER BY i.interview_date, i.start_time";
-        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql); ResultSet resultSet = statement.executeQuery()) {
-            return mapList(resultSet);
+        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+            if (jobOwnerId != null) {
+                statement.setInt(1, jobOwnerId);
+            }
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return mapList(resultSet);
+            }
         }
     }
 
     public List<Interview> search(String keyword, Date interviewDate, String status) throws SQLException {
+        return search(keyword, interviewDate, status, null);
+    }
+
+    public List<Interview> search(String keyword, Date interviewDate, String status, Integer jobOwnerId) throws SQLException {
         StringBuilder sql = new StringBuilder(SELECT_INTERVIEW + "WHERE 1 = 1");
         List<String> parameters = new ArrayList<>();
         if (keyword != null && !keyword.isBlank()) {
@@ -89,6 +103,9 @@ public class InterviewDAO extends DaoSupport {
         if (status != null && !status.isBlank()) {
             sql.append(" AND i.status = ?");
         }
+        if (jobOwnerId != null && jobOwnerId > 0) {
+            sql.append(" AND j.created_by = ?");
+        }
         sql.append(" ORDER BY i.interview_date DESC, i.start_time DESC");
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql.toString())) {
             int index = 1;
@@ -99,7 +116,10 @@ public class InterviewDAO extends DaoSupport {
                 statement.setDate(index++, interviewDate);
             }
             if (status != null && !status.isBlank()) {
-                statement.setString(index, status.trim().toUpperCase());
+                statement.setString(index++, status.trim().toUpperCase());
+            }
+            if (jobOwnerId != null && jobOwnerId > 0) {
+                statement.setInt(index, jobOwnerId);
             }
             try (ResultSet resultSet = statement.executeQuery()) {
                 return mapList(resultSet);
@@ -200,10 +220,22 @@ public class InterviewDAO extends DaoSupport {
     }
 
     public long countUpcoming() throws SQLException {
-        String sql = "SELECT COUNT(*) FROM interviews WHERE interview_date >= CURRENT_DATE AND status IN ('SCHEDULED', 'RESCHEDULED')";
-        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql); ResultSet resultSet = statement.executeQuery()) {
-            resultSet.next();
-            return resultSet.getLong(1);
+        return countUpcoming(null);
+    }
+
+    public long countUpcoming(Integer jobOwnerId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM interviews i"
+                + (jobOwnerId == null ? "" : " JOIN applications a ON a.id = i.application_id JOIN jobs j ON j.id = a.job_id")
+                + " WHERE i.interview_date >= CURRENT_DATE AND i.status IN ('SCHEDULED', 'RESCHEDULED')"
+                + (jobOwnerId == null ? "" : " AND j.created_by = ?");
+        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+            if (jobOwnerId != null) {
+                statement.setInt(1, jobOwnerId);
+            }
+            try (ResultSet resultSet = statement.executeQuery()) {
+                resultSet.next();
+                return resultSet.getLong(1);
+            }
         }
     }
 

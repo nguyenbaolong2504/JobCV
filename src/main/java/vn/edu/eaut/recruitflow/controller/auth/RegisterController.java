@@ -76,7 +76,7 @@ public class RegisterController extends BaseController {
                 redirect(request, response, "/interviewer/dashboard");
                 break;
             case "CANDIDATE":
-                redirect(request, response, "/candidate/dashboard");
+                redirect(request, response, "/home");
                 break;
             default:
                 redirect(request, response, "/home");
@@ -87,7 +87,7 @@ public class RegisterController extends BaseController {
     private String validateFullName(String fullName) throws BusinessException {
         String normalized = fullName == null ? "" : fullName.trim().replaceAll("\\s+", " ");
         if (normalized.length() < 2 || normalized.length() > 100) {
-            throw new BusinessException("Họ và tên phải có từ 2 đến 120 ký tự.");
+            throw new BusinessException("Họ và tên phải có từ 2 đến 100 ký tự.");
         }
         return normalized;
     }

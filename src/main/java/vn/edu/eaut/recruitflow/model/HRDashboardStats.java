@@ -7,9 +7,16 @@ public class HRDashboardStats {
     private long activeJobs;
     private long totalApplications;
     private long screeningCandidates;
+    private long newApplications;
+    private long shortlistedCandidates;
+    private long interviewedCandidates;
     private long upcomingInterviews;
     private long offersSent;
+    private long draftOffers;
+    private long acceptedOffers;
     private long hiredCandidates;
+    private int hiringRate;
+    private int offerAcceptanceRate;
     private Map<String, Long> applicationsByMonth = new LinkedHashMap<>();
     private Map<String, Long> applicationStatus = new LinkedHashMap<>();
     private Map<String, Long> recruitmentFunnel = new LinkedHashMap<>();
@@ -20,12 +27,26 @@ public class HRDashboardStats {
     public void setTotalApplications(long totalApplications) { this.totalApplications = totalApplications; }
     public long getScreeningCandidates() { return screeningCandidates; }
     public void setScreeningCandidates(long screeningCandidates) { this.screeningCandidates = screeningCandidates; }
+    public long getNewApplications() { return newApplications; }
+    public void setNewApplications(long newApplications) { this.newApplications = newApplications; }
+    public long getShortlistedCandidates() { return shortlistedCandidates; }
+    public void setShortlistedCandidates(long shortlistedCandidates) { this.shortlistedCandidates = shortlistedCandidates; }
+    public long getInterviewedCandidates() { return interviewedCandidates; }
+    public void setInterviewedCandidates(long interviewedCandidates) { this.interviewedCandidates = interviewedCandidates; }
     public long getUpcomingInterviews() { return upcomingInterviews; }
     public void setUpcomingInterviews(long upcomingInterviews) { this.upcomingInterviews = upcomingInterviews; }
     public long getOffersSent() { return offersSent; }
     public void setOffersSent(long offersSent) { this.offersSent = offersSent; }
+    public long getDraftOffers() { return draftOffers; }
+    public void setDraftOffers(long draftOffers) { this.draftOffers = draftOffers; }
+    public long getAcceptedOffers() { return acceptedOffers; }
+    public void setAcceptedOffers(long acceptedOffers) { this.acceptedOffers = acceptedOffers; }
     public long getHiredCandidates() { return hiredCandidates; }
     public void setHiredCandidates(long hiredCandidates) { this.hiredCandidates = hiredCandidates; }
+    public int getHiringRate() { return hiringRate; }
+    public void setHiringRate(int hiringRate) { this.hiringRate = Math.max(0, Math.min(100, hiringRate)); }
+    public int getOfferAcceptanceRate() { return offerAcceptanceRate; }
+    public void setOfferAcceptanceRate(int offerAcceptanceRate) { this.offerAcceptanceRate = Math.max(0, Math.min(100, offerAcceptanceRate)); }
     public Map<String, Long> getApplicationsByMonth() { return applicationsByMonth; }
     public void setApplicationsByMonth(Map<String, Long> applicationsByMonth) { this.applicationsByMonth = applicationsByMonth == null ? new LinkedHashMap<>() : new LinkedHashMap<>(applicationsByMonth); }
     public Map<String, Long> getApplicationStatus() { return applicationStatus; }

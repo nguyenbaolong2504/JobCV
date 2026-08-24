@@ -47,6 +47,7 @@ public class CandidateProfileService {
         validateLength(submitted.getMajor(), 100, "Chuyên ngành");
         validateLength(submitted.getSkills(), 4000, "Kỹ năng");
         validateLength(submitted.getSummary(), 8000, "Giới thiệu");
+        validateCareerFields(submitted);
         submitted.setUserId(candidateId);
         try {
             if (!profileDAO.update(submitted)) {
@@ -54,6 +55,19 @@ public class CandidateProfileService {
             }
         } catch (SQLException exception) {
             throw new BusinessException("Không thể cập nhật hồ sơ ứng viên.", exception);
+        }
+    }
+
+    public void updateAvatar(int candidateId, String avatarPath) throws BusinessException {
+        if (avatarPath != null && !avatarPath.matches("[A-Za-z0-9._-]{1,255}")) {
+            throw new BusinessException("Tên tệp ảnh đại diện không hợp lệ.");
+        }
+        try {
+            if (!profileDAO.updateAvatar(candidateId, avatarPath)) {
+                throw new BusinessException("Không tìm thấy hồ sơ ứng viên.");
+            }
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể cập nhật ảnh đại diện.", exception);
         }
     }
 
@@ -74,6 +88,7 @@ public class CandidateProfileService {
         validateLength(submitted.getMajor(), 100, "Chuyên ngành");
         validateLength(submitted.getSkills(), 4000, "Kỹ năng");
         validateLength(submitted.getSummary(), 8000, "Giới thiệu");
+        validateCareerFields(submitted);
         try (Connection connection = DBUtil.getConnection()) {
             boolean originalAutoCommit = connection.getAutoCommit();
             connection.setAutoCommit(false);
@@ -110,7 +125,7 @@ public class CandidateProfileService {
             return 0;
         }
         int completed = 0;
-        int total = 7;
+        int total = 14;
         if (profile.getDateOfBirth() != null) completed++;
         if (notBlank(profile.getAddress())) completed++;
         if (notBlank(profile.getUniversity())) completed++;
@@ -118,6 +133,13 @@ public class CandidateProfileService {
         if (notBlank(profile.getSkills())) completed++;
         if (notBlank(profile.getSummary())) completed++;
         if (profile.getExperienceYears() > 0) completed++;
+        if (notBlank(profile.getAvatarPath())) completed++;
+        if (notBlank(profile.getPhone())) completed++;
+        if (notBlank(profile.getTargetPosition())) completed++;
+        if (notBlank(profile.getTargetLocation())) completed++;
+        if (profile.getExpectedSalary() != null && profile.getExpectedSalary().signum() > 0) completed++;
+        if (notBlank(profile.getCareerGoal())) completed++;
+        if (notBlank(profile.getCertificates())) completed++;
         return Math.round(completed * 100f / total);
     }
 
@@ -129,5 +151,22 @@ public class CandidateProfileService {
 
     private boolean notBlank(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private void validateCareerFields(CandidateProfile profile) throws BusinessException {
+        validateLength(profile.getPhone(), 20, "Số điện thoại");
+        validateLength(profile.getTargetPosition(), 150, "Vị trí mong muốn");
+        validateLength(profile.getTargetLocation(), 100, "Địa điểm mong muốn");
+        validateLength(profile.getCareerGoal(), 3000, "Mục tiêu nghề nghiệp");
+        validateLength(profile.getCertificates(), 2000, "Chứng chỉ");
+        if (profile.getPhone() != null && !profile.getPhone().isBlank()
+                && !profile.getPhone().matches("^(?:\\+84|0)[0-9]{9,10}$")) {
+            throw new BusinessException("Số điện thoại chưa đúng định dạng Việt Nam.");
+        }
+        if (profile.getExpectedSalary() != null
+                && (profile.getExpectedSalary().signum() < 0
+                || profile.getExpectedSalary().compareTo(new java.math.BigDecimal("1000000000")) > 0)) {
+            throw new BusinessException("Mức lương mong muốn không hợp lệ.");
+        }
     }
 }

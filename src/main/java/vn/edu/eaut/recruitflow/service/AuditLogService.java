@@ -5,6 +5,7 @@ import vn.edu.eaut.recruitflow.model.AuditLog;
 import vn.edu.eaut.recruitflow.util.BusinessException;
 
 import java.sql.SQLException;
+import java.util.List;
 
 /** Writes structured audit entries for administrative and workflow changes. */
 public class AuditLogService {
@@ -31,6 +32,14 @@ public class AuditLogService {
             auditLogDAO.insert(log);
         } catch (SQLException exception) {
             throw new BusinessException("Không thể ghi nhật ký hệ thống.", exception);
+        }
+    }
+
+    public List<AuditLog> getRecent(int limit) throws BusinessException {
+        try {
+            return auditLogDAO.search(null, "", "", 1, Math.max(1, Math.min(limit, 20)));
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể tải hoạt động hệ thống gần đây.", exception);
         }
     }
 }

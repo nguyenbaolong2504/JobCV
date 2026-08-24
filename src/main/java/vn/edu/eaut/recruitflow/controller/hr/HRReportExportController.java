@@ -29,7 +29,8 @@ public class HRReportExportController extends BaseController {
         try {
             LocalDate fromDate = optionalDate(request, "fromDate", "Từ ngày");
             LocalDate toDate = optionalDate(request, "toDate", "Đến ngày");
-            Map<String, Object> report = reportService.getRecruitmentReport(fromDate, toDate);
+            Map<String, Object> report = reportService.getRecruitmentReport(
+                    fromDate, toDate, RequestUtil.currentUserId(request));
             response.setCharacterEncoding("UTF-8");
             response.setContentType("text/csv; charset=UTF-8");
             response.setHeader("Content-Disposition", "attachment; filename=recruitment-report.csv");

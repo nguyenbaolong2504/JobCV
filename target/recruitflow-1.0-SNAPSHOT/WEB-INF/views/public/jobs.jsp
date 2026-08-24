@@ -5,82 +5,26 @@
 <jsp:include page="/WEB-INF/views/common/header.jsp" />
 <jsp:include page="/WEB-INF/views/common/navbar.jsp" />
 
-<main class="py-4 py-lg-5">
-    <div class="container">
-        <div class="mb-4">
-            <nav aria-label="breadcrumb"><ol class="breadcrumb mb-2"><li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/">Trang chủ</a></li><li class="breadcrumb-item active" aria-current="page">Việc làm</li></ol></nav>
-            <h1 class="page-title mb-1">Tìm cơ hội phù hợp với bạn</h1>
-            <p class="text-muted mb-0">Lọc theo nhu cầu và bắt đầu hành trình ứng tuyển ngay hôm nay.</p>
-        </div>
-
-        <form class="filter-card mb-4" action="${pageContext.request.contextPath}/jobs" method="get">
-            <div class="row g-3 align-items-end">
-                <div class="col-lg-4">
-                    <label class="form-label fw-semibold" for="keyword">Từ khóa</label>
-                    <div class="input-group"><span class="input-group-text bg-white"><i class="bi bi-search"></i></span><input class="form-control" id="keyword" name="keyword" type="search" value="<c:out value='${param.keyword}'/>" placeholder="Tên vị trí hoặc kỹ năng"></div>
-                </div>
-                <div class="col-sm-6 col-lg-2">
-                    <label class="form-label fw-semibold" for="departmentId">Phòng ban</label>
-                    <select class="form-select" id="departmentId" name="departmentId">
-                        <option value="">Tất cả</option>
-                        <c:forEach var="department" items="${departments}"><option value="<c:out value='${department.id}'/>" ${param.departmentId eq department.id ? 'selected' : ''}><c:out value="${department.name}" /></option></c:forEach>
-                    </select>
-                </div>
-                <div class="col-sm-6 col-lg-2">
-                    <label class="form-label fw-semibold" for="location">Địa điểm</label>
-                    <input class="form-control" id="location" name="location" type="text" value="<c:out value='${param.location}'/>" placeholder="Hà Nội, Remote...">
-                </div>
-                <div class="col-sm-6 col-lg-2">
-                    <label class="form-label fw-semibold" for="employmentType">Loại hình</label>
-                    <select class="form-select" id="employmentType" name="employmentType">
-                        <option value="">Tất cả</option>
-                        <option value="FULL_TIME" ${param.employmentType eq 'FULL_TIME' ? 'selected' : ''}>Toàn thời gian</option>
-                        <option value="PART_TIME" ${param.employmentType eq 'PART_TIME' ? 'selected' : ''}>Bán thời gian</option>
-                        <option value="INTERNSHIP" ${param.employmentType eq 'INTERNSHIP' ? 'selected' : ''}>Thực tập</option>
-                        <option value="CONTRACT" ${param.employmentType eq 'CONTRACT' ? 'selected' : ''}>Hợp đồng</option>
-                        <option value="REMOTE" ${param.employmentType eq 'REMOTE' ? 'selected' : ''}>Remote</option>
-                    </select>
-                </div>
-                <div class="col-sm-6 col-lg-2 d-grid">
-                    <button class="btn btn-primary" type="submit">Áp dụng bộ lọc</button>
-                </div>
+<main class="job-search-page">
+    <section class="job-search-hero"><div class="container"><nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/">Trang chủ</a></li><li class="breadcrumb-item active">Việc làm</li></ol></nav><span class="section-kicker">CƠ HỘI NGHỀ NGHIỆP</span><h1>Tìm công việc phù hợp với bạn</h1><p><strong><c:out value="${page.totalItems}" /></strong> vị trí đang mở từ các nhà tuyển dụng đã xác thực.</p>
+        <form class="job-search-bar" action="${pageContext.request.contextPath}/jobs" method="get"><div><i class="bi bi-search"></i><label class="visually-hidden" for="keyword">Từ khóa</label><input id="keyword" name="keyword" type="search" maxlength="150" value="<c:out value='${keyword}'/>" placeholder="Chức danh, kỹ năng hoặc tên công ty"></div><div><i class="bi bi-geo-alt"></i><label class="visually-hidden" for="location">Địa điểm</label><input id="location" name="location" maxlength="100" value="<c:out value='${location}'/>" placeholder="Địa điểm làm việc"></div><button class="btn btn-primary" type="submit"><i class="bi bi-search me-1"></i>Tìm việc</button></form>
+        <div class="job-quick-search"><span>Gợi ý:</span><a href="${pageContext.request.contextPath}/jobs?keyword=Java">Java Developer</a><a href="${pageContext.request.contextPath}/jobs?keyword=Marketing">Marketing</a><a href="${pageContext.request.contextPath}/jobs?employmentType=INTERNSHIP">Thực tập</a><a href="${pageContext.request.contextPath}/jobs?employmentType=REMOTE">Remote</a></div>
+    </div></section>
+    <section class="public-section"><div class="container"><jsp:include page="/WEB-INF/views/common/flash.jsp" />
+        <div class="job-search-layout">
+            <aside class="job-filter-panel"><div class="job-filter-head"><div><i class="bi bi-sliders"></i><strong>Bộ lọc tìm kiếm</strong></div><a href="${pageContext.request.contextPath}/jobs">Xóa lọc</a></div><form action="${pageContext.request.contextPath}/jobs" method="get"><input type="hidden" name="keyword" value="<c:out value='${keyword}'/>"><input type="hidden" name="location" value="<c:out value='${location}'/>">
+                <div class="job-filter-group"><label for="departmentId">Lĩnh vực</label><select class="form-select" id="departmentId" name="departmentId"><option value="">Tất cả lĩnh vực</option><c:forEach var="department" items="${departments}"><option value="<c:out value='${department.id}'/>" ${departmentId eq department.id ? 'selected' : ''}><c:out value="${department.displayName}" /></option></c:forEach></select></div>
+                <div class="job-filter-group"><label for="employmentType">Loại hình làm việc</label><select class="form-select" id="employmentType" name="employmentType"><option value="">Tất cả loại hình</option><option value="FULL_TIME" ${employmentType eq 'FULL_TIME' ? 'selected' : ''}>Toàn thời gian</option><option value="PART_TIME" ${employmentType eq 'PART_TIME' ? 'selected' : ''}>Bán thời gian</option><option value="INTERNSHIP" ${employmentType eq 'INTERNSHIP' ? 'selected' : ''}>Thực tập</option><option value="CONTRACT" ${employmentType eq 'CONTRACT' ? 'selected' : ''}>Hợp đồng</option><option value="REMOTE" ${employmentType eq 'REMOTE' ? 'selected' : ''}>Làm từ xa</option></select></div>
+                <div class="job-filter-group"><span class="job-filter-label">Kinh nghiệm phổ biến</span><div class="filter-shortcuts"><a href="${pageContext.request.contextPath}/jobs?keyword=Intern">Chưa có kinh nghiệm</a><a href="${pageContext.request.contextPath}/jobs?keyword=Junior">1–2 năm</a><a href="${pageContext.request.contextPath}/jobs?keyword=Senior">Senior</a></div></div>
+                <button class="btn btn-primary w-100" type="submit">Áp dụng bộ lọc</button>
+            </form><div class="job-alert-promo"><span><i class="bi bi-bell"></i></span><strong>Không bỏ lỡ việc phù hợp</strong><p>Đăng nhập để lưu bộ lọc và nhận thông báo cơ hội mới.</p><a href="${pageContext.request.contextPath}/login">Thiết lập thông báo <i class="bi bi-arrow-right"></i></a></div></aside>
+            <div class="job-results-panel"><header class="job-results-head"><div><h2><c:choose><c:when test="${not empty keyword}">Kết quả cho “<c:out value="${keyword}" />”</c:when><c:otherwise>Việc làm mới nhất</c:otherwise></c:choose></h2><p>Tìm thấy <strong><c:out value="${page.totalItems}" /></strong> cơ hội phù hợp</p></div><form action="${pageContext.request.contextPath}/jobs" method="get"><input type="hidden" name="keyword" value="<c:out value='${keyword}'/>"><input type="hidden" name="departmentId" value="<c:out value='${departmentId}'/>"><input type="hidden" name="location" value="<c:out value='${location}'/>"><input type="hidden" name="employmentType" value="<c:out value='${employmentType}'/>"><label for="sort">Sắp xếp</label><select class="form-select form-select-sm" id="sort" name="sort" onchange="this.form.submit()"><option value="newest" ${sort eq 'newest' ? 'selected' : ''}>Mới nhất</option><option value="deadline" ${sort eq 'deadline' ? 'selected' : ''}>Sắp hết hạn</option><option value="salary" ${sort eq 'salary' ? 'selected' : ''}>Lương cao</option></select></form></header>
+                <div class="job-result-list"><c:forEach var="job" items="${page.items}"><c:set var="company" value="${companyByDepartment[job.departmentId]}"/><c:url var="jobDetailUrl" value="/jobs/detail"><c:param name="id" value="${job.id}" /></c:url><c:url var="companyUrl" value="/companies/detail"><c:param name="id" value="${job.departmentId}" /></c:url>
+                    <article class="job-result-card"><a class="job-result-logo" href="${companyUrl}"><img src="${pageContext.request.contextPath}/assets/images/employers/${company.logoFile}" alt="Logo ${company.name}" loading="lazy"></a><div class="job-result-main"><div class="d-flex flex-wrap justify-content-between gap-2"><div><a class="job-result-title" href="${jobDetailUrl}"><c:out value="${job.title}" /></a><a class="job-result-company" href="${companyUrl}"><c:out value="${company.name}" /><i class="bi bi-patch-check-fill"></i></a></div><span class="job-new-badge">Mới</span></div><div class="job-result-tags"><span class="salary"><i class="bi bi-cash-stack"></i><fmt:formatNumber value="${job.salaryMin}" type="number" />–<fmt:formatNumber value="${job.salaryMax}" type="number" /> VNĐ</span><span><i class="bi bi-geo-alt"></i><c:out value="${job.location}" /></span><span><i class="bi bi-briefcase"></i><span data-enum-label="${job.employmentType}"><c:out value="${job.employmentType}" /></span></span><span><i class="bi bi-person-workspace"></i><c:out value="${job.experienceRequired}" /> năm</span></div><div class="job-result-bottom"><span><i class="bi bi-clock"></i>Hạn nộp <c:out value="${job.deadline}" /></span><span><i class="bi bi-people"></i>Tuyển <c:out value="${job.numberOfPositions}" /> vị trí</span><div><a class="btn btn-sm btn-outline-primary" href="${jobDetailUrl}">Xem chi tiết</a><c:choose><c:when test="${sessionScope.role eq 'CANDIDATE'}"><a class="btn btn-sm btn-primary" href="${jobDetailUrl}#apply-now">Ứng tuyển</a></c:when><c:when test="${empty sessionScope.userId}"><a class="btn btn-sm btn-primary" href="${pageContext.request.contextPath}/login">Đăng nhập để ứng tuyển</a></c:when></c:choose></div></div></div></article>
+                </c:forEach><c:if test="${empty page.items}"><div class="rf-card empty-state"><div class="empty-icon"><i class="bi bi-search"></i></div><h3 class="h5">Chưa tìm thấy công việc phù hợp</h3><p class="mb-3">Thử rút gọn từ khóa, chọn lĩnh vực khác hoặc xóa bộ lọc.</p><a class="btn btn-outline-primary" href="${pageContext.request.contextPath}/jobs">Xem tất cả việc làm</a></div></c:if></div>
+                <jsp:include page="/WEB-INF/views/common/pagination.jsp" />
             </div>
-        </form>
-
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2 class="h5 mb-0">Danh sách việc làm</h2>
-            <form action="${pageContext.request.contextPath}/jobs" method="get" class="d-flex gap-2 align-items-center">
-                <input type="hidden" name="keyword" value="<c:out value='${param.keyword}'/>">
-                <input type="hidden" name="departmentId" value="<c:out value='${param.departmentId}'/>">
-                <input type="hidden" name="location" value="<c:out value='${param.location}'/>">
-                <input type="hidden" name="employmentType" value="<c:out value='${param.employmentType}'/>">
-                <label class="small text-muted" for="sort">Sắp xếp</label>
-                <select class="form-select form-select-sm" id="sort" name="sort" onchange="this.form.submit()">
-                    <option value="newest" ${empty param.sort or param.sort eq 'newest' ? 'selected' : ''}>Mới nhất</option>
-                    <option value="deadline" ${param.sort eq 'deadline' ? 'selected' : ''}>Hạn nộp gần nhất</option>
-                    <option value="salary" ${param.sort eq 'salary' ? 'selected' : ''}>Mức lương</option>
-                </select>
-            </form>
         </div>
-
-        <div class="row g-4">
-            <c:forEach var="job" items="${page.items}">
-                <c:url var="jobDetailUrl" value="/jobs/detail"><c:param name="id" value="${job.id}" /></c:url>
-                <div class="col-md-6 col-xl-4">
-                    <article class="job-card">
-                        <div class="d-flex justify-content-between gap-2 mb-3"><span class="badge text-bg-primary-subtle text-primary"><c:out value="${job.departmentName}" /></span><span class="small text-muted"><i class="bi bi-calendar3 me-1"></i><c:out value="${job.deadline}" /></span></div>
-                        <a class="job-card-title d-block mb-3" href="${jobDetailUrl}"><c:out value="${job.title}" /></a>
-                        <div class="d-flex flex-column gap-2 mb-3"><span class="meta-item"><i class="bi bi-geo-alt"></i><c:out value="${job.location}" /></span><span class="meta-item"><i class="bi bi-briefcase"></i><c:out value="${job.employmentType}" /></span><span class="meta-item"><i class="bi bi-person-workspace"></i>Tối thiểu <c:out value="${job.experienceRequired}" /> năm kinh nghiệm</span></div>
-                        <div class="pt-3 border-top d-flex justify-content-between align-items-center"><span class="fw-semibold text-success"><fmt:formatNumber value="${job.salaryMin}" type="number" /> – <fmt:formatNumber value="${job.salaryMax}" type="number" /> VNĐ</span><a href="${jobDetailUrl}" class="btn btn-sm btn-outline-primary">Chi tiết</a></div>
-                    </article>
-                </div>
-            </c:forEach>
-            <c:if test="${empty page.items}">
-                <div class="col-12"><div class="rf-card empty-state"><div class="empty-icon"><i class="bi bi-search"></i></div><h5>Không tìm thấy công việc phù hợp</h5><p class="mb-3">Hãy thử đổi từ khóa hoặc nới rộng bộ lọc tìm kiếm.</p><a href="${pageContext.request.contextPath}/jobs" class="btn btn-outline-primary">Xóa bộ lọc</a></div></div>
-            </c:if>
-        </div>
-        <jsp:include page="/WEB-INF/views/common/pagination.jsp" />
-    </div>
+    </div></section>
 </main>
-
 <jsp:include page="/WEB-INF/views/common/footer.jsp" />

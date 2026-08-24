@@ -41,6 +41,6 @@ public class AuditLogController extends BaseController {
         } catch (BusinessException | IllegalArgumentException ex) {
             request.setAttribute("error", ex.getMessage());
         }
-        view(request, response, "/WEB-INF/views/admin/audit-logs.jsp", "Audit Logs | RecruitFlow");
+        view(request, response, "/WEB-INF/views/admin/audit-logs.jsp", "Nhật ký hệ thống | RecruitFlow");
     }
 }

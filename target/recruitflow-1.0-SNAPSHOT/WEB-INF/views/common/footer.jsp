@@ -1,5 +1,15 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
+<c:set var="currentUri" value="${pageContext.request.requestURI}" />
+<c:if test="${not fn:contains(currentUri, '/candidate/') and not fn:contains(currentUri, '/hr/') and not fn:contains(currentUri, '/admin/') and not fn:contains(currentUri, '/interviewer/') and not fn:endsWith(currentUri, '/login') and not fn:endsWith(currentUri, '/register')}">
+<footer class="rf-site-footer"><div class="container">
+    <div class="rf-footer-main"><div class="rf-footer-brand"><a href="${pageContext.request.contextPath}/"><span>R</span><strong>RecruitFlow</strong></a><p>Kết nối đúng người với đúng cơ hội bằng trải nghiệm tuyển dụng minh bạch, có cấu trúc và thân thiện.</p><div><span><i class="bi bi-shield-check"></i>Tin tuyển dụng rõ ràng</span><span><i class="bi bi-patch-check"></i>Nhà tuyển dụng xác thực</span></div></div>
+        <div class="rf-footer-links"><section><h2>Dành cho ứng viên</h2><a href="${pageContext.request.contextPath}/jobs">Tìm việc làm</a><a href="${pageContext.request.contextPath}/companies">Khám phá công ty</a><a href="${pageContext.request.contextPath}/register">Tạo tài khoản</a></section><section><h2>Dành cho nhà tuyển dụng</h2><a href="${pageContext.request.contextPath}/register">Đăng tin tuyển dụng</a><a href="${pageContext.request.contextPath}/login">Quản lý ứng viên</a><a href="${pageContext.request.contextPath}/login">Báo cáo tuyển dụng</a></section><section><h2>RecruitFlow</h2><a href="${pageContext.request.contextPath}/">Về chúng tôi</a><a href="${pageContext.request.contextPath}/companies">Đối tác tuyển dụng</a><a href="${pageContext.request.contextPath}/jobs">Cơ hội nổi bật</a></section></div>
+    </div><div class="rf-footer-bottom"><span>© 2026 RecruitFlow · Nền tảng tuyển dụng EAUT</span><div><span>Quyền riêng tư</span><span>Điều khoản sử dụng</span><span>Hỗ trợ</span></div></div>
+</div></footer>
+</c:if>
+<script src="${pageContext.request.contextPath}/webjars/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
 <div class="rf-chatbot" id="rfChatbot">
     <section class="rf-chatbot-panel" id="rfChatbotPanel" aria-label="Tr&#7907; l&#253; RecruitFlow" hidden>
         <header class="rf-chatbot-header">
@@ -22,7 +32,11 @@
         <i class="bi bi-chat-dots-fill"></i><span>1</span>
     </button>
 </div>
-<script src="${pageContext.request.contextPath}/assets/js/app.js?v=20260816-chatbot-v2"></script>
+<button class="portal-nav-toggle" id="portalNavToggle" type="button" aria-label="Mở menu chức năng" aria-expanded="false">
+    <i class="bi bi-list" aria-hidden="true"></i>
+</button>
+<button class="portal-nav-backdrop" id="portalNavBackdrop" type="button" aria-label="Đóng menu chức năng" tabindex="-1"></button>
+<script src="${pageContext.request.contextPath}/assets/js/app.js?v=20260824-release-v1"></script>
 </body>
 
 </html>

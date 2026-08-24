@@ -50,7 +50,9 @@ Thêm vào CATALINA_OPTS hoặc cấu hình server trong IDE:
 -Drecruitflow.db.password=your_mysql_password
 ~~~
 
-DBUtil ưu tiên JVM property → environment variable → default local (root/root, localhost:3306/recruitflow).
+DBUtil ưu tiên JVM property → environment variable. URL và user mặc định lần lượt là
+`localhost:3306/recruitflow` và `root`; mật khẩu không có giá trị mặc định và phải được cấu hình
+theo môi trường. Source không chứa mật khẩu database.
 
 ## 3. AI CV Coach (tùy chọn)
 

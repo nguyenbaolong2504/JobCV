@@ -27,10 +27,11 @@ public class OfferEditController extends BaseController {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         try {
-            int offerId = RequestUtil.requiredPositiveInt(request, "id", "Offer");
-            request.setAttribute("offer", offerService.getForHr(offerId));
-            request.setAttribute("applications", applicationService.findInterviewed());
-            view(request, response, "/WEB-INF/views/hr/offer-form.jsp", "Chỉnh sửa offer | RecruitFlow");
+            int offerId = RequestUtil.requiredPositiveInt(request, "id", "Thư mời");
+            int actorId = RequestUtil.currentUserId(request);
+            request.setAttribute("offer", offerService.getForHr(offerId, actorId));
+            request.setAttribute("applications", applicationService.findInterviewed(actorId));
+            view(request, response, "/WEB-INF/views/hr/offer-form.jsp", "Chỉnh sửa thư mời | RecruitFlow");
         } catch (BusinessException | IllegalArgumentException ex) {
             redirectWithError(request, response, "/hr/offers", ex.getMessage());
         }

@@ -36,7 +36,7 @@ public class InterviewerInterviewDetailController extends BaseController {
             int interviewerId = RequestUtil.currentUserId(request);
             Interview interview = interviewService.getForInterviewer(interviewId, interviewerId);
             request.setAttribute("interview", interview);
-            var application = applicationService.getForHr(interview.getApplicationId());
+            var application = applicationService.getForInterviewer(interview.getApplicationId(), interviewerId);
             request.setAttribute("application", application);
             try {
                 request.setAttribute("profile", candidateProfileService.getProfile(application.getCandidateId()));

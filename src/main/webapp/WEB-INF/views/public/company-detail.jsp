@@ -1,0 +1,20 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+<c:set var="pageTitle" value="${company.name} | RecruitFlow" scope="request" />
+<jsp:include page="/WEB-INF/views/common/header.jsp" />
+<jsp:include page="/WEB-INF/views/common/navbar.jsp" />
+
+<main class="company-detail-page">
+    <section class="company-profile-cover"><div class="container"><nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/">Trang chủ</a></li><li class="breadcrumb-item"><a href="${pageContext.request.contextPath}/companies">Công ty</a></li><li class="breadcrumb-item active"><c:out value="${company.name}" /></li></ol></nav></div></section>
+    <div class="container company-profile-shell">
+        <header class="company-profile-header"><span class="company-profile-logo"><img src="${pageContext.request.contextPath}/assets/images/employers/${company.logoFile}" alt="Logo ${company.name}"></span><div class="flex-grow-1"><div class="d-flex flex-wrap align-items-center gap-2"><h1><c:out value="${company.name}" /></h1><c:if test="${company.verified}"><span class="company-verified"><i class="bi bi-patch-check-fill"></i>Nhà tuyển dụng đã xác thực</span></c:if></div><p><c:out value="${company.industry}" /></p><div class="company-profile-meta"><span><i class="bi bi-geo-alt"></i><c:out value="${company.location}" /></span><span><i class="bi bi-people"></i><c:out value="${company.size}" /></span><span><i class="bi bi-globe2"></i><c:out value="${company.website}" /></span></div></div><a class="btn btn-primary" href="#open-jobs"><i class="bi bi-briefcase me-1"></i><c:out value="${company.openJobs}" /> việc đang tuyển</a></header>
+        <div class="row g-4 mt-1"><div class="col-lg-8">
+            <section class="content-card mb-4"><h2>Giới thiệu công ty</h2><p class="company-about"><c:out value="${company.description}" /></p></section>
+            <section class="content-card" id="open-jobs"><div class="d-flex justify-content-between align-items-center gap-3 mb-3"><div><h2 class="mb-1">Vị trí đang tuyển</h2><p class="text-muted mb-0">Khám phá cơ hội phù hợp tại <c:out value="${company.name}" />.</p></div><span class="result-count"><strong><c:out value="${company.openJobs}" /></strong> tin</span></div>
+                <div class="company-job-list"><c:forEach var="job" items="${companyJobs}"><c:url var="jobUrl" value="/jobs/detail"><c:param name="id" value="${job.id}" /></c:url><article><span class="company-job-icon"><i class="bi bi-briefcase"></i></span><div class="flex-grow-1"><a href="${jobUrl}"><c:out value="${job.title}" /></a><div><span><i class="bi bi-geo-alt"></i><c:out value="${job.location}" /></span><span><i class="bi bi-clock"></i>Hạn <c:out value="${job.deadline}" /></span><span class="text-success"><fmt:formatNumber value="${job.salaryMin}" type="number" />–<fmt:formatNumber value="${job.salaryMax}" type="number" /> VNĐ</span></div></div><a class="btn btn-sm btn-outline-primary" href="${jobUrl}">Xem chi tiết</a></article></c:forEach><c:if test="${empty companyJobs}"><div class="empty-state py-4"><div class="empty-icon"><i class="bi bi-hourglass-split"></i></div><h3 class="h6">Chưa có vị trí đang mở</h3><p class="mb-0">Hãy quay lại sau để xem cơ hội mới.</p></div></c:if></div>
+            </section>
+        </div><aside class="col-lg-4"><section class="content-card position-sticky" style="top:5.5rem"><h2>Điểm nổi bật</h2><div class="company-highlight-list"><c:forEach var="highlight" items="${company.highlights}"><div><i class="bi bi-check2-circle"></i><span><c:out value="${highlight}" /></span></div></c:forEach></div><hr><div class="job-safety-note mt-0"><i class="bi bi-shield-check"></i><span><strong>Thông tin minh bạch</strong>Các vị trí công khai thời hạn, yêu cầu và mức lương dự kiến.</span></div></section></aside></div>
+    </div>
+</main>
+<jsp:include page="/WEB-INF/views/common/footer.jsp" />

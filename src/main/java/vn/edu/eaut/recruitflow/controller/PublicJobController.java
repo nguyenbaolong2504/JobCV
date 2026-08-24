@@ -7,6 +7,10 @@ import vn.edu.eaut.recruitflow.model.PageResult;
 import vn.edu.eaut.recruitflow.service.DepartmentService;
 import vn.edu.eaut.recruitflow.service.JobService;
 import vn.edu.eaut.recruitflow.service.MatchingService;
+import vn.edu.eaut.recruitflow.service.SavedJobService;
+import vn.edu.eaut.recruitflow.service.ResumeService;
+import vn.edu.eaut.recruitflow.service.ApplicationService;
+import vn.edu.eaut.recruitflow.service.CompanyProfileService;
 import vn.edu.eaut.recruitflow.util.BusinessException;
 import vn.edu.eaut.recruitflow.util.RequestUtil;
 
@@ -18,6 +22,9 @@ import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.Locale;
 import java.util.Set;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.function.Function;
 
 /** Serves only publicly visible, published job advertisements. */
 @WebServlet(name = "PublicJobController", urlPatterns = {"/jobs", "/jobs/detail"})
@@ -29,12 +36,20 @@ public class PublicJobController extends BaseController {
     private JobService jobService;
     private DepartmentService departmentService;
     private MatchingService matchingService;
+    private SavedJobService savedJobService;
+    private ResumeService resumeService;
+    private ApplicationService applicationService;
+    private CompanyProfileService companyService;
 
     @Override
     public void init() throws ServletException {
         jobService = new JobService();
         departmentService = new DepartmentService();
         matchingService = new MatchingService();
+        savedJobService = new SavedJobService();
+        resumeService = new ResumeService();
+        applicationService = new ApplicationService();
+        companyService = new CompanyProfileService();
     }
 
     @Override
@@ -67,6 +82,8 @@ public class PublicJobController extends BaseController {
 
             request.setAttribute("page", pageResult);
             request.setAttribute("departments", departmentService.getAllDepartments());
+            request.setAttribute("companyByDepartment", companyService.getCompanies("").stream()
+                    .collect(Collectors.toMap(company -> company.getId(), Function.identity())));
             request.setAttribute("keyword", keyword);
             request.setAttribute("departmentId", departmentId);
             request.setAttribute("location", location);
@@ -99,6 +116,10 @@ public class PublicJobController extends BaseController {
 
             request.setAttribute("job", job);
             request.setAttribute("skills", jobService.getSkills(jobId));
+            request.setAttribute("company", companyService.getCompany(job.getDepartmentId()));
+            List<Job> relatedJobs = jobService.searchPublishedJobs(null, job.getDepartmentId(), null, null, 1, 5, "newest").getItems();
+            request.setAttribute("relatedJobs", relatedJobs.stream().filter(item -> item.getId() != jobId).limit(4).toList());
+            request.setAttribute("jobSaved", false);
             attachCandidateMatchWhenAvailable(request, jobId);
             view(request, response, "/WEB-INF/views/public/job-detail.jsp", "Chi tiết việc làm | RecruitFlow");
         } catch (BusinessException ex) {
@@ -115,6 +136,9 @@ public class PublicJobController extends BaseController {
         try {
             int candidateId = RequestUtil.currentUserId(request);
             request.setAttribute("matchResult", matchingService.calculateForCandidate(candidateId, jobId));
+            request.setAttribute("jobSaved", savedJobService.isSaved(candidateId, jobId));
+            request.setAttribute("candidateResumes", resumeService.getResumes(candidateId));
+            request.setAttribute("alreadyApplied", applicationService.hasApplied(candidateId, jobId));
         } catch (BusinessException ignored) {
             // A public job page remains usable even when a session expires between filter and controller.
         }
