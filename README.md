@@ -13,7 +13,7 @@ MySQL   → DAO → Service → Servlet → JSP/JSTL → Browser
 
 | Nhóm | Công nghệ |
 | --- | --- |
-| Backend | Java 17, Servlet 4 (javax.servlet), JSP, JSTL |
+| Backend | Java 25, Servlet 4 (javax.servlet), JSP, JSTL |
 | Data | JDBC, MySQL Connector/J 8, MySQL 8 |
 | Build/server | Maven WAR, Apache Tomcat 9 |
 | Frontend | HTML5, CSS3, JavaScript, Bootstrap 5 |
@@ -51,7 +51,7 @@ src/main/webapp/
 
 ### Chạy local bằng một lệnh
 
-Sau khi đã có Java 17, Maven, MySQL 8, Tomcat 9 và Node.js 18.18+, chạy:
+Sau khi đã có Java 25, Maven, MySQL 8, Tomcat 9 và Node.js 18.18+, chạy:
 
 ~~~powershell
 npm run dev

@@ -1,0 +1,7 @@
+{
+  "databaseUrl": "jdbc:mysql://localhost:3306/jobcvdb?useSSL=false&serverTimezone=Asia/Bangkok&allowPublicKeyRetrieval=true&characterEncoding=UTF-8",
+  "databaseUser": "root",
+  "mysqlService": "MySQL80",
+  "httpPort": 8081,
+  "contextPath": "/recruitflow"
+}

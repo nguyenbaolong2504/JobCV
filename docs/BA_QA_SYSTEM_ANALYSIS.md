@@ -21,7 +21,7 @@ RecruitFlow là hệ thống quản lý tuyển dụng và onboarding theo mô h
 
 | Lớp | Công nghệ / vai trò |
 | --- | --- |
-| Backend | Java 17, Servlet 4 (`javax.servlet`), JSP/JSTL |
+| Backend | Java 25, Servlet 4 (`javax.servlet`), JSP/JSTL |
 | Kiến trúc | MVC phân lớp: Filter → Servlet Controller → Service → DAO → JDBC → MySQL |
 | Database | MySQL 8, JDBC, `PreparedStatement`, transaction thủ công |
 | Build / deploy | Maven, packaging WAR, Apache Tomcat 9 |
@@ -403,7 +403,7 @@ stateDiagram-v2
 
 | Hạng mục | Kết quả |
 | --- | --- |
-| JDK / Maven | Java 17 và Maven 3.9.16 hoạt động; Maven dùng repository local được cấu hình cho runner. |
+| JDK / Maven | Java 25 và Maven 3.9.16 hoạt động; Maven dùng repository local được cấu hình cho runner. |
 | MySQL | MySQL 8 (`MySQL80`) đang chạy và runner kết nối được database từ JDBC URL đã cấu hình. |
 | Khởi động một lệnh | `npm run dev` PASS: kiểm tra/kết nối MySQL, chạy migration được duyệt, build WAR, deploy `recruitflow.war` và khởi động Tomcat 9. |
 | Runtime | RecruitFlow phản hồi tại `/recruitflow`; môi trường xác minh dùng `http://localhost:8081/recruitflow/home`. |
