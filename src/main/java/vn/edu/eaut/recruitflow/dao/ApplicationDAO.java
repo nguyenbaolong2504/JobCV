@@ -46,6 +46,17 @@ public class ApplicationDAO extends DaoSupport {
         }
     }
 
+    /** Locks only the application row while a workflow transaction is in progress. */
+    public boolean lockById(Connection connection, int id) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT id FROM applications WHERE id = ? FOR UPDATE")) {
+            statement.setInt(1, id);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next();
+            }
+        }
+    }
+
     public Application findByCandidateAndJob(int candidateId, int jobId) throws SQLException {
         String sql = SELECT_APPLICATION + "WHERE a.candidate_id = ? AND a.job_id = ?";
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -362,6 +373,17 @@ public class ApplicationDAO extends DaoSupport {
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, status);
             statement.setInt(2, applicationId);
+            return statement.executeUpdate() == 1;
+        }
+    }
+
+    public boolean updateStatusIfCurrent(Connection connection, int applicationId, String targetStatus,
+                                         String expectedStatus) throws SQLException {
+        String sql = "UPDATE applications SET status = ? WHERE id = ? AND status = ?";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, targetStatus);
+            statement.setInt(2, applicationId);
+            statement.setString(3, expectedStatus);
             return statement.executeUpdate() == 1;
         }
     }

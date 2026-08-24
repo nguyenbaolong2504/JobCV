@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class UserDAO extends DaoSupport {
-    private static final String SELECT_USER = "SELECT u.id, u.email, u.password_hash, u.full_name, u.role_id, u.status, u.created_at, u.updated_at, r.role_name "
+    private static final String SELECT_USER = "SELECT u.id, u.email, u.password_hash, u.full_name, u.role_id, u.status, u.session_version, u.created_at, u.updated_at, r.role_name "
             + "FROM users u JOIN roles r ON r.id = u.role_id ";
 
     public User findByEmail(String email) throws SQLException {
@@ -139,8 +139,26 @@ public class UserDAO extends DaoSupport {
     }
 
     public boolean updatePassword(int userId, String passwordHash) throws SQLException {
-        String sql = "UPDATE users SET password_hash = ? WHERE id = ?";
-        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+        try (Connection connection = openConnection()) {
+            return updatePassword(connection, userId, passwordHash);
+        }
+    }
+
+    /** Serializes sensitive actions for one account, such as accepting an offer. */
+    public boolean lockById(Connection connection, int id) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("SELECT id FROM users WHERE id = ? FOR UPDATE")) {
+            statement.setInt(1, id);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next();
+            }
+        }
+    }
+
+    public boolean updatePassword(Connection connection, int userId, String passwordHash) throws SQLException {
+        // Keep the password update and global session revocation in one atomic row update.
+        // AuthenticationFilter compares this version with the value stored at login.
+        String sql = "UPDATE users SET password_hash = ?, session_version = session_version + 1 WHERE id = ?";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, passwordHash);
             statement.setInt(2, userId);
             return statement.executeUpdate() == 1;
@@ -203,6 +221,7 @@ public class UserDAO extends DaoSupport {
         user.setRoleId(resultSet.getInt("role_id"));
         user.setRoleName(resultSet.getString("role_name"));
         user.setStatus(resultSet.getString("status"));
+        user.setSessionVersion(resultSet.getInt("session_version"));
         user.setCreatedAt(resultSet.getTimestamp("created_at"));
         user.setUpdatedAt(resultSet.getTimestamp("updated_at"));
         return user;

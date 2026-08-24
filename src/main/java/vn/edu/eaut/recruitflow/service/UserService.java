@@ -1,13 +1,17 @@
 package vn.edu.eaut.recruitflow.service;
 
 import vn.edu.eaut.recruitflow.dao.CandidateProfileDAO;
+import vn.edu.eaut.recruitflow.dao.RecruiterProfileDAO;
 import vn.edu.eaut.recruitflow.dao.RoleDAO;
 import vn.edu.eaut.recruitflow.dao.UserDAO;
 import vn.edu.eaut.recruitflow.enums.UserStatus;
 import vn.edu.eaut.recruitflow.model.CandidateProfile;
 import vn.edu.eaut.recruitflow.model.PageResult;
+import vn.edu.eaut.recruitflow.model.RecruiterProfile;
 import vn.edu.eaut.recruitflow.model.Role;
 import vn.edu.eaut.recruitflow.model.User;
+import vn.edu.eaut.recruitflow.util.AuthSession;
+import vn.edu.eaut.recruitflow.util.AuthValidation;
 import vn.edu.eaut.recruitflow.util.BusinessException;
 import vn.edu.eaut.recruitflow.util.DBUtil;
 import vn.edu.eaut.recruitflow.util.PasswordUtil;
@@ -16,23 +20,32 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Locale;
-import java.util.regex.Pattern;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /** Authentication, candidate registration, and admin user-management rules. */
 public class UserService {
-    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
+    private static final Logger LOGGER = Logger.getLogger(UserService.class.getName());
+
     private final UserDAO userDAO;
     private final RoleDAO roleDAO;
     private final CandidateProfileDAO candidateProfileDAO;
+    private final RecruiterProfileDAO recruiterProfileDAO;
 
     public UserService() {
-        this(new UserDAO(), new RoleDAO(), new CandidateProfileDAO());
+        this(new UserDAO(), new RoleDAO(), new CandidateProfileDAO(), new RecruiterProfileDAO());
     }
 
     UserService(UserDAO userDAO, RoleDAO roleDAO, CandidateProfileDAO candidateProfileDAO) {
+        this(userDAO, roleDAO, candidateProfileDAO, new RecruiterProfileDAO());
+    }
+
+    UserService(UserDAO userDAO, RoleDAO roleDAO, CandidateProfileDAO candidateProfileDAO,
+                RecruiterProfileDAO recruiterProfileDAO) {
         this.userDAO = userDAO;
         this.roleDAO = roleDAO;
         this.candidateProfileDAO = candidateProfileDAO;
+        this.recruiterProfileDAO = recruiterProfileDAO;
     }
 
     /** Returns null for invalid credentials; database failures remain user-safe. */
@@ -41,12 +54,17 @@ public class UserService {
             return null;
         }
         try {
-            User user = userDAO.findByEmail(normalizeEmail(email));
+            User user = userDAO.findByEmail(AuthValidation.email(email));
             if (user == null || !UserStatus.ACTIVE.name().equals(user.getStatus())) {
                 return null;
             }
             return PasswordUtil.matches(password, user.getPasswordHash()) ? user : null;
         } catch (SQLException exception) {
+            // Keep the browser response generic, but retain the actionable cause in the server log.
+            // Never log credentials or the submitted password here.
+            LOGGER.log(Level.WARNING,
+                    "Authentication database query failed. Check JDBC URL, DB credentials, and users/roles schema.",
+                    exception);
             throw new BusinessException("Không thể xác thực tài khoản lúc này.", exception);
         }
     }
@@ -61,15 +79,33 @@ public class UserService {
     }
 
     public void registerCandidate(String email, String password, String fullName) throws BusinessException {
-        registerAccount(email, password, fullName, "CANDIDATE");
+        registerAccount(email, password, fullName, "CANDIDATE", null, null, null);
     }
 
     public void registerAccount(String email, String password, String fullName, String accountType) throws BusinessException {
-        String normalizedEmail = normalizeEmail(email);
-        validateRegistration(normalizedEmail, password, fullName);
+        registerAccount(email, password, fullName, accountType, null, null, null);
+    }
+
+    /**
+     * Candidate accounts are active immediately. Recruiter registrations collect verifiable work
+     * details and remain INACTIVE until an Admin explicitly activates the account.
+     */
+    public void registerAccount(String email, String password, String fullName, String accountType,
+                                String organizationName, String jobTitle, String workPhone) throws BusinessException {
+        String normalizedEmail = AuthValidation.email(email);
+        String validatedPassword = AuthValidation.newPassword(password);
+        String validatedFullName = AuthValidation.fullName(fullName);
         String roleName = accountType == null ? "" : accountType.trim().toUpperCase(Locale.ROOT);
         if (!"CANDIDATE".equals(roleName) && !"HR".equals(roleName)) {
             throw new BusinessException("Loại tài khoản không hợp lệ.");
+        }
+        String validatedOrganization = null;
+        String validatedJobTitle = null;
+        String validatedWorkPhone = null;
+        if ("HR".equals(roleName)) {
+            validatedOrganization = AuthValidation.organizationName(organizationName);
+            validatedJobTitle = AuthValidation.jobTitle(jobTitle);
+            validatedWorkPhone = AuthValidation.workPhone(workPhone);
         }
 
         try (Connection connection = DBUtil.getConnection()) {
@@ -86,10 +122,10 @@ public class UserService {
 
                 User user = new User();
                 user.setEmail(normalizedEmail);
-                user.setPasswordHash(PasswordUtil.hash(password));
-                user.setFullName(fullName.trim());
+                user.setPasswordHash(PasswordUtil.hash(validatedPassword));
+                user.setFullName(validatedFullName);
                 user.setRoleId(selectedRole.getId());
-                user.setStatus(UserStatus.ACTIVE.name());
+                user.setStatus("CANDIDATE".equals(roleName) ? UserStatus.ACTIVE.name() : UserStatus.INACTIVE.name());
                 userDAO.insert(connection, user);
 
                 if ("CANDIDATE".equals(roleName)) {
@@ -97,6 +133,13 @@ public class UserService {
                     profile.setUserId(user.getId());
                     profile.setExperienceYears(0);
                     candidateProfileDAO.insert(connection, profile);
+                } else {
+                    RecruiterProfile profile = new RecruiterProfile();
+                    profile.setUserId(user.getId());
+                    profile.setOrganizationName(validatedOrganization);
+                    profile.setJobTitle(validatedJobTitle);
+                    profile.setWorkPhone(validatedWorkPhone);
+                    recruiterProfileDAO.insert(connection, profile);
                 }
 
                 connection.commit();
@@ -136,6 +179,23 @@ public class UserService {
         }
     }
 
+    /** Re-checks account status and role on protected requests so locked accounts lose access immediately. */
+    public User validateAuthenticatedSession(int userId, String expectedRole) throws BusinessException {
+        if (userId <= 0 || !AuthSession.isSupportedRole(expectedRole)) {
+            return null;
+        }
+        try {
+            User user = userDAO.findById(userId);
+            if (user == null || !UserStatus.ACTIVE.name().equals(user.getStatus())
+                    || !AuthSession.normalizeRole(expectedRole).equals(AuthSession.normalizeRole(user.getRoleName()))) {
+                return null;
+            }
+            return user;
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể xác thực phiên đăng nhập lúc này.", exception);
+        }
+    }
+
     public PageResult<User> searchUsers(String keyword, String status, String roleName, int page, int pageSize) throws BusinessException {
         try {
             List<User> users = userDAO.list(keyword, status, roleName, page, pageSize);
@@ -169,19 +229,4 @@ public class UserService {
         }
     }
 
-    private String normalizeEmail(String email) {
-        return email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
-    }
-
-    private void validateRegistration(String email, String password, String fullName) throws BusinessException {
-        if (!EMAIL_PATTERN.matcher(email).matches() || email.length() > 254) {
-            throw new BusinessException("Email không hợp lệ.");
-        }
-        if (fullName == null || fullName.trim().length() < 2 || fullName.trim().length() > 100) {
-            throw new BusinessException("Họ tên phải có từ 2 đến 100 ký tự.");
-        }
-        if (password == null || password.length() < 6 || password.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72) {
-            throw new BusinessException("Mật khẩu phải có từ 6 đến 72 ký tự.");
-        }
-    }
 }

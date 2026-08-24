@@ -1,5 +1,7 @@
 package vn.edu.eaut.recruitflow.model;
 
+import static vn.edu.eaut.recruitflow.util.VietnameseTextUtil.repairLegacyMojibake;
+
 import java.sql.Timestamp;
 
 public class ApplicationStatusHistory {
@@ -24,9 +26,9 @@ public class ApplicationStatusHistory {
     public String getStatus() { return newStatus; }
     public Integer getChangedBy() { return changedBy; }
     public void setChangedBy(Integer changedBy) { this.changedBy = changedBy; }
-    public String getChangedByName() { return changedByName; }
+    public String getChangedByName() { return repairLegacyMojibake(changedByName); }
     public void setChangedByName(String changedByName) { this.changedByName = changedByName; }
-    public String getRemarks() { return remarks; }
+    public String getRemarks() { return repairLegacyMojibake(remarks); }
     public void setRemarks(String remarks) { this.remarks = remarks; }
     /** View-friendly alias used by the application timeline. */
     public String getNote() { return remarks; }

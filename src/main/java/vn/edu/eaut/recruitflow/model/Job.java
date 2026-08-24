@@ -14,6 +14,8 @@ public class Job {
     private String title;
     private int departmentId;
     private String departmentName;
+    private Integer categoryId;
+    private String categoryName;
     private String location;
     private String employmentType;
     private int numberOfPositions;
@@ -42,6 +44,10 @@ public class Job {
     public void setDepartmentId(int departmentId) { this.departmentId = departmentId; }
     public String getDepartmentName() { return localizeDepartment(departmentName); }
     public void setDepartmentName(String departmentName) { this.departmentName = departmentName; }
+    public Integer getCategoryId() { return categoryId; }
+    public void setCategoryId(Integer categoryId) { this.categoryId = categoryId; }
+    public String getCategoryName() { return categoryName; }
+    public void setCategoryName(String categoryName) { this.categoryName = categoryName; }
     public String getLocation() { return localizeLocation(location); }
     public void setLocation(String location) { this.location = location; }
     public String getEmploymentType() { return employmentType; }

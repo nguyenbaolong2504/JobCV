@@ -4,8 +4,8 @@
 <c:set var="pageTitle" value="CV của tôi | RecruitFlow" scope="request" />
 <c:set var="defaultResumeId" value="" />
 <c:set var="defaultResumeName" value="CV của bạn" />
-<c:forEach var="availableResume" items="${resumes}" varStatus="resumeStatus">
-    <c:if test="${availableResume.defaultResume or resumeStatus.first}">
+<c:forEach var="availableResume" items="${resumes}">
+    <c:if test="${availableResume.fileAvailable and (availableResume.defaultResume or empty defaultResumeId)}">
         <c:set var="defaultResumeId" value="${availableResume.id}" />
         <c:set var="defaultResumeName" value="${availableResume.fileName}" />
     </c:if>
@@ -27,19 +27,24 @@
                     </div>
                     <p class="text-muted mb-0">Tải lên, chọn CV mặc định và nhận gợi ý cải thiện phù hợp với mục tiêu ứng tuyển.</p>
                 </div>
-                <c:choose>
-                    <c:when test="${not empty defaultResumeId}">
-                        <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal"
-                                data-bs-target="#aiReviewModal" data-ai-review-trigger
-                                data-resume-id="<c:out value='${defaultResumeId}'/>"
-                                data-resume-name="<c:out value='${defaultResumeName}'/>">
-                            <i class="bi bi-stars me-1"></i>Nhờ AI đánh giá CV
-                        </button>
-                    </c:when>
-                    <c:otherwise>
-                        <a class="btn btn-outline-primary" href="#resumeFile"><i class="bi bi-cloud-arrow-up me-1"></i>Tải CV để dùng AI</a>
-                    </c:otherwise>
-                </c:choose>
+                <div class="d-flex flex-wrap gap-2">
+                    <a class="btn btn-primary" href="${pageContext.request.contextPath}/candidate/cv-builder">
+                        <i class="bi bi-magic me-1"></i>Tạo CV theo mẫu
+                    </a>
+                    <c:choose>
+                        <c:when test="${not empty defaultResumeId}">
+                            <button class="btn btn-outline-primary" type="button" data-bs-toggle="modal"
+                                    data-bs-target="#aiReviewModal" data-ai-review-trigger
+                                    data-resume-id="<c:out value='${defaultResumeId}'/>"
+                                    data-resume-name="<c:out value='${defaultResumeName}'/>">
+                                <i class="bi bi-stars me-1"></i>Nhờ AI đánh giá CV
+                            </button>
+                        </c:when>
+                        <c:otherwise>
+                            <a class="btn btn-outline-primary" href="#resumeFile"><i class="bi bi-cloud-arrow-up me-1"></i>Tải CV để dùng AI</a>
+                        </c:otherwise>
+                    </c:choose>
+                </div>
             </div>
 
             <section class="ai-review-result content-card mb-4 d-none" id="aiReviewResult"
@@ -156,23 +161,29 @@
                                             <div class="d-flex flex-wrap align-items-center gap-2">
                                                 <h3 class="h6 mb-0 text-break"><c:out value="${resume.fileName}" /></h3>
                                                 <c:if test="${resume.defaultResume}"><span class="badge text-bg-success">CV mặc định</span></c:if>
+                                                <c:if test="${not resume.fileAvailable}"><span class="badge text-bg-warning">Tệp cần tải lại</span></c:if>
                                             </div>
                                             <p class="text-muted small mb-0 mt-1">
                                                 <c:out value="${resume.fileType}" /> · <c:out value="${resume.fileSize}" /> bytes · Tải lên <c:out value="${resume.uploadedAt}" />
                                             </p>
                                         </div>
                                         <div class="resume-actions d-flex flex-wrap gap-2">
-                                            <c:url var="downloadResumeUrl" value="/candidate/resumes/download"><c:param name="id" value="${resume.id}" /></c:url>
-                                            <a class="btn btn-sm btn-outline-primary" href="${downloadResumeUrl}" target="_blank" rel="noopener" title="Xem CV">
-                                                <i class="bi bi-eye"></i><span class="visually-hidden">Xem CV</span>
-                                            </a>
-                                            <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal"
-                                                    data-bs-target="#aiReviewModal" data-ai-review-trigger
-                                                    data-resume-id="<c:out value='${resume.id}'/>"
-                                                    data-resume-name="<c:out value='${resume.fileName}'/>" title="Nhờ AI đánh giá CV">
-                                                <i class="bi bi-stars me-1"></i><span class="d-none d-sm-inline">AI đánh giá</span>
-                                            </button>
-                                            <c:if test="${not resume.defaultResume}">
+                                            <c:choose>
+                                                <c:when test="${resume.fileAvailable}">
+                                                    <c:url var="downloadResumeUrl" value="/candidate/resumes/download"><c:param name="id" value="${resume.id}" /></c:url>
+                                                    <a class="btn btn-sm btn-outline-primary" href="${downloadResumeUrl}" target="_blank" rel="noopener" title="Xem CV">
+                                                        <i class="bi bi-eye"></i><span class="visually-hidden">Xem CV</span>
+                                                    </a>
+                                                    <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal"
+                                                            data-bs-target="#aiReviewModal" data-ai-review-trigger
+                                                            data-resume-id="<c:out value='${resume.id}'/>"
+                                                            data-resume-name="<c:out value='${resume.fileName}'/>" title="Nhờ AI đánh giá CV">
+                                                        <i class="bi bi-stars me-1"></i><span class="d-none d-sm-inline">AI đánh giá</span>
+                                                    </button>
+                                                </c:when>
+                                                <c:otherwise><span class="small text-warning-emphasis align-self-center">Tải CV mới để dùng lại.</span></c:otherwise>
+                                            </c:choose>
+                                            <c:if test="${not resume.defaultResume and resume.fileAvailable}">
                                                 <form action="${pageContext.request.contextPath}/candidate/resumes/default" method="post">
                                                     <input type="hidden" name="resumeId" value="<c:out value='${resume.id}'/>">
                                                     <button class="btn btn-sm btn-outline-secondary" type="submit" title="Đặt làm CV mặc định">

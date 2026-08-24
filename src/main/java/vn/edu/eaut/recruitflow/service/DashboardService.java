@@ -44,10 +44,13 @@ public class DashboardService {
 
     public CandidateDashboardStats getCandidateDashboardStats(int candidateId) throws BusinessException {
         try {
+            offerDAO.expirePastDueSentOffers();
             CandidateDashboardStats stats = new CandidateDashboardStats();
             stats.setTotalApplications(applicationDAO.countByCandidateId(candidateId));
             stats.setUpcomingInterviews(interviewDAO.countUpcomingByCandidateId(candidateId));
-            stats.setOffers(offerDAO.countByCandidateId(candidateId));
+            // The dashboard wording is "offers awaiting a response"; historical accepted,
+            // declined, and expired offers remain visible in the list but must not trigger this alert.
+            stats.setOffers(offerDAO.countPendingByCandidateId(candidateId));
             CandidateProfile profile = profileService.getProfile(candidateId);
             stats.setProfileCompletion(profileService.completion(profile));
             return stats;
@@ -74,6 +77,7 @@ public class DashboardService {
 
     private HRDashboardStats getHrDashboardStats(Integer ownerId) throws BusinessException {
         try {
+            offerDAO.expirePastDueSentOffers();
             HRDashboardStats stats = new HRDashboardStats();
             stats.setActiveJobs(jobDAO.count(null, null, null, null, "PUBLISHED", ownerId));
             stats.setTotalApplications(applicationDAO.count(null, null, null, null, ownerId));
@@ -93,7 +97,9 @@ public class DashboardService {
             stats.setApplicationStatus(statusCounts);
             stats.setApplicationsByMonth(fillRecentMonths(applicationDAO.countByMonth(6, ownerId), 6));
             Map<String, Long> funnel = new LinkedHashMap<>();
-            funnel.put("APPLIED", stats.getTotalApplications());
+            // "Đã nộp" is a current pipeline state, not the aggregate total.
+            // Keep totalApplications for the summary card and exclude withdrawn/rejected records here.
+            funnel.put("SUBMITTED", statusCounts.getOrDefault(ApplicationStatus.SUBMITTED.name(), 0L));
             funnel.put("SCREENING", statusCounts.getOrDefault(ApplicationStatus.SCREENING.name(), 0L));
             funnel.put("INTERVIEW", statusCounts.getOrDefault(ApplicationStatus.INTERVIEW_SCHEDULED.name(), 0L)
                     + statusCounts.getOrDefault(ApplicationStatus.INTERVIEWED.name(), 0L));

@@ -35,9 +35,11 @@ public class AdminUserController extends BaseController {
             PageResult<User> page = adminService.searchUsers(
                     RequestUtil.text(request, "keyword"), role, status,
                     RequestUtil.page(request), RequestUtil.pageSize(request));
+            int actorId = RequestUtil.currentUserId(request);
             request.setAttribute("users", page.getItems());
             request.setAttribute("page", page);
-            request.setAttribute("roles", adminService.getRoles(RequestUtil.currentUserId(request)));
+            request.setAttribute("roles", adminService.getRoles(actorId));
+            request.setAttribute("recruiterProfiles", adminService.getRecruiterProfiles(page.getItems(), actorId));
         } catch (BusinessException | IllegalArgumentException ex) {
             request.setAttribute("error", ex.getMessage());
         }

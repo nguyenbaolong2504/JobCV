@@ -1,13 +1,17 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <c:set var="pageTitle" value="Báo cáo tuyển dụng | RecruitFlow" />
+<c:url var="exportUrl" value="/hr/reports/export">
+    <c:param name="fromDate" value="${param.fromDate}" />
+    <c:param name="toDate" value="${param.toDate}" />
+</c:url>
 <jsp:include page="/WEB-INF/views/common/header.jsp" />
 
 <div class="container-fluid p-0">
     <div class="row g-0">
         <jsp:include page="/WEB-INF/views/common/hr-sidebar.jsp" />
         <main class="col-md-10 offset-md-2 bg-light min-vh-100">
-            <div class="topbar"><div><p class="text-muted small mb-1">Phân tích</p><h4 class="mb-0">Báo cáo tuyển dụng</h4></div><a class="btn btn-outline-primary" href="${pageContext.request.contextPath}/hr/reports/export"><i class="bi bi-download me-1"></i> Xuất báo cáo</a></div>
+            <div class="topbar"><div><p class="text-muted small mb-1">Phân tích</p><h4 class="mb-0">Báo cáo tuyển dụng</h4></div><a class="btn btn-outline-primary" href="${exportUrl}"><i class="bi bi-download me-1"></i> Xuất báo cáo</a></div>
             <div class="main-content">
                 <section class="card mb-4"><div class="card-body"><form class="row gy-2 gx-3 align-items-end" method="get" action="${pageContext.request.contextPath}/hr/reports"><div class="col-md-4"><label class="form-label small text-muted">Từ ngày</label><input class="form-control" type="date" name="fromDate" value="<c:out value='${param.fromDate}'/>"></div><div class="col-md-4"><label class="form-label small text-muted">Đến ngày</label><input class="form-control" type="date" name="toDate" value="<c:out value='${param.toDate}'/>"></div><div class="col-md-4"><button class="btn btn-primary" type="submit"><i class="bi bi-bar-chart me-1"></i> Cập nhật báo cáo</button></div></form></div></section>
                 <div class="row g-3 mb-4"><div class="col-sm-6 col-xl-3"><div class="card p-3 h-100"><p class="text-muted mb-1">Tổng đơn</p><h3 class="mb-0"><c:out value="${report.totalApplications}" /></h3></div></div><div class="col-sm-6 col-xl-3"><div class="card p-3 h-100"><p class="text-muted mb-1">Tỷ lệ vào danh sách ngắn</p><h3 class="mb-0"><c:out value="${report.shortlistRate}" />%</h3></div></div><div class="col-sm-6 col-xl-3"><div class="card p-3 h-100"><p class="text-muted mb-1">Thư mời đã gửi</p><h3 class="mb-0"><c:out value="${report.offersSent}" /></h3></div></div><div class="col-sm-6 col-xl-3"><div class="card p-3 h-100"><p class="text-muted mb-1">Tỷ lệ tuyển dụng</p><h3 class="mb-0 text-success"><c:out value="${report.hireRate}" />%</h3></div></div></div>
@@ -66,5 +70,4 @@
     }());
 </script>
 <jsp:include page="/WEB-INF/views/common/footer.jsp" />
-
 

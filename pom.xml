@@ -54,6 +54,13 @@
             <version>0.4</version>
         </dependency>
 
+        <!-- JavaMail 1.x keeps javax.mail compatibility with Servlet 4 / Tomcat 9. -->
+        <dependency>
+            <groupId>com.sun.mail</groupId>
+            <artifactId>javax.mail</artifactId>
+            <version>1.6.2</version>
+        </dependency>
+
         <!-- Apache PDFBox -->
         <dependency>
             <groupId>org.apache.pdfbox</groupId>

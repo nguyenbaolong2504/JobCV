@@ -1,5 +1,7 @@
 package vn.edu.eaut.recruitflow.model;
 
+import static vn.edu.eaut.recruitflow.util.VietnameseTextUtil.repairLegacyMojibake;
+
 import java.sql.Timestamp;
 
 public class Notification {
@@ -15,9 +17,9 @@ public class Notification {
     public void setId(int id) { this.id = id; }
     public int getUserId() { return userId; }
     public void setUserId(int userId) { this.userId = userId; }
-    public String getTitle() { return title; }
+    public String getTitle() { return repairLegacyMojibake(title); }
     public void setTitle(String title) { this.title = title; }
-    public String getMessage() { return message; }
+    public String getMessage() { return repairLegacyMojibake(message); }
     public void setMessage(String message) { this.message = message; }
     public String getLinkUrl() { return linkUrl; }
     public void setLinkUrl(String linkUrl) { this.linkUrl = linkUrl; }

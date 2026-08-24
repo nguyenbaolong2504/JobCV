@@ -167,8 +167,15 @@ public class ResumeDAO extends DaoSupport {
     }
 
     public long countByCandidateId(int candidateId) throws SQLException {
+        try (Connection connection = openConnection()) {
+            return countByCandidateId(connection, candidateId);
+        }
+    }
+
+    /** Counts resumes inside a caller-owned transaction. */
+    public long countByCandidateId(Connection connection, int candidateId) throws SQLException {
         String sql = "SELECT COUNT(*) FROM resumes WHERE candidate_id = ?";
-        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, candidateId);
             try (ResultSet resultSet = statement.executeQuery()) {
                 resultSet.next();

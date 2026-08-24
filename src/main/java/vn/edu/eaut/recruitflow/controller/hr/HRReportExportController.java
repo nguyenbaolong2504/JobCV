@@ -40,11 +40,24 @@ public class HRReportExportController extends BaseController {
                 writeRow(writer, "From date", fromDate == null ? "" : fromDate.toString());
                 writeRow(writer, "To date", toDate == null ? "" : toDate.toString());
                 writeRow(writer, "Total applications", report.get("totalApplications"));
+                writeRow(writer, "Submitted", report.get("submitted"));
+                writeRow(writer, "Shortlisted", report.get("shortlisted"));
                 writeRow(writer, "Screening", report.get("screening"));
                 writeRow(writer, "Interview", report.get("interview"));
-                writeRow(writer, "Offers", report.get("offered"));
+                writeRow(writer, "Offers currently pending", report.get("offered"));
+                writeRow(writer, "Offers sent", report.get("offersSent"));
                 writeRow(writer, "Hired", report.get("hired"));
+                writeRow(writer, "Shortlist rate (%)", report.get("shortlistRate"));
+                writeRow(writer, "Screening rate (%)", report.get("screeningRate"));
+                writeRow(writer, "Interview rate (%)", report.get("interviewRate"));
+                writeRow(writer, "Offer rate (%)", report.get("offerRate"));
                 writeRow(writer, "Hire rate (%)", report.get("hireRate"));
+                Object byMonth = report.get("applicationsByMonth");
+                if (byMonth instanceof Map<?, ?> monthTotals) {
+                    for (Map.Entry<?, ?> entry : monthTotals.entrySet()) {
+                        writeRow(writer, "Applications in " + entry.getKey(), entry.getValue());
+                    }
+                }
             }
         } catch (BusinessException | IllegalArgumentException exception) {
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, exception.getMessage());

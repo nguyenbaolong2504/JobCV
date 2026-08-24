@@ -35,6 +35,7 @@ abstract class CandidateBaseController extends BaseController {
     protected void useUtf8(HttpServletRequest request, HttpServletResponse response) throws IOException {
         request.setCharacterEncoding("UTF-8");
         response.setCharacterEncoding("UTF-8");
+        response.setContentType("text/html; charset=UTF-8");
     }
 
     protected Integer optionalPositiveInt(HttpServletRequest request, String field, String label)

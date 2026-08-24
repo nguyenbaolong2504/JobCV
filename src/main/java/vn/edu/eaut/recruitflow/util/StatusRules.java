@@ -14,7 +14,8 @@ public final class StatusRules {
         APPLICATION_TRANSITIONS.put(ApplicationStatus.SUBMITTED, EnumSet.of(ApplicationStatus.SCREENING, ApplicationStatus.WITHDRAWN));
         APPLICATION_TRANSITIONS.put(ApplicationStatus.SCREENING, EnumSet.of(ApplicationStatus.SHORTLISTED, ApplicationStatus.REJECTED));
         APPLICATION_TRANSITIONS.put(ApplicationStatus.SHORTLISTED, EnumSet.of(ApplicationStatus.INTERVIEW_SCHEDULED, ApplicationStatus.REJECTED));
-        APPLICATION_TRANSITIONS.put(ApplicationStatus.INTERVIEW_SCHEDULED, EnumSet.of(ApplicationStatus.INTERVIEWED, ApplicationStatus.REJECTED));
+        APPLICATION_TRANSITIONS.put(ApplicationStatus.INTERVIEW_SCHEDULED,
+                EnumSet.of(ApplicationStatus.SHORTLISTED, ApplicationStatus.INTERVIEWED, ApplicationStatus.REJECTED));
         APPLICATION_TRANSITIONS.put(ApplicationStatus.INTERVIEWED, EnumSet.of(ApplicationStatus.OFFERED, ApplicationStatus.REJECTED));
         APPLICATION_TRANSITIONS.put(ApplicationStatus.OFFERED, EnumSet.of(ApplicationStatus.HIRED, ApplicationStatus.REJECTED));
         APPLICATION_TRANSITIONS.put(ApplicationStatus.HIRED, EnumSet.noneOf(ApplicationStatus.class));

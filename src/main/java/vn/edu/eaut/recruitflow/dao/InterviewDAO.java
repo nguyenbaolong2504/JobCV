@@ -164,6 +164,36 @@ public class InterviewDAO extends DaoSupport {
         }
     }
 
+    /** Locks only the interview row before a workflow update. */
+    public boolean lockById(Connection connection, int id) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT id FROM interviews WHERE id = ? FOR UPDATE")) {
+            statement.setInt(1, id);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next();
+            }
+        }
+    }
+
+    public boolean hasActiveInterviewForApplication(Connection connection, int applicationId,
+                                                     Integer excludeInterviewId) throws SQLException {
+        StringBuilder sql = new StringBuilder("SELECT 1 FROM interviews WHERE application_id = ? "
+                + "AND status IN ('SCHEDULED', 'RESCHEDULED')");
+        if (excludeInterviewId != null) {
+            sql.append(" AND id <> ?");
+        }
+        sql.append(" LIMIT 1");
+        try (PreparedStatement statement = connection.prepareStatement(sql.toString())) {
+            statement.setInt(1, applicationId);
+            if (excludeInterviewId != null) {
+                statement.setInt(2, excludeInterviewId);
+            }
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next();
+            }
+        }
+    }
+
     public int insert(Interview interview) throws SQLException {
         try (Connection connection = openConnection()) {
             return insert(connection, interview);
@@ -201,6 +231,16 @@ public class InterviewDAO extends DaoSupport {
         }
     }
 
+    public boolean updateIfActive(Connection connection, Interview interview) throws SQLException {
+        String sql = "UPDATE interviews SET interviewer_id = ?, interview_type = ?, interview_date = ?, start_time = ?, end_time = ?, "
+                + "location = ?, meeting_url = ?, status = ?, note = ? "
+                + "WHERE id = ? AND status IN ('SCHEDULED', 'RESCHEDULED')";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            bindInterview(statement, interview, true);
+            return statement.executeUpdate() == 1;
+        }
+    }
+
     public boolean updateStatus(int interviewId, String status) throws SQLException {
         try (Connection connection = openConnection()) {
             return updateStatus(connection, interviewId, status);
@@ -215,8 +255,28 @@ public class InterviewDAO extends DaoSupport {
         }
     }
 
+    public boolean updateStatusIfCurrent(Connection connection, int interviewId, String targetStatus,
+                                         String expectedStatus) throws SQLException {
+        String sql = "UPDATE interviews SET status = ? WHERE id = ? AND status = ?";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, targetStatus);
+            statement.setInt(2, interviewId);
+            statement.setString(3, expectedStatus);
+            return statement.executeUpdate() == 1;
+        }
+    }
+
     public boolean cancel(Connection connection, int interviewId) throws SQLException {
         return updateStatus(connection, interviewId, "CANCELLED");
+    }
+
+    public boolean cancelIfActive(Connection connection, int interviewId) throws SQLException {
+        String sql = "UPDATE interviews SET status = 'CANCELLED' WHERE id = ? "
+                + "AND status IN ('SCHEDULED', 'RESCHEDULED')";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, interviewId);
+            return statement.executeUpdate() == 1;
+        }
     }
 
     public long countUpcoming() throws SQLException {
