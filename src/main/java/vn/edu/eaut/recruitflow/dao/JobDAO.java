@@ -264,12 +264,16 @@ public class JobDAO extends DaoSupport {
         JobSearchCriteria safeCriteria = criteria == null ? new JobSearchCriteria() : criteria;
         String keyword = safeCriteria.getKeyword();
         if (keyword != null && !keyword.isBlank()) {
-            sql.append(" AND (LOWER(j.title) LIKE ? OR LOWER(j.job_code) LIKE ? OR LOWER(j.description) LIKE ? "
-                    + "OR LOWER(j.requirements) LIKE ? OR EXISTS (SELECT 1 FROM job_skills js "
-                    + "WHERE js.job_id = j.id AND LOWER(js.skill_name) LIKE ?))");
-            String value = likeValue(keyword);
-            for (int index = 0; index < 5; index++) {
-                parameters.add(value);
+            String[] tokens = keyword.trim().split("\\s+");
+            int tokenCount = Math.min(tokens.length, 8);
+            for (int tokenIndex = 0; tokenIndex < tokenCount; tokenIndex++) {
+                sql.append(" AND (LOWER(j.title) LIKE ? OR LOWER(j.job_code) LIKE ? OR LOWER(j.description) LIKE ? "
+                        + "OR LOWER(j.requirements) LIKE ? OR EXISTS (SELECT 1 FROM job_skills js "
+                        + "WHERE js.job_id = j.id AND LOWER(js.skill_name) LIKE ?))");
+                String value = likeValue(tokens[tokenIndex]);
+                for (int parameterIndex = 0; parameterIndex < 5; parameterIndex++) {
+                    parameters.add(value);
+                }
             }
         }
         if (safeCriteria.getTitle() != null && !safeCriteria.getTitle().isBlank()) {

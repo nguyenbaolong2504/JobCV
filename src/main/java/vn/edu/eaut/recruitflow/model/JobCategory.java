@@ -1,5 +1,7 @@
 package vn.edu.eaut.recruitflow.model;
 
+import static vn.edu.eaut.recruitflow.util.VietnameseTextUtil.repairLegacyMojibake;
+
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,13 +33,13 @@ public class JobCategory {
     public Integer getParentId() { return parentId; }
     public void setParentId(Integer parentId) { this.parentId = parentId; }
 
-    public String getParentName() { return parentName; }
+    public String getParentName() { return repairLegacyMojibake(parentName); }
     public void setParentName(String parentName) { this.parentName = parentName; }
 
-    public String getName() { return name; }
+    public String getName() { return repairLegacyMojibake(name); }
     public void setName(String name) { this.name = name; }
 
-    public String getDescription() { return description; }
+    public String getDescription() { return repairLegacyMojibake(description); }
     public void setDescription(String description) { this.description = description; }
 
     public int getDisplayOrder() { return displayOrder; }

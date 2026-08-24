@@ -1,5 +1,7 @@
 package vn.edu.eaut.recruitflow.model;
 
+import static vn.edu.eaut.recruitflow.util.VietnameseTextUtil.repairLegacyMojibake;
+
 public class JobSkill {
     private int id;
     private int jobId;
@@ -11,7 +13,7 @@ public class JobSkill {
     public void setId(int id) { this.id = id; }
     public int getJobId() { return jobId; }
     public void setJobId(int jobId) { this.jobId = jobId; }
-    public String getSkillName() { return skillName; }
+    public String getSkillName() { return repairLegacyMojibake(skillName); }
     public void setSkillName(String skillName) { this.skillName = skillName; }
     public int getWeight() { return weight; }
     public void setWeight(int weight) { this.weight = weight; }

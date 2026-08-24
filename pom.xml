@@ -14,6 +14,7 @@
         <maven.compiler.target>17</maven.compiler.target>
         <maven.compiler.release>17</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <recruitflow.build.directory>${project.basedir}/target</recruitflow.build.directory>
         <junit.jupiter.version>5.10.2</junit.jupiter.version>
     </properties>
 
@@ -94,6 +95,9 @@
     </dependencies>
 
     <build>
+        <directory>${recruitflow.build.directory}</directory>
+        <outputDirectory>${recruitflow.build.directory}/classes</outputDirectory>
+        <testOutputDirectory>${recruitflow.build.directory}/test-classes</testOutputDirectory>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

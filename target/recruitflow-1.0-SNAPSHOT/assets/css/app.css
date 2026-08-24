@@ -768,6 +768,9 @@ a {
 .rf-chatbot-message { border-radius: 14px; font-size: .88rem; line-height: 1.45; max-width: 84%; padding: 10px 12px; white-space: pre-line; }
 .rf-chatbot-message.bot { align-self: flex-start; background: #fff; border: 1px solid #e5e7eb; border-bottom-left-radius: 4px; color: #334155; }
 .rf-chatbot-message.user { align-self: flex-end; background: #2563eb; border-bottom-right-radius: 4px; color: #fff; }
+.rf-chatbot-actions { display: flex; flex-direction: column; gap: 7px; margin-top: 10px; white-space: normal; }
+.rf-chatbot-action { align-items: center; background: #16a34a; border-radius: 8px; color: #fff; display: inline-flex; font-size: .8rem; font-weight: 700; justify-content: center; line-height: 1.2; padding: 9px 11px; text-align: center; text-decoration: none; }
+.rf-chatbot-action:hover { background: #15803d; color: #fff; text-decoration: none; }
 .rf-chatbot-suggestions { display: flex; gap: 7px; overflow-x: auto; padding: 10px 12px 4px; }
 .rf-chatbot-suggestions button { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 999px; color: #1d4ed8; font-size: .75rem; padding: 6px 10px; white-space: nowrap; }
 .rf-chatbot-form { align-items: center; display: flex; gap: 8px; padding: 10px 12px 12px; }

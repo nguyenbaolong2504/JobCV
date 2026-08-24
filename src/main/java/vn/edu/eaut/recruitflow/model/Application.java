@@ -1,5 +1,7 @@
 package vn.edu.eaut.recruitflow.model;
 
+import static vn.edu.eaut.recruitflow.util.VietnameseTextUtil.repairLegacyMojibake;
+
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 
@@ -36,12 +38,12 @@ public class Application {
     public void setUpdatedAt(Timestamp updatedAt) { this.updatedAt = updatedAt; }
     public String getJobCode() { return jobCode; }
     public void setJobCode(String jobCode) { this.jobCode = jobCode; }
-    public String getJobTitle() { return jobTitle; }
+    public String getJobTitle() { return repairLegacyMojibake(jobTitle); }
     public void setJobTitle(String jobTitle) { this.jobTitle = jobTitle; }
-    public String getCandidateName() { return candidateName; }
+    public String getCandidateName() { return repairLegacyMojibake(candidateName); }
     public void setCandidateName(String candidateName) { this.candidateName = candidateName; }
     public String getCandidateEmail() { return candidateEmail; }
     public void setCandidateEmail(String candidateEmail) { this.candidateEmail = candidateEmail; }
-    public String getResumeFileName() { return resumeFileName; }
+    public String getResumeFileName() { return repairLegacyMojibake(resumeFileName); }
     public void setResumeFileName(String resumeFileName) { this.resumeFileName = resumeFileName; }
 }

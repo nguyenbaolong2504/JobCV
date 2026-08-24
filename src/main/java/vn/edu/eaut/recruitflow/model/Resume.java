@@ -1,5 +1,7 @@
 package vn.edu.eaut.recruitflow.model;
 
+import static vn.edu.eaut.recruitflow.util.VietnameseTextUtil.repairLegacyMojibake;
+
 import java.sql.Timestamp;
 
 public class Resume {
@@ -18,7 +20,7 @@ public class Resume {
     public void setId(int id) { this.id = id; }
     public int getCandidateId() { return candidateId; }
     public void setCandidateId(int candidateId) { this.candidateId = candidateId; }
-    public String getFileName() { return fileName; }
+    public String getFileName() { return repairLegacyMojibake(fileName); }
     public void setFileName(String fileName) { this.fileName = fileName; }
     public String getFilePath() { return filePath; }
     public void setFilePath(String filePath) { this.filePath = filePath; }
@@ -26,7 +28,7 @@ public class Resume {
     public void setFileType(String fileType) { this.fileType = fileType; }
     public long getFileSize() { return fileSize; }
     public void setFileSize(long fileSize) { this.fileSize = fileSize; }
-    public String getExtractedText() { return extractedText; }
+    public String getExtractedText() { return repairLegacyMojibake(extractedText); }
     public void setExtractedText(String extractedText) { this.extractedText = extractedText; }
     public boolean isDefaultResume() { return defaultResume; }
     /** JSP-compatible property name: ${resume.default}. */

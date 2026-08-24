@@ -11,7 +11,7 @@
             <div class="rf-chatbot-message bot">Xin ch&#224;o! M&#236;nh c&#243; th&#7875; gi&#250;p b&#7841;n t&#236;m vi&#7879;c, &#7913;ng tuy&#7875;n v&#224; qu&#7843;n l&#253; CV.</div>
         </div>
         <div class="rf-chatbot-suggestions" id="rfChatbotSuggestions">
-            <button type="button">T&#236;m vi&#7879;c</button><button type="button">C&#225;ch &#7913;ng tuy&#7875;n</button><button type="button">Qu&#7843;n l&#253; CV</button><button type="button">Tr&#7841;ng th&#225;i h&#7891; s&#417;</button>
+            <button type="button">T&#236;m vi&#7879;c Intern Backend</button><button type="button">Vi&#7871;t CV nh&#432; th&#7871; n&#224;o?</button><button type="button">CV m&#7851;u</button><button type="button">Tr&#7841;ng th&#225;i h&#7891; s&#417;</button>
         </div>
         <form class="rf-chatbot-form" id="rfChatbotForm">
             <input id="rfChatbotInput" type="text" maxlength="250" autocomplete="off" placeholder="Nh&#7853;p c&#226;u h&#7887;i..." aria-label="C&#226;u h&#7887;i">
@@ -22,7 +22,7 @@
         <i class="bi bi-chat-dots-fill"></i><span>1</span>
     </button>
 </div>
-<script src="${pageContext.request.contextPath}/assets/js/app.js?v=20260822-auth-cv-eye"></script>
+<script src="${pageContext.request.contextPath}/assets/js/app.js?v=20260824-chatbot-intent-fix"></script>
 </body>
 
 </html>

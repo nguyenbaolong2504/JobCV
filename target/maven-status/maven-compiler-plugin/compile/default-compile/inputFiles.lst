@@ -123,6 +123,7 @@ C:\Users\Admin\Documents\GitHub\JobCV\src\main\java\vn\edu\eaut\recruitflow\cont
 C:\Users\Admin\Documents\GitHub\JobCV\src\main\java\vn\edu\eaut\recruitflow\controller\hr\OfferCreateController.java
 C:\Users\Admin\Documents\GitHub\JobCV\src\main\java\vn\edu\eaut\recruitflow\service\CvBuilderService.java
 C:\Users\Admin\Documents\GitHub\JobCV\src\main\java\vn\edu\eaut\recruitflow\controller\candidate\CandidateOfferController.java
+C:\Users\Admin\Documents\GitHub\JobCV\src\main\java\vn\edu\eaut\recruitflow\util\VietnameseTextUtil.java
 C:\Users\Admin\Documents\GitHub\JobCV\src\main\java\vn\edu\eaut\recruitflow\model\InterviewFeedback.java
 C:\Users\Admin\Documents\GitHub\JobCV\src\main\java\vn\edu\eaut\recruitflow\enums\RoleName.java
 C:\Users\Admin\Documents\GitHub\JobCV\src\main\java\vn\edu\eaut\recruitflow\service\UserService.java
@@ -162,6 +163,7 @@ C:\Users\Admin\Documents\GitHub\JobCV\src\main\java\vn\edu\eaut\recruitflow\mode
 C:\Users\Admin\Documents\GitHub\JobCV\src\main\java\vn\edu\eaut\recruitflow\service\OpenAiCompatibleCvCoachProvider.java
 C:\Users\Admin\Documents\GitHub\JobCV\src\main\java\vn\edu\eaut\recruitflow\controller\candidate\CandidateAiResumeReviewController.java
 C:\Users\Admin\Documents\GitHub\JobCV\src\main\java\vn\edu\eaut\recruitflow\service\GoogleOAuthService.java
+C:\Users\Admin\Documents\GitHub\JobCV\src\main\java\vn\edu\eaut\recruitflow\tool\DatabaseTextRepairTool.java
 C:\Users\Admin\Documents\GitHub\JobCV\src\main\java\vn\edu\eaut\recruitflow\model\Application.java
 C:\Users\Admin\Documents\GitHub\JobCV\src\main\java\vn\edu\eaut\recruitflow\model\Onboarding.java
 C:\Users\Admin\Documents\GitHub\JobCV\src\main\java\vn\edu\eaut\recruitflow\model\MatchResult.java

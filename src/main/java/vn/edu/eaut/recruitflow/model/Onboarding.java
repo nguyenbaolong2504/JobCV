@@ -1,5 +1,7 @@
 package vn.edu.eaut.recruitflow.model;
 
+import static vn.edu.eaut.recruitflow.util.VietnameseTextUtil.repairLegacyMojibake;
+
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 
@@ -28,8 +30,8 @@ public class Onboarding {
     public void setUpdatedAt(Timestamp updatedAt) { this.updatedAt = updatedAt; }
     public int getCandidateId() { return candidateId; }
     public void setCandidateId(int candidateId) { this.candidateId = candidateId; }
-    public String getCandidateName() { return candidateName; }
+    public String getCandidateName() { return repairLegacyMojibake(candidateName); }
     public void setCandidateName(String candidateName) { this.candidateName = candidateName; }
-    public String getJobTitle() { return jobTitle; }
+    public String getJobTitle() { return repairLegacyMojibake(jobTitle); }
     public void setJobTitle(String jobTitle) { this.jobTitle = jobTitle; }
 }

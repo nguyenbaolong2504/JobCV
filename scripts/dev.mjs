@@ -39,7 +39,7 @@ Usage:
 
 Optional flags:
   --no-migrate                Do not apply migrations during npm run dev
-  --skip-build                Deploy the existing target/recruitflow-1.0-SNAPSHOT.war
+  --skip-build                Deploy the existing .recruitflow/build/recruitflow-1.0-SNAPSHOT.war
 
 Configuration priority: environment variable > dev.config.json > default.
 Secrets are never read from dev.config.json. Set RECRUITFLOW_DB_PASSWORD for non-interactive use,
@@ -606,7 +606,10 @@ async function waitForPortToClose(port, timeoutMilliseconds) {
 }
 
 function buildWar(skipBuild) {
-    const war = path.join(PROJECT_ROOT, 'target', 'recruitflow-1.0-SNAPSHOT.war');
+    // Keep the live development build outside target/. On Windows a previous Tomcat process can
+    // retain a handle to an exploded dependency there and make Maven's normal clean/build fail.
+    const buildDirectory = path.join(PROJECT_ROOT, '.recruitflow', 'build');
+    const war = path.join(buildDirectory, 'recruitflow-1.0-SNAPSHOT.war');
     if (skipBuild) {
         if (!fs.existsSync(war)) {
             fail('Không có WAR hiện có để deploy; bỏ --skip-build hoặc chạy Maven package.');
@@ -622,7 +625,11 @@ function buildWar(skipBuild) {
     const mavenRepositoryOption = /(?:^|\s)-Dmaven\.repo\.local=/.test(existingMavenOptions)
         ? existingMavenOptions
         : `${existingMavenOptions} -Dmaven.repo.local="${path.join(os.homedir(), '.m2', 'repository')}"`.trim();
-    const result = commandResult(maven, ['-DskipTests', 'package'], {
+    const result = commandResult(maven, [
+        `-Drecruitflow.build.directory=${buildDirectory}`,
+        '-Dmaven.test.skip=true',
+        'package'
+    ], {
         env: {
             ...process.env,
             MAVEN_SKIP_RC: process.env.MAVEN_SKIP_RC ?? '1',
@@ -694,7 +701,7 @@ async function run() {
     }
 
     const jdbcUrl = setting(config, 'RECRUITFLOW_DB_URL', 'databaseUrl',
-        'jdbc:mysql://localhost:3306/recruitflow?useSSL=false&serverTimezone=Asia/Bangkok&allowPublicKeyRetrieval=true&characterEncoding=UTF-8');
+        'jdbc:mysql://localhost:3306/recruitflow?useSSL=false&serverTimezone=Asia/Bangkok&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci');
     const databaseUser = setting(config, 'RECRUITFLOW_DB_USER', 'databaseUser', 'root');
     const database = parseJdbcUrl(jdbcUrl);
     const password = await securePasswordPrompt();

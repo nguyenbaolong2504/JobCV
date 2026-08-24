@@ -1,5 +1,7 @@
 package vn.edu.eaut.recruitflow.model;
 
+import static vn.edu.eaut.recruitflow.util.VietnameseTextUtil.repairLegacyMojibake;
+
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 
@@ -29,7 +31,7 @@ public class InterviewFeedback {
     public void setAttitudeScore(BigDecimal attitudeScore) { this.attitudeScore = attitudeScore; }
     public BigDecimal getOverallScore() { return overallScore; }
     public void setOverallScore(BigDecimal overallScore) { this.overallScore = overallScore; }
-    public String getComment() { return comment; }
+    public String getComment() { return repairLegacyMojibake(comment); }
     public void setComment(String comment) { this.comment = comment; }
     public String getRecommendation() { return recommendation; }
     public void setRecommendation(String recommendation) { this.recommendation = recommendation; }

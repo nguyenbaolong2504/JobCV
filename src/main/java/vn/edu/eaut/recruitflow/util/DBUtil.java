@@ -14,7 +14,7 @@ public final class DBUtil {
     private static final Logger LOGGER = Logger.getLogger(DBUtil.class.getName());
 
     /** Matches the database created by schema.sql. Credentials must never be committed here. */
-    private static final String DEFAULT_URL = "jdbc:mysql://localhost:3306/recruitflow?useSSL=false&serverTimezone=Asia/Bangkok&allowPublicKeyRetrieval=true&characterEncoding=UTF-8";
+    private static final String DEFAULT_URL = "jdbc:mysql://localhost:3306/recruitflow?useSSL=false&serverTimezone=Asia/Bangkok&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=UTF-8&connectionCollation=utf8mb4_unicode_ci";
     private static final String URL = configuration("recruitflow.db.url", "RECRUITFLOW_DB_URL", DEFAULT_URL);
     private static final String USER = configuration("recruitflow.db.user", "RECRUITFLOW_DB_USER", "root");
     // An empty fallback supports a deliberately passwordless local MySQL account only. Production

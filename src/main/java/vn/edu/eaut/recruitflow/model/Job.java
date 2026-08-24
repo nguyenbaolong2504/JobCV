@@ -8,6 +8,8 @@ import java.util.List;
 import vn.edu.eaut.recruitflow.enums.EmploymentType;
 import vn.edu.eaut.recruitflow.enums.JobStatus;
 
+import static vn.edu.eaut.recruitflow.util.VietnameseTextUtil.repairLegacyMojibake;
+
 public class Job {
     private int id;
     private String jobCode;
@@ -38,17 +40,17 @@ public class Job {
     public void setId(int id) { this.id = id; }
     public String getJobCode() { return jobCode; }
     public void setJobCode(String jobCode) { this.jobCode = jobCode; }
-    public String getTitle() { return title; }
+    public String getTitle() { return repairLegacyMojibake(title); }
     public void setTitle(String title) { this.title = title; }
     public int getDepartmentId() { return departmentId; }
     public void setDepartmentId(int departmentId) { this.departmentId = departmentId; }
-    public String getDepartmentName() { return departmentName; }
+    public String getDepartmentName() { return repairLegacyMojibake(departmentName); }
     public void setDepartmentName(String departmentName) { this.departmentName = departmentName; }
     public Integer getCategoryId() { return categoryId; }
     public void setCategoryId(Integer categoryId) { this.categoryId = categoryId; }
-    public String getCategoryName() { return categoryName; }
+    public String getCategoryName() { return repairLegacyMojibake(categoryName); }
     public void setCategoryName(String categoryName) { this.categoryName = categoryName; }
-    public String getLocation() { return location; }
+    public String getLocation() { return repairLegacyMojibake(location); }
     public void setLocation(String location) { this.location = location; }
     public String getEmploymentType() { return employmentType; }
     public void setEmploymentType(String employmentType) { this.employmentType = employmentType; }
@@ -73,9 +75,9 @@ public class Job {
     public void setSalaryMin(BigDecimal salaryMin) { this.salaryMin = salaryMin; }
     public BigDecimal getSalaryMax() { return salaryMax; }
     public void setSalaryMax(BigDecimal salaryMax) { this.salaryMax = salaryMax; }
-    public String getDescription() { return description; }
+    public String getDescription() { return repairLegacyMojibake(description); }
     public void setDescription(String description) { this.description = description; }
-    public String getRequirements() { return requirements; }
+    public String getRequirements() { return repairLegacyMojibake(requirements); }
     public void setRequirements(String requirements) { this.requirements = requirements; }
     public int getExperienceRequired() { return experienceRequired; }
     public void setExperienceRequired(int experienceRequired) { this.experienceRequired = experienceRequired; }

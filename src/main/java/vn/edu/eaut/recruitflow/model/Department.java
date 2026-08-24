@@ -1,5 +1,7 @@
 package vn.edu.eaut.recruitflow.model;
 
+import static vn.edu.eaut.recruitflow.util.VietnameseTextUtil.repairLegacyMojibake;
+
 import java.sql.Timestamp;
 
 public class Department {
@@ -13,10 +15,10 @@ public class Department {
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
     
-    public String getName() { return name; }
+    public String getName() { return repairLegacyMojibake(name); }
     public void setName(String name) { this.name = name; }
     
-    public String getDescription() { return description; }
+    public String getDescription() { return repairLegacyMojibake(description); }
     public void setDescription(String description) { this.description = description; }
     
     public Timestamp getCreatedAt() { return createdAt; }

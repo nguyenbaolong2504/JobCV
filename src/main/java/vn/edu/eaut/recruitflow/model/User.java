@@ -3,6 +3,8 @@ package vn.edu.eaut.recruitflow.model;
 import java.sql.Timestamp;
 import vn.edu.eaut.recruitflow.enums.UserStatus;
 
+import static vn.edu.eaut.recruitflow.util.VietnameseTextUtil.repairLegacyMojibake;
+
 public class User {
     private int id;
     private String email;
@@ -31,13 +33,13 @@ public class User {
     public String getPasswordHash() { return passwordHash; }
     public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
 
-    public String getFullName() { return fullName; }
+    public String getFullName() { return repairLegacyMojibake(fullName); }
     public void setFullName(String fullName) { this.fullName = fullName; }
 
     public int getRoleId() { return roleId; }
     public void setRoleId(int roleId) { this.roleId = roleId; }
     
-    public String getRoleName() { return roleName; }
+    public String getRoleName() { return repairLegacyMojibake(roleName); }
     public void setRoleName(String roleName) { this.roleName = roleName; }
 
     public String getStatus() { return status; }

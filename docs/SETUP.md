@@ -46,7 +46,7 @@ npm run dev:check     # chỉ kiểm tra tool/Tomcat, không chạm DB hay serve
 npm run dev:migrate   # chỉ chạy migration idempotent vào database đang cấu hình
 npm test              # chạy JUnit regression test
 npm run dev -- --no-migrate  # build/deploy/start nhưng không chạy migration
-npm run dev -- --skip-build  # deploy WAR target hiện có rồi start Tomcat
+npm run dev -- --skip-build  # deploy WAR .recruitflow/build hiện có rồi start Tomcat
 ~~~
 
 `npm run dev` không chạy `schema.sql` tự động vì file đó seed/reset dữ liệu demo. Với database mới, hãy khởi tạo có chủ đích bằng phần 1 bên dưới; với `jobcvdb` hiện có, runner áp dụng migration vào chính schema từ JDBC URL, không còn hard-code `USE jobcvdb`. Không dùng `--no-migrate` nếu schema hiện tại chưa có các migration mà bản WAR cần.

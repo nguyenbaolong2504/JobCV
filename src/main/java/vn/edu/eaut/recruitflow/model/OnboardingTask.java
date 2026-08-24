@@ -1,5 +1,7 @@
 package vn.edu.eaut.recruitflow.model;
 
+import static vn.edu.eaut.recruitflow.util.VietnameseTextUtil.repairLegacyMojibake;
+
 import java.sql.Timestamp;
 
 public class OnboardingTask {
@@ -17,12 +19,12 @@ public class OnboardingTask {
     public void setId(int id) { this.id = id; }
     public int getOnboardingId() { return onboardingId; }
     public void setOnboardingId(int onboardingId) { this.onboardingId = onboardingId; }
-    public String getTaskName() { return taskName; }
+    public String getTaskName() { return repairLegacyMojibake(taskName); }
     public void setTaskName(String taskName) { this.taskName = taskName; }
     /** UI-friendly alias for taskName. */
-    public String getTitle() { return taskName; }
+    public String getTitle() { return repairLegacyMojibake(taskName); }
     public void setTitle(String title) { this.taskName = title; }
-    public String getDescription() { return description; }
+    public String getDescription() { return repairLegacyMojibake(description); }
     public void setDescription(String description) { this.description = description; }
     public boolean isRequired() { return required; }
     public boolean getIsRequired() { return required; }

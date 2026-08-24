@@ -1,6 +1,7 @@
 package vn.edu.eaut.recruitflow.dao;
 
 import vn.edu.eaut.recruitflow.model.CandidateProfile;
+import vn.edu.eaut.recruitflow.util.VietnameseTextUtil;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -87,12 +88,12 @@ public class CandidateProfileDAO extends DaoSupport {
         }
         statement.setDate(index++, profile.getDateOfBirth());
         statement.setString(index++, profile.getGender());
-        statement.setString(index++, profile.getAddress());
-        statement.setString(index++, profile.getUniversity());
-        statement.setString(index++, profile.getMajor());
+        statement.setString(index++, VietnameseTextUtil.repairLegacyMojibake(profile.getAddress()));
+        statement.setString(index++, VietnameseTextUtil.repairLegacyMojibake(profile.getUniversity()));
+        statement.setString(index++, VietnameseTextUtil.repairLegacyMojibake(profile.getMajor()));
         statement.setInt(index++, profile.getExperienceYears());
-        statement.setString(index++, profile.getSkills());
-        statement.setString(index++, profile.getSummary());
+        statement.setString(index++, VietnameseTextUtil.repairLegacyMojibake(profile.getSkills()));
+        statement.setString(index++, VietnameseTextUtil.repairLegacyMojibake(profile.getSummary()));
         if (update) {
             statement.setInt(index, profile.getUserId());
         }
@@ -104,12 +105,12 @@ public class CandidateProfileDAO extends DaoSupport {
         profile.setUserId(resultSet.getInt("user_id"));
         profile.setDateOfBirth(resultSet.getDate("date_of_birth"));
         profile.setGender(resultSet.getString("gender"));
-        profile.setAddress(resultSet.getString("address"));
-        profile.setUniversity(resultSet.getString("university"));
-        profile.setMajor(resultSet.getString("major"));
+        profile.setAddress(VietnameseTextUtil.repairLegacyMojibake(resultSet.getString("address")));
+        profile.setUniversity(VietnameseTextUtil.repairLegacyMojibake(resultSet.getString("university")));
+        profile.setMajor(VietnameseTextUtil.repairLegacyMojibake(resultSet.getString("major")));
         profile.setExperienceYears(resultSet.getInt("experience_years"));
-        profile.setSkills(resultSet.getString("skills"));
-        profile.setSummary(resultSet.getString("summary"));
+        profile.setSkills(VietnameseTextUtil.repairLegacyMojibake(resultSet.getString("skills")));
+        profile.setSummary(VietnameseTextUtil.repairLegacyMojibake(resultSet.getString("summary")));
         profile.setCreatedAt(resultSet.getTimestamp("created_at"));
         profile.setUpdatedAt(resultSet.getTimestamp("updated_at"));
         profile.setFullName(resultSet.getString("full_name"));
