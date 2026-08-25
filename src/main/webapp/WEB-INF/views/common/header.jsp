@@ -17,7 +17,7 @@
             </title>
             <link href="${pageContext.request.contextPath}/webjars/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
             <link href="${pageContext.request.contextPath}/webjars/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-            <link href="${pageContext.request.contextPath}/assets/css/app.css?v=20260825-platform-v2" rel="stylesheet">
+            <link href="${pageContext.request.contextPath}/assets/css/app.css?v=20260825-brands-v3" rel="stylesheet">
         </head>
 
         <body data-csrf-token="<c:out value='${requestScope.csrfToken}'/>" data-context-path="${pageContext.request.contextPath}">

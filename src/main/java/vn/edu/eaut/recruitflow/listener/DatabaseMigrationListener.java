@@ -90,6 +90,8 @@ public class DatabaseMigrationListener implements ServletContextListener {
             context.log("RecruitFlow migration checked: job_alerts");
             int insertedDemoJobs = DemoJobDataSeeder.seed(connection);
             context.log("RecruitFlow demo catalog checked: " + insertedDemoJobs + " new jobs added");
+            int insertedDemoEmployers = DemoEmployerDataSeeder.seed(connection);
+            context.log("RecruitFlow demo employers checked: " + insertedDemoEmployers + " new profiles added");
         } catch (SQLException exception) {
             // Keep the application deployable when the database is temporarily unavailable.
             // The error remains visible in the Tomcat log and the existing pages can report it.
