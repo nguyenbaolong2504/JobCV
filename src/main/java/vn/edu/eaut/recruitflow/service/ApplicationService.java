@@ -178,23 +178,13 @@ public class ApplicationService {
     public PageResult<Application> searchForCandidate(int candidateId, String keyword, ApplicationStatus status, int page, int pageSize)
             throws BusinessException {
         try {
-            List<Application> all = applicationDAO.findByCandidateId(candidateId);
-            String normalizedKeyword = keyword == null ? "" : keyword.trim().toLowerCase();
-            List<Application> filtered = new ArrayList<>();
-            for (Application application : all) {
-                boolean matchesStatus = status == null || status.name().equals(application.getStatus());
-                boolean matchesKeyword = normalizedKeyword.isBlank()
-                        || (application.getJobTitle() != null && application.getJobTitle().toLowerCase().contains(normalizedKeyword))
-                        || (application.getJobCode() != null && application.getJobCode().toLowerCase().contains(normalizedKeyword));
-                if (matchesStatus && matchesKeyword) {
-                    filtered.add(application);
-                }
-            }
             int safePage = Math.max(1, page);
             int safeSize = Math.max(1, Math.min(100, pageSize));
-            int from = Math.min((safePage - 1) * safeSize, filtered.size());
-            int to = Math.min(from + safeSize, filtered.size());
-            return new PageResult<>(filtered.subList(from, to), safePage, safeSize, filtered.size());
+            String statusValue = status == null ? null : status.name();
+            List<Application> items = applicationDAO.searchByCandidate(
+                    candidateId, keyword, statusValue, safePage, safeSize);
+            long total = applicationDAO.countByCandidate(candidateId, keyword, statusValue);
+            return new PageResult<>(items, safePage, safeSize, total);
         } catch (SQLException exception) {
             throw new BusinessException("Không thể tải danh sách đơn ứng tuyển.", exception);
         }
@@ -213,6 +203,16 @@ public class ApplicationService {
             return new PageResult<>(applications, page, pageSize, total);
         } catch (SQLException exception) {
             throw new BusinessException("Không thể tìm kiếm đơn ứng tuyển.", exception);
+        }
+    }
+
+    public java.util.Map<Integer, Long> countByJobForHr(int actorId) throws BusinessException {
+        User actor = requireHrActor(actorId);
+        Integer ownerId = "ADMIN".equals(actor.getRoleName()) ? null : actorId;
+        try {
+            return applicationDAO.countGroupedByJob(ownerId);
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể thống kê hồ sơ theo tin tuyển dụng.", exception);
         }
     }
 

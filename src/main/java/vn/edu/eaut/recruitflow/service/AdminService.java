@@ -73,6 +73,9 @@ public class AdminService {
             stats.setTotalDepartments(departmentDAO.count());
             stats.setTotalJobs(jobDAO.countAll());
             stats.setTotalApplications(applicationDAO.countAll());
+            stats.setCandidates(userDAO.countByRole(RoleName.CANDIDATE.name()));
+            stats.setEmployers(userDAO.countByRole(RoleName.HR.name()));
+            stats.setActiveJobs(jobDAO.countActiveJobs());
             return stats;
         } catch (SQLException exception) {
             throw new BusinessException("Không thể tải Admin dashboard.", exception);

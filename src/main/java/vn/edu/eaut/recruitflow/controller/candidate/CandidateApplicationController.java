@@ -98,9 +98,10 @@ public class CandidateApplicationController extends CandidateBaseController {
     }
 
     private void apply(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        int jobId = 0;
         try {
             int candidateId = currentCandidateId(request);
-            int jobId = RequestUtil.requiredPositiveInt(request, "jobId", "Tin tuyển dụng");
+            jobId = RequestUtil.requiredPositiveInt(request, "jobId", "Tin tuyển dụng");
             String resumeValue = RequestUtil.text(request, "resumeId");
             Integer resumeId = resumeValue.isEmpty()
                     ? null
@@ -109,7 +110,8 @@ public class CandidateApplicationController extends CandidateBaseController {
             applicationService.apply(candidateId, jobId, resumeId, coverLetter);
             redirectWithSuccess(request, response, "/candidate/applications", "Đã nộp đơn ứng tuyển thành công.");
         } catch (BusinessException | IllegalArgumentException ex) {
-            redirectWithError(request, response, "/candidate/jobs", ex.getMessage());
+            redirectWithError(request, response,
+                    jobId > 0 ? "/jobs/detail?id=" + jobId + "#apply-now" : "/candidate/jobs", ex.getMessage());
         }
     }
 

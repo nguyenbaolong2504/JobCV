@@ -6,7 +6,6 @@ import vn.edu.eaut.recruitflow.enums.EmploymentType;
 import vn.edu.eaut.recruitflow.service.DepartmentService;
 import vn.edu.eaut.recruitflow.service.MatchingService;
 import vn.edu.eaut.recruitflow.service.SavedJobService;
-import vn.edu.eaut.recruitflow.service.CompanyProfileService;
 import vn.edu.eaut.recruitflow.service.ResumeService;
 import vn.edu.eaut.recruitflow.util.BusinessException;
 import vn.edu.eaut.recruitflow.util.RequestUtil;
@@ -18,8 +17,6 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.function.Function;
 
 /** Published-job search annotated with the current candidate's CV match information. */
 @WebServlet(name = "CandidateJobController", urlPatterns = "/candidate/jobs")
@@ -29,7 +26,6 @@ public class CandidateJobController extends CandidateBaseController {
     private MatchingService matchingService;
     private DepartmentService departmentService;
     private SavedJobService savedJobService;
-    private CompanyProfileService companyService;
     private ResumeService resumeService;
 
     @Override
@@ -37,7 +33,6 @@ public class CandidateJobController extends CandidateBaseController {
         matchingService = new MatchingService();
         departmentService = new DepartmentService();
         savedJobService = new SavedJobService();
-        companyService = new CompanyProfileService();
         resumeService = new ResumeService();
     }
 
@@ -63,8 +58,6 @@ public class CandidateJobController extends CandidateBaseController {
                     candidateId, keyword, departmentId, location, employmentType, page, pageSize, sort));
             request.setAttribute("departments", departmentService.getAllDepartments());
             request.setAttribute("savedJobIds", savedJobService.getSavedJobIds(candidateId));
-            request.setAttribute("companyByDepartment", companyService.getCompanies("").stream()
-                    .collect(Collectors.toMap(company -> company.getId(), Function.identity())));
             request.setAttribute("hasCandidateResume", !resumeService.getResumes(candidateId).isEmpty());
         } catch (BusinessException | IllegalArgumentException ex) {
             request.setAttribute("error", ex.getMessage());

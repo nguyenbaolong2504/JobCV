@@ -13,9 +13,18 @@ import java.util.Map;
 
 /** Persists organization data used to review self-registered recruiter accounts. */
 public class RecruiterProfileDAO extends DaoSupport {
+    private static final String SELECT_PROFILE = "SELECT id, user_id, organization_name, job_title, work_phone, "
+            + "industry, company_size, address, website, description, logo_path, cover_path, is_verified, "
+            + "created_at, updated_at FROM recruiter_profiles ";
+
+    public RecruiterProfile findByUserId(int userId) throws SQLException {
+        try (Connection connection = openConnection()) {
+            return findByUserId(connection, userId);
+        }
+    }
+
     public RecruiterProfile findByUserId(Connection connection, int userId) throws SQLException {
-        String sql = "SELECT id, user_id, organization_name, job_title, work_phone, created_at, updated_at "
-                + "FROM recruiter_profiles WHERE user_id = ?";
+        String sql = SELECT_PROFILE + "WHERE user_id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, userId);
             try (ResultSet resultSet = statement.executeQuery()) {
@@ -30,8 +39,7 @@ public class RecruiterProfileDAO extends DaoSupport {
             return profiles;
         }
         String placeholders = String.join(", ", java.util.Collections.nCopies(userIds.size(), "?"));
-        String sql = "SELECT id, user_id, organization_name, job_title, work_phone, created_at, updated_at "
-                + "FROM recruiter_profiles WHERE user_id IN (" + placeholders + ") ORDER BY id";
+        String sql = SELECT_PROFILE + "WHERE user_id IN (" + placeholders + ") ORDER BY id";
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
             for (int index = 0; index < userIds.size(); index++) {
                 statement.setInt(index + 1, userIds.get(index));
@@ -64,6 +72,26 @@ public class RecruiterProfileDAO extends DaoSupport {
         throw new SQLException("Creating recruiter profile did not return a generated id.");
     }
 
+    public boolean updateCompanyProfile(RecruiterProfile profile) throws SQLException {
+        String sql = "UPDATE recruiter_profiles SET organization_name = ?, job_title = ?, work_phone = ?, "
+                + "industry = ?, company_size = ?, address = ?, website = ?, description = ?, "
+                + "logo_path = ?, cover_path = ? WHERE user_id = ?";
+        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, profile.getOrganizationName());
+            statement.setString(2, profile.getJobTitle());
+            statement.setString(3, profile.getWorkPhone());
+            statement.setString(4, profile.getIndustry());
+            statement.setString(5, profile.getCompanySize());
+            statement.setString(6, profile.getAddress());
+            statement.setString(7, profile.getWebsite());
+            statement.setString(8, profile.getDescription());
+            statement.setString(9, profile.getLogoPath());
+            statement.setString(10, profile.getCoverPath());
+            statement.setInt(11, profile.getUserId());
+            return statement.executeUpdate() == 1;
+        }
+    }
+
     private RecruiterProfile map(ResultSet resultSet) throws SQLException {
         RecruiterProfile profile = new RecruiterProfile();
         profile.setId(resultSet.getInt("id"));
@@ -71,6 +99,14 @@ public class RecruiterProfileDAO extends DaoSupport {
         profile.setOrganizationName(resultSet.getString("organization_name"));
         profile.setJobTitle(resultSet.getString("job_title"));
         profile.setWorkPhone(resultSet.getString("work_phone"));
+        profile.setIndustry(resultSet.getString("industry"));
+        profile.setCompanySize(resultSet.getString("company_size"));
+        profile.setAddress(resultSet.getString("address"));
+        profile.setWebsite(resultSet.getString("website"));
+        profile.setDescription(resultSet.getString("description"));
+        profile.setLogoPath(resultSet.getString("logo_path"));
+        profile.setCoverPath(resultSet.getString("cover_path"));
+        profile.setVerified(resultSet.getBoolean("is_verified"));
         profile.setCreatedAt(resultSet.getTimestamp("created_at"));
         profile.setUpdatedAt(resultSet.getTimestamp("updated_at"));
         return profile;

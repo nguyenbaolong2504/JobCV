@@ -1,6 +1,7 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <c:set var="pageTitle" value="CV của tôi | RecruitFlow" scope="request" />
 <c:set var="defaultResumeId" value="" />
 <c:set var="defaultResumeName" value="CV của bạn" />
@@ -118,7 +119,8 @@
                     <section class="content-card mb-4">
                         <h2 class="h5 fw-bold mb-2">Tải CV mới</h2>
                         <p class="text-muted small">Hỗ trợ PDF, DOC, DOCX; tối đa 5 MB. Tên tệp sẽ được hệ thống đổi để bảo mật.</p>
-                        <form action="${pageContext.request.contextPath}/candidate/resumes/upload" method="post" enctype="multipart/form-data">
+                        <form class="resume-upload-dropzone" action="${pageContext.request.contextPath}/candidate/resumes/upload" method="post" enctype="multipart/form-data" data-resume-dropzone>
+                            <div class="resume-drop-hint"><span><i class="bi bi-cloud-arrow-up"></i></span><strong>Kéo thả CV vào đây</strong><small>hoặc chọn tệp từ máy tính</small></div>
                             <label class="form-label" for="resumeFile">Chọn tệp CV <span class="text-danger">*</span></label>
                             <input class="form-control" id="resumeFile" name="resumeFile" type="file"
                                    accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -156,7 +158,7 @@
                             <c:forEach var="resume" items="${resumes}">
                                 <article class="resume-item border rounded-3 p-3" id="resume-${resume.id}">
                                     <div class="d-flex flex-wrap align-items-start gap-3">
-                                        <span class="resume-file-icon"><i class="bi bi-file-earmark-text"></i></span>
+                                        <span class="resume-file-icon"><i class="bi ${resume.fileType eq 'pdf' ? 'bi-file-earmark-pdf' : 'bi-file-earmark-text'}"></i></span>
                                         <div class="flex-grow-1 min-w-0">
                                             <div class="d-flex flex-wrap align-items-center gap-2">
                                                 <h3 class="h6 mb-0 text-break"><c:out value="${resume.fileName}" /></h3>
@@ -164,7 +166,7 @@
                                                 <c:if test="${not resume.fileAvailable}"><span class="badge text-bg-warning">Tệp cần tải lại</span></c:if>
                                             </div>
                                             <p class="text-muted small mb-0 mt-1">
-                                                <c:out value="${resume.fileType}" /> · <c:out value="${resume.fileSize}" /> bytes · Tải lên <c:out value="${resume.uploadedAt}" />
+                                                <c:out value="${fn:toUpperCase(resume.fileType)}" /> · <fmt:formatNumber value="${resume.fileSize / 1024}" maxFractionDigits="1" /> KB · Tải lên <fmt:formatDate value="${resume.uploadedAt}" pattern="dd/MM/yyyy HH:mm" />
                                             </p>
                                         </div>
                                         <div class="resume-actions d-flex flex-wrap gap-2">

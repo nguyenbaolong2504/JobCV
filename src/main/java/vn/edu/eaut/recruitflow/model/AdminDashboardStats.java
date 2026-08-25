@@ -7,6 +7,9 @@ public class AdminDashboardStats {
     private long totalDepartments;
     private long totalJobs;
     private long totalApplications;
+    private long candidates;
+    private long employers;
+    private long activeJobs;
 
     public long getTotalUsers() { return totalUsers; }
     public void setTotalUsers(long totalUsers) { this.totalUsers = totalUsers; }
@@ -20,4 +23,10 @@ public class AdminDashboardStats {
     public void setTotalJobs(long totalJobs) { this.totalJobs = totalJobs; }
     public long getTotalApplications() { return totalApplications; }
     public void setTotalApplications(long totalApplications) { this.totalApplications = totalApplications; }
+    public long getCandidates() { return candidates; }
+    public void setCandidates(long candidates) { this.candidates = candidates; }
+    public long getEmployers() { return employers; }
+    public void setEmployers(long employers) { this.employers = employers; }
+    public long getActiveJobs() { return activeJobs; }
+    public void setActiveJobs(long activeJobs) { this.activeJobs = activeJobs; }
 }

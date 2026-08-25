@@ -6,6 +6,7 @@ import vn.edu.eaut.recruitflow.enums.EmploymentType;
 import vn.edu.eaut.recruitflow.enums.JobStatus;
 import vn.edu.eaut.recruitflow.model.Job;
 import vn.edu.eaut.recruitflow.model.JobSkill;
+import vn.edu.eaut.recruitflow.model.JobSearchCriteria;
 import vn.edu.eaut.recruitflow.model.PageResult;
 import vn.edu.eaut.recruitflow.model.User;
 import vn.edu.eaut.recruitflow.util.BusinessException;
@@ -19,6 +20,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Locale;
 import java.util.Set;
 
@@ -70,7 +72,8 @@ public class JobService {
 
     public List<Job> getFeaturedPublishedJobs(int limit) throws BusinessException {
         try {
-            return jobDAO.findPublishedJobs(1, Math.max(1, Math.min(limit, 20)));
+            return jobDAO.searchPublished(new JobSearchCriteria(), "newest", 1,
+                    Math.max(1, Math.min(limit, 20)));
         } catch (SQLException exception) {
             throw new BusinessException("Không thể tải tin tuyển dụng nổi bật.", exception);
         }
@@ -102,6 +105,48 @@ public class JobService {
             return new PageResult<>(jobs, page, pageSize, total);
         } catch (SQLException exception) {
             throw new BusinessException("Không thể tìm kiếm tin tuyển dụng.", exception);
+        }
+    }
+
+    public PageResult<Job> searchPublishedJobs(JobSearchCriteria criteria, int page, int pageSize, String sort)
+            throws BusinessException {
+        try {
+            List<Job> jobs = jobDAO.searchPublished(criteria, publicSort(sort), page, pageSize);
+            long total = jobDAO.countPublished(criteria);
+            return new PageResult<>(jobs, page, pageSize, total);
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể tìm kiếm tin tuyển dụng.", exception);
+        }
+    }
+
+    public List<String> getSearchSuggestions(String query, int limit) throws BusinessException {
+        String normalized = query == null ? "" : query.trim();
+        if (normalized.length() < 2) {
+            return List.of();
+        }
+        if (normalized.length() > 80) {
+            throw new BusinessException("Từ khóa gợi ý không được vượt quá 80 ký tự.");
+        }
+        try {
+            return jobDAO.suggestPublished(normalized, limit);
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể tải gợi ý tìm kiếm.", exception);
+        }
+    }
+
+    public List<String> getPopularKeywords(int limit) throws BusinessException {
+        try {
+            return jobDAO.findPopularKeywords(limit);
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể tải từ khóa phổ biến.", exception);
+        }
+    }
+
+    public Map<Integer, Long> countPublishedJobsByDepartment() throws BusinessException {
+        try {
+            return jobDAO.countPublishedByDepartment();
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể thống kê việc làm theo lĩnh vực.", exception);
         }
     }
 
@@ -344,6 +389,7 @@ public class JobService {
         return switch (sort) {
             case "deadline" -> "deadline_asc";
             case "salary" -> "salary_desc";
+            case "experience" -> "experience_asc";
             default -> sort;
         };
     }

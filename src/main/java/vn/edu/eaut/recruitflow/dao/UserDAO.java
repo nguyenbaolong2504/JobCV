@@ -91,6 +91,17 @@ public class UserDAO extends DaoSupport {
         return count(null, status, null);
     }
 
+    public long countByRole(String roleName) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM users u JOIN roles r ON r.id = u.role_id WHERE r.role_name = ?";
+        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, roleName);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                resultSet.next();
+                return resultSet.getLong(1);
+            }
+        }
+    }
+
     public long countAll() throws SQLException {
         return count(null, null, null);
     }

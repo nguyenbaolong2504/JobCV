@@ -83,7 +83,8 @@
                                                 aria-label="Chỉnh sửa <c:out value='${category.name}'/>">
                                                 <i class="bi bi-pencil"></i>
                                             </button>
-                                            <form class="d-inline" method="post" action="${pageContext.request.contextPath}/admin/job-categories/delete" onsubmit="return confirm('Xóa danh mục này? Danh mục có danh mục con hoặc tin tuyển dụng sẽ không thể xóa.');">
+                                            <form class="d-inline" method="post" action="${pageContext.request.contextPath}/admin/job-categories/delete"
+                                                data-confirm="Xóa danh mục này? Danh mục có danh mục con hoặc tin tuyển dụng sẽ được hệ thống bảo vệ.">
                                                 <input type="hidden" name="id" value="<c:out value='${category.id}'/>">
                                                 <button class="btn btn-sm btn-outline-danger" type="submit" aria-label="Xóa <c:out value='${category.name}'/>"><i class="bi bi-trash"></i></button>
                                             </form>

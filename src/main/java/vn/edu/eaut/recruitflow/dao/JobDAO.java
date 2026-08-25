@@ -12,19 +12,25 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class JobDAO extends DaoSupport {
     private static final String SELECT_JOB_LEGACY = "SELECT j.id, j.job_code, j.title, j.department_id, d.name AS department_name, "
+            + "rp.id AS company_id, rp.organization_name AS company_name, rp.logo_path AS company_logo_file, "
             + "j.location, j.employment_type, j.number_of_positions, j.salary_min, j.salary_max, j.description, j.requirements, "
             + "j.experience_required, j.deadline, j.status, j.created_by, j.created_at, j.updated_at "
-            + "FROM jobs j JOIN departments d ON d.id = j.department_id ";
+            + "FROM jobs j JOIN departments d ON d.id = j.department_id "
+            + "LEFT JOIN recruiter_profiles rp ON rp.user_id = j.created_by ";
     private static final String SELECT_JOB_WITH_CATEGORY = "SELECT j.id, j.job_code, j.title, j.department_id, d.name AS department_name, "
             + "j.category_id, c.name AS category_name, j.location, "
+            + "rp.id AS company_id, rp.organization_name AS company_name, rp.logo_path AS company_logo_file, "
             + "j.employment_type, j.number_of_positions, j.salary_min, j.salary_max, j.description, j.requirements, "
             + "j.experience_required, j.deadline, j.status, j.created_by, j.created_at, j.updated_at "
             + "FROM jobs j JOIN departments d ON d.id = j.department_id "
-            + "LEFT JOIN job_categories c ON c.id = j.category_id ";
+            + "LEFT JOIN job_categories c ON c.id = j.category_id "
+            + "LEFT JOIN recruiter_profiles rp ON rp.user_id = j.created_by ";
     private static volatile Boolean categorySchemaAvailable;
     private final JobSkillDAO jobSkillDAO = new JobSkillDAO();
 
@@ -115,6 +121,11 @@ public class JobDAO extends DaoSupport {
         return search(criteria, "PUBLISHED", sort, page, pageSize, true, null);
     }
 
+    public List<Job> searchPublishedByOwner(int ownerUserId, JobSearchCriteria criteria, String sort,
+                                             int page, int pageSize) throws SQLException {
+        return search(criteria, "PUBLISHED", sort, page, pageSize, true, ownerUserId);
+    }
+
     private List<Job> search(JobSearchCriteria criteria, String status, String sort, int page, int pageSize,
                              boolean openOnly, Integer createdBy) throws SQLException {
         try (Connection connection = openConnection()) {
@@ -156,7 +167,8 @@ public class JobDAO extends DaoSupport {
     private long count(JobSearchCriteria criteria, String status, boolean openOnly, Integer createdBy) throws SQLException {
         try (Connection connection = openConnection()) {
             boolean supportsCategories = supportsCategories(connection);
-            StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM jobs j WHERE 1 = 1");
+            StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM jobs j "
+                    + "LEFT JOIN recruiter_profiles rp ON rp.user_id = j.created_by WHERE 1 = 1");
             List<Object> parameters = new ArrayList<>();
             appendFilters(sql, parameters, criteria, status, openOnly, supportsCategories, createdBy);
             try (PreparedStatement statement = connection.prepareStatement(sql.toString())) {
@@ -171,6 +183,67 @@ public class JobDAO extends DaoSupport {
 
     public long countActiveJobs() throws SQLException {
         return countPublished(new JobSearchCriteria());
+    }
+
+    /** Lightweight database-backed suggestions for the public search box. */
+    public List<String> suggestPublished(String query, int requestedLimit) throws SQLException {
+        String normalized = query == null ? "" : query.trim();
+        if (normalized.isEmpty()) {
+            return List.of();
+        }
+        int limit = Math.max(1, Math.min(requestedLimit, 10));
+        List<String> suggestions = new ArrayList<>();
+        String titleSql = "SELECT j.title FROM jobs j "
+                + "WHERE j.status = 'PUBLISHED' AND j.deadline >= CURRENT_DATE AND LOWER(j.title) LIKE ? "
+                + "GROUP BY j.title ORDER BY MAX(j.created_at) DESC, j.title LIMIT ?";
+        String skillSql = "SELECT js.skill_name FROM job_skills js JOIN jobs j ON j.id = js.job_id "
+                + "WHERE j.status = 'PUBLISHED' AND j.deadline >= CURRENT_DATE AND LOWER(js.skill_name) LIKE ? "
+                + "GROUP BY js.skill_name ORDER BY COUNT(*) DESC, js.skill_name LIMIT ?";
+        try (Connection connection = openConnection()) {
+            appendSuggestions(connection, titleSql, normalized, limit, suggestions);
+            if (suggestions.size() < limit) {
+                appendSuggestions(connection, skillSql, normalized, limit - suggestions.size(), suggestions);
+            }
+            if (suggestions.size() < limit) {
+                String companySql = "SELECT rp.organization_name FROM recruiter_profiles rp JOIN users u ON u.id = rp.user_id "
+                        + "WHERE u.status = 'ACTIVE' AND LOWER(rp.organization_name) LIKE ? "
+                        + "ORDER BY rp.organization_name LIMIT ?";
+                appendSuggestions(connection, companySql, normalized, limit - suggestions.size(), suggestions);
+            }
+        }
+        return suggestions;
+    }
+
+    /** Most frequently required skills from currently open jobs; never returns fabricated keywords. */
+    public List<String> findPopularKeywords(int requestedLimit) throws SQLException {
+        int limit = Math.max(1, Math.min(requestedLimit, 12));
+        String sql = "SELECT js.skill_name FROM job_skills js JOIN jobs j ON j.id = js.job_id "
+                + "WHERE j.status = 'PUBLISHED' AND j.deadline >= CURRENT_DATE "
+                + "GROUP BY js.skill_name ORDER BY COUNT(*) DESC, MAX(j.created_at) DESC, js.skill_name LIMIT ?";
+        List<String> keywords = new ArrayList<>();
+        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, limit);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    keywords.add(resultSet.getString(1));
+                }
+            }
+        }
+        return keywords;
+    }
+
+    public Map<Integer, Long> countPublishedByDepartment() throws SQLException {
+        String sql = "SELECT j.department_id, COUNT(*) FROM jobs j "
+                + "WHERE j.status = 'PUBLISHED' AND j.deadline >= CURRENT_DATE "
+                + "GROUP BY j.department_id ORDER BY COUNT(*) DESC";
+        Map<Integer, Long> counts = new LinkedHashMap<>();
+        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql);
+             ResultSet resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                counts.put(resultSet.getInt(1), resultSet.getLong(2));
+            }
+        }
+        return counts;
     }
 
     public long countByStatus(String status) throws SQLException {
@@ -280,9 +353,12 @@ public class JobDAO extends DaoSupport {
             for (int tokenIndex = 0; tokenIndex < tokenCount; tokenIndex++) {
                 sql.append(" AND (LOWER(j.title) LIKE ? OR LOWER(j.job_code) LIKE ? OR LOWER(j.description) LIKE ? "
                         + "OR LOWER(j.requirements) LIKE ? OR EXISTS (SELECT 1 FROM job_skills js "
-                        + "WHERE js.job_id = j.id AND LOWER(js.skill_name) LIKE ?))");
+                        + "WHERE js.job_id = j.id AND LOWER(js.skill_name) LIKE ?) "
+                        + "OR EXISTS (SELECT 1 FROM departments search_department "
+                        + "WHERE search_department.id = j.department_id AND LOWER(search_department.name) LIKE ?) "
+                        + "OR LOWER(COALESCE(rp.organization_name, '')) LIKE ?)");
                 String value = likeValue(tokens[tokenIndex]);
-                for (int parameterIndex = 0; parameterIndex < 5; parameterIndex++) {
+                for (int parameterIndex = 0; parameterIndex < 7; parameterIndex++) {
                     parameters.add(value);
                 }
             }
@@ -382,6 +458,22 @@ public class JobDAO extends DaoSupport {
         }
     }
 
+    private void appendSuggestions(Connection connection, String sql, String query, int limit,
+                                   List<String> suggestions) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, likeValue(query));
+            statement.setInt(2, limit);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    String suggestion = resultSet.getString(1);
+                    if (suggestion != null && suggestions.stream().noneMatch(suggestion::equalsIgnoreCase)) {
+                        suggestions.add(suggestion);
+                    }
+                }
+            }
+        }
+    }
+
     private String likeValue(String value) {
         return '%' + value.trim().toLowerCase() + '%';
     }
@@ -441,6 +533,9 @@ public class JobDAO extends DaoSupport {
         job.setDeadline(resultSet.getDate("deadline"));
         job.setStatus(resultSet.getString("status"));
         job.setCreatedBy(resultSet.getInt("created_by"));
+        job.setCompanyId(getNullableInt(resultSet, "company_id"));
+        job.setCompanyName(resultSet.getString("company_name"));
+        job.setCompanyLogoFile(resultSet.getString("company_logo_file"));
         job.setCreatedAt(resultSet.getTimestamp("created_at"));
         job.setUpdatedAt(resultSet.getTimestamp("updated_at"));
         return job;

@@ -10,6 +10,8 @@
                     <a class="${fn:endsWith(currentPath, '/hr/dashboard') ? 'active' : ''}"
                         href="${pageContext.request.contextPath}/hr/dashboard"><i class="bi bi-grid-1x2"></i> Tổng
                         quan</a>
+                    <a class="${fn:contains(currentPath, '/hr/company') ? 'active' : ''}"
+                        href="${pageContext.request.contextPath}/hr/company"><i class="bi bi-buildings"></i> Hồ sơ doanh nghiệp</a>
                     <a class="${fn:contains(currentPath, '/hr/jobs') ? 'active' : ''}"
                         href="${pageContext.request.contextPath}/hr/jobs"><i class="bi bi-briefcase"></i> Tin tuyển
                         dụng</a>

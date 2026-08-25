@@ -2,6 +2,7 @@ package vn.edu.eaut.recruitflow.controller.auth;
 
 import vn.edu.eaut.recruitflow.controller.BaseController;
 import vn.edu.eaut.recruitflow.service.UserService;
+import vn.edu.eaut.recruitflow.util.AuthValidation;
 import vn.edu.eaut.recruitflow.util.BusinessException;
 import vn.edu.eaut.recruitflow.util.RequestUtil;
 
@@ -11,7 +12,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
 /** Registers a new job-seeker or recruiter account through the service layer. */
@@ -44,19 +44,25 @@ public class RegisterController extends BaseController {
         setUtf8(request, response);
 
         try {
-            String fullName = validateFullName(RequestUtil.text(request, "fullName"));
-            String email = normalizeAndValidateEmail(RequestUtil.text(request, "email"));
-            String password = validatePassword(RequestUtil.text(request, "password"));
+            String fullName = AuthValidation.fullName(RequestUtil.text(request, "fullName"));
+            String email = AuthValidation.email(RequestUtil.text(request, "email"));
+            String password = AuthValidation.newPassword(RequestUtil.text(request, "password"));
             String confirmPassword = RequestUtil.text(request, "confirmPassword");
             String accountType = validateAccountType(RequestUtil.text(request, "accountType"));
+            String organizationName = "HR".equals(accountType) ? RequestUtil.text(request, "organizationName") : null;
+            String jobTitle = "HR".equals(accountType) ? RequestUtil.text(request, "jobTitle") : null;
+            String workPhone = "HR".equals(accountType) ? RequestUtil.text(request, "workPhone") : null;
 
             // The current form does not require a confirmation input, but validate it when supplied.
             if (!confirmPassword.isEmpty() && !password.equals(confirmPassword)) {
                 throw new BusinessException("Xác nhận mật khẩu không khớp.");
             }
 
-            userService.registerAccount(email, password, fullName, accountType);
-            redirectWithSuccess(request, response, "/login", "Đăng ký thành công. Vui lòng đăng nhập để tiếp tục.");
+            userService.registerAccount(email, password, fullName, accountType,
+                    organizationName, jobTitle, workPhone);
+            redirectWithSuccess(request, response, "/login", "HR".equals(accountType)
+                    ? "Đăng ký thành công. Hồ sơ nhà tuyển dụng đang chờ quản trị viên xét duyệt."
+                    : "Đăng ký thành công. Vui lòng đăng nhập để tiếp tục.");
         } catch (BusinessException ex) {
             redirectWithError(request, response, "/register", ex.getMessage());
         }
@@ -82,33 +88,6 @@ public class RegisterController extends BaseController {
                 redirect(request, response, "/home");
                 break;
         }
-    }
-
-    private String validateFullName(String fullName) throws BusinessException {
-        String normalized = fullName == null ? "" : fullName.trim().replaceAll("\\s+", " ");
-        if (normalized.length() < 2 || normalized.length() > 100) {
-            throw new BusinessException("Họ và tên phải có từ 2 đến 100 ký tự.");
-        }
-        return normalized;
-    }
-
-    private String normalizeAndValidateEmail(String email) throws BusinessException {
-        String normalized = email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
-        if (normalized.isEmpty() || normalized.length() > 254
-                || !normalized.matches("(?i)^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,63}$")) {
-            throw new BusinessException("Vui lòng nhập địa chỉ email hợp lệ.");
-        }
-        return normalized;
-    }
-
-    private String validatePassword(String password) throws BusinessException {
-        if (password == null || password.length() < 6) {
-            throw new BusinessException("Mật khẩu phải có ít nhất 6 ký tự.");
-        }
-        if (password.getBytes(StandardCharsets.UTF_8).length > 72) {
-            throw new BusinessException("Mật khẩu không được vượt quá 72 byte.");
-        }
-        return password;
     }
 
     private String validateAccountType(String accountType) throws BusinessException {

@@ -1,102 +1,159 @@
 package vn.edu.eaut.recruitflow.service;
 
+import vn.edu.eaut.recruitflow.dao.CompanyProfileDAO;
+import vn.edu.eaut.recruitflow.dao.JobDAO;
+import vn.edu.eaut.recruitflow.dao.RecruiterProfileDAO;
 import vn.edu.eaut.recruitflow.model.CompanyProfile;
-import vn.edu.eaut.recruitflow.model.Department;
 import vn.edu.eaut.recruitflow.model.Job;
+import vn.edu.eaut.recruitflow.model.JobSearchCriteria;
 import vn.edu.eaut.recruitflow.model.PageResult;
+import vn.edu.eaut.recruitflow.model.RecruiterProfile;
 import vn.edu.eaut.recruitflow.util.BusinessException;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
+import java.util.regex.Pattern;
 
-/** Provides coherent public employer pages without exposing HR account data. */
+/** Employer directory backed by recruiter profiles and the jobs they actually own. */
 public class CompanyProfileService {
-    private final DepartmentService departmentService;
-    private final JobService jobService;
+    private static final Pattern PHONE = Pattern.compile("^[0-9+() .-]{6,30}$");
+    private final CompanyProfileDAO companyDAO;
+    private final RecruiterProfileDAO recruiterProfileDAO;
+    private final JobDAO jobDAO;
+    private final AuditLogService auditLogService;
 
     public CompanyProfileService() {
-        this.departmentService = new DepartmentService();
-        this.jobService = new JobService();
+        this.companyDAO = new CompanyProfileDAO();
+        this.recruiterProfileDAO = new RecruiterProfileDAO();
+        this.jobDAO = new JobDAO();
+        this.auditLogService = new AuditLogService();
     }
 
     public List<CompanyProfile> getCompanies(String keyword) throws BusinessException {
-        String normalized = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
-        List<CompanyProfile> result = new ArrayList<>();
-        for (Department department : departmentService.getAllDepartments()) {
-            CompanyProfile company = fromDepartment(department);
-            if (normalized.isEmpty() || company.getName().toLowerCase(Locale.ROOT).contains(normalized)
-                    || company.getIndustry().toLowerCase(Locale.ROOT).contains(normalized)
-                    || company.getLocation().toLowerCase(Locale.ROOT).contains(normalized)) {
-                company.setOpenJobs(jobService.searchPublishedJobs(null, department.getId(), null, null, 1, 1, "newest").getTotalItems());
-                result.add(company);
-            }
+        return getCompanies(keyword, "jobs");
+    }
+
+    public List<CompanyProfile> getCompanies(String keyword, String sort) throws BusinessException {
+        return searchCompanies(keyword, true, sort, 1, 24).getItems();
+    }
+
+    public PageResult<CompanyProfile> searchCompanies(String keyword, boolean publicOnly, String sort,
+                                                       int page, int pageSize) throws BusinessException {
+        String normalized = keyword == null ? "" : keyword.trim();
+        if (normalized.length() > 100) throw new BusinessException("Từ khóa không được vượt quá 100 ký tự.");
+        try {
+            List<CompanyProfile> companies = companyDAO.search(normalized, publicOnly, sort, page, pageSize);
+            companies.forEach(this::attachHighlights);
+            return new PageResult<>(companies, page, pageSize, companyDAO.count(normalized, publicOnly));
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể tải danh sách doanh nghiệp.", exception);
         }
-        return result;
+    }
+
+    public List<CompanyProfile> getFeaturedCompanies(int limit) throws BusinessException {
+        return searchCompanies("", true, "jobs", 1, 24).getItems().stream()
+                .filter(company -> company.isVerified() && company.getOpenJobs() > 0)
+                .limit(Math.max(1, Math.min(limit, 12)))
+                .toList();
     }
 
     public CompanyProfile getCompany(int id) throws BusinessException {
-        Department department = departmentService.getById(id);
-        CompanyProfile company = fromDepartment(department);
-        company.setOpenJobs(jobService.searchPublishedJobs(null, id, null, null, 1, 1, "newest").getTotalItems());
-        return company;
-    }
-
-    public List<Job> getOpenJobs(int id) throws BusinessException {
-        PageResult<Job> page = jobService.searchPublishedJobs(null, id, null, null, 1, 24, "newest");
-        return page.getItems();
-    }
-
-    public CompanyProfile fromDepartment(Department department) {
-        CompanyProfile company = new CompanyProfile();
-        company.setId(department.getId());
-        company.setVerified(true);
-        company.setLocation("Hà Nội · TP.HCM · Làm việc linh hoạt");
-        company.setSize("100–500 nhân sự");
-        company.setWebsite("recruitflow.local");
-        company.setHighlights(List.of("Quy trình tuyển dụng minh bạch", "Môi trường học hỏi và phát triển", "Đánh giá theo năng lực"));
-        switch (department.getName()) {
-            case "Information Technology" -> assign(company, "NovaTech Solutions", "IT - Phần mềm", "novatech.svg",
-                    "NovaTech xây dựng sản phẩm số và nền tảng doanh nghiệp, tập trung vào chất lượng kỹ thuật, khả năng mở rộng và trải nghiệm người dùng.");
-            case "Finance" -> assign(company, "Horizon Finance", "Tài chính", "horizon-finance.svg",
-                    "Horizon Finance phát triển các giải pháp tài chính vận hành dựa trên dữ liệu, kiểm soát rủi ro và dịch vụ khách hàng đáng tin cậy.");
-            case "Human Resources" -> assign(company, "PeopleFirst Group", "Nhân sự", "peoplefirst.svg",
-                    "PeopleFirst đồng hành cùng doanh nghiệp trong tuyển dụng, phát triển con người và xây dựng trải nghiệm nhân viên bền vững.");
-            case "Marketing" -> assign(company, "Aurora Media", "Marketing & Truyền thông", "aurora-media.svg",
-                    "Aurora Media là đội ngũ chiến lược và sáng tạo đa kênh, kết nối thương hiệu với khách hàng bằng nội dung và dữ liệu.");
-            case "Sales" -> assign(company, "NextCommerce", "Kinh doanh & Thương mại", "nextcommerce.svg",
-                    "NextCommerce phát triển hệ sinh thái bán hàng hiện đại, nơi đội ngũ kinh doanh được hỗ trợ bởi công nghệ và dữ liệu thị trường.");
-            case "Construction" -> assign(company, "BuildCore Vietnam", "Xây dựng", "generic-careers.svg",
-                    "BuildCore Vietnam triển khai các dự án xây dựng với trọng tâm an toàn, chất lượng công trình và phát triển đội ngũ kỹ sư hiện trường.");
-            case "Customer Service" -> assign(company, "CarePlus Services", "Chăm sóc khách hàng", "generic-careers.svg",
-                    "CarePlus xây dựng trải nghiệm khách hàng nhất quán qua đội ngũ tư vấn, chăm sóc và quản lý chất lượng dịch vụ.");
-            case "Design" -> assign(company, "PixelCraft Studio", "Thiết kế", "generic-careers.svg",
-                    "PixelCraft là studio thiết kế sản phẩm và truyền thông, đề cao tư duy người dùng, tính nhất quán và khả năng cộng tác đa chức năng.");
-            case "Operations" -> assign(company, "FlowOps Vietnam", "Vận hành", "generic-careers.svg",
-                    "FlowOps tối ưu quy trình vận hành, phối hợp nguồn lực và chất lượng dịch vụ để giúp tổ chức tăng trưởng bền vững.");
-            default -> assign(company, vietnameseDepartmentName(department.getName()) + " Careers", vietnameseDepartmentName(department.getName()), "generic-careers.svg",
-                    department.getDescription() == null || department.getDescription().isBlank()
-                            ? "Doanh nghiệp chú trọng xây dựng đội ngũ chuyên môn, quy trình làm việc rõ ràng và cơ hội phát triển dài hạn."
-                            : department.getDescription());
+        try {
+            CompanyProfile company = companyDAO.findById(id, true);
+            if (company == null) throw new BusinessException("Không tìm thấy doanh nghiệp.");
+            attachHighlights(company);
+            return company;
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể tải thông tin doanh nghiệp.", exception);
         }
-        return company;
     }
 
-    private void assign(CompanyProfile company, String name, String industry, String logo, String description) {
-        company.setName(name);
-        company.setIndustry(industry);
-        company.setLogoFile(logo);
-        company.setDescription(description);
+    public CompanyProfile getCompanyByOwner(int ownerUserId) throws BusinessException {
+        try {
+            CompanyProfile company = companyDAO.findByOwner(ownerUserId);
+            if (company == null) throw new BusinessException("Nhà tuyển dụng chưa hoàn thiện hồ sơ doanh nghiệp.");
+            attachHighlights(company);
+            return company;
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể tải thông tin doanh nghiệp.", exception);
+        }
     }
 
-    private String vietnameseDepartmentName(String value) {
-        if (value == null) return "Doanh nghiệp";
-        return switch (value) {
-            case "Engineering" -> "Kỹ thuật";
-            case "Operations" -> "Vận hành";
-            case "Customer Service" -> "Chăm sóc khách hàng";
-            case "Design" -> "Thiết kế";
-            default -> value;
-        };
+    public RecruiterProfile getRecruiterProfile(int ownerUserId) throws BusinessException {
+        try {
+            RecruiterProfile profile = recruiterProfileDAO.findByUserId(ownerUserId);
+            if (profile == null) throw new BusinessException("Không tìm thấy hồ sơ doanh nghiệp.");
+            return profile;
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể tải hồ sơ doanh nghiệp.", exception);
+        }
+    }
+
+    public void updateRecruiterProfile(int ownerUserId, RecruiterProfile profile) throws BusinessException {
+        if (profile == null || profile.getUserId() != ownerUserId) throw new BusinessException("Hồ sơ doanh nghiệp không hợp lệ.");
+        validate(profile);
+        try {
+            if (!recruiterProfileDAO.updateCompanyProfile(profile)) throw new BusinessException("Không thể cập nhật hồ sơ doanh nghiệp.");
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể cập nhật hồ sơ doanh nghiệp.", exception);
+        }
+    }
+
+    public void setVerified(int companyId, boolean verified, int actorId, String ipAddress) throws BusinessException {
+        try {
+            CompanyProfile company = companyDAO.findById(companyId, false);
+            if (company == null) throw new BusinessException("Không tìm thấy doanh nghiệp.");
+            if (verified && (company.getDescription() == null || company.getDescription().isBlank())) {
+                throw new BusinessException("Doanh nghiệp phải hoàn thiện phần giới thiệu trước khi xác thực.");
+            }
+            if (!companyDAO.setVerified(companyId, verified)) throw new BusinessException("Không thể cập nhật trạng thái xác thực.");
+            auditLogService.record(actorId, verified ? "COMPANY_VERIFIED" : "COMPANY_VERIFICATION_REVOKED",
+                    "recruiter_profiles", companyId,
+                    (verified ? "Verified company " : "Revoked verification for company ") + company.getName(), ipAddress);
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể cập nhật trạng thái xác thực doanh nghiệp.", exception);
+        }
+    }
+
+    public List<Job> getOpenJobs(int companyId) throws BusinessException {
+        CompanyProfile company = getCompany(companyId);
+        try {
+            return jobDAO.searchPublishedByOwner(company.getOwnerUserId(), new JobSearchCriteria(), "newest", 1, 24);
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể tải việc làm của doanh nghiệp.", exception);
+        }
+    }
+
+    private void validate(RecruiterProfile profile) throws BusinessException {
+        requireLength(profile.getOrganizationName(), "Tên doanh nghiệp", 2, 150);
+        requireLength(profile.getJobTitle(), "Chức danh người liên hệ", 2, 100);
+        if (profile.getWorkPhone() == null || !PHONE.matcher(profile.getWorkPhone()).matches()) throw new BusinessException("Số điện thoại công việc không hợp lệ.");
+        optionalLength(profile.getIndustry(), "Lĩnh vực", 120);
+        optionalLength(profile.getCompanySize(), "Quy mô", 60);
+        optionalLength(profile.getAddress(), "Địa chỉ", 255);
+        optionalLength(profile.getWebsite(), "Website", 255);
+        optionalLength(profile.getDescription(), "Giới thiệu doanh nghiệp", 5000);
+        if (profile.getWebsite() != null && !profile.getWebsite().isBlank()
+                && !(profile.getWebsite().startsWith("https://") || profile.getWebsite().startsWith("http://"))) {
+            throw new BusinessException("Website phải bắt đầu bằng http:// hoặc https://.");
+        }
+    }
+
+    private void requireLength(String value, String label, int min, int max) throws BusinessException {
+        int length = value == null ? 0 : value.trim().length();
+        if (length < min || length > max) throw new BusinessException(label + " phải có từ " + min + " đến " + max + " ký tự.");
+    }
+
+    private void optionalLength(String value, String label, int max) throws BusinessException {
+        if (value != null && value.trim().length() > max) throw new BusinessException(label + " không được vượt quá " + max + " ký tự.");
+    }
+
+    private void attachHighlights(CompanyProfile company) {
+        List<String> highlights = new ArrayList<>();
+        if (company.isVerified()) highlights.add("Thông tin doanh nghiệp đã được xác thực");
+        if (company.getOpenJobs() > 0) highlights.add(company.getOpenJobs() + " vị trí đang nhận hồ sơ");
+        if (company.getIndustry() != null && !company.getIndustry().isBlank()) highlights.add("Lĩnh vực: " + company.getIndustry());
+        company.setHighlights(highlights);
     }
 }

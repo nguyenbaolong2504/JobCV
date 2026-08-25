@@ -7,6 +7,10 @@ import vn.edu.eaut.recruitflow.service.JobAlertService;
 import vn.edu.eaut.recruitflow.service.MatchingService;
 import vn.edu.eaut.recruitflow.service.SavedJobService;
 import vn.edu.eaut.recruitflow.service.ResumeService;
+import vn.edu.eaut.recruitflow.service.JobCategoryService;
+import vn.edu.eaut.recruitflow.service.NotificationService;
+import vn.edu.eaut.recruitflow.service.CandidateProfileService;
+import vn.edu.eaut.recruitflow.service.CompanyProfileService;
 import vn.edu.eaut.recruitflow.model.CandidateDashboardStats;
 import vn.edu.eaut.recruitflow.util.BusinessException;
 import vn.edu.eaut.recruitflow.util.RequestUtil;
@@ -31,6 +35,10 @@ public class HomeController extends BaseController {
     private SavedJobService savedJobService;
     private JobAlertService jobAlertService;
     private ResumeService resumeService;
+    private JobCategoryService categoryService;
+    private NotificationService notificationService;
+    private CandidateProfileService candidateProfileService;
+    private CompanyProfileService companyProfileService;
 
     @Override
     public void init() throws ServletException {
@@ -41,6 +49,10 @@ public class HomeController extends BaseController {
         savedJobService = new SavedJobService();
         jobAlertService = new JobAlertService();
         resumeService = new ResumeService();
+        categoryService = new JobCategoryService();
+        notificationService = new NotificationService();
+        candidateProfileService = new CandidateProfileService();
+        companyProfileService = new CompanyProfileService();
     }
 
     @Override
@@ -62,11 +74,18 @@ public class HomeController extends BaseController {
             request.setAttribute("featuredJobs", jobService.getFeaturedPublishedJobs(FEATURED_JOB_LIMIT));
             request.setAttribute("publishedJobCount", jobService.countPublishedJobs());
             request.setAttribute("departments", departmentService.getAllDepartments());
+            request.setAttribute("departmentJobCounts", jobService.countPublishedJobsByDepartment());
+            request.setAttribute("popularKeywords", jobService.getPopularKeywords(8));
+            request.setAttribute("categories", categoryService.getPublicHierarchy());
+            request.setAttribute("featuredCompanies", companyProfileService.getFeaturedCompanies(10));
         } catch (BusinessException ex) {
             request.setAttribute("featuredJobs", List.of());
             request.setAttribute("departments", List.of());
+            request.setAttribute("popularKeywords", List.of());
+            request.setAttribute("featuredCompanies", List.of());
             request.setAttribute("error", ex.getMessage());
         }
+        request.setAttribute("pageDescription", "Tìm việc làm, quản lý CV và theo dõi hành trình ứng tuyển minh bạch trên RecruitFlow.");
         attachCandidateHome(request);
         view(request, response, "/WEB-INF/views/public/home.jsp", "RecruitFlow | Tuyển dụng và tiếp nhận nhân sự");
     }
@@ -86,6 +105,8 @@ public class HomeController extends BaseController {
             request.setAttribute("candidateSavedJobCount", savedJobService.count(candidateId));
             request.setAttribute("candidateJobAlertCount", jobAlertService.countActive(candidateId));
             request.setAttribute("candidateHasResume", !resumeService.getResumes(candidateId).isEmpty());
+            request.setAttribute("unreadNotificationCount", notificationService.unreadCount(candidateId));
+            request.setAttribute("layoutCandidateProfile", candidateProfileService.getProfile(candidateId));
         } catch (BusinessException ex) {
             request.setAttribute("candidateHomeError", ex.getMessage());
         }

@@ -14,6 +14,8 @@ public final class PermissionPolicy {
     public static PermissionCode requiredForPath(String path) {
         if (path == null) return null;
         if (path.startsWith("/admin/dashboard")) return PermissionCode.ADMIN_DASHBOARD_VIEW;
+        if (path.startsWith("/admin/jobs") || path.startsWith("/admin/applications") || path.startsWith("/admin/reports")) return PermissionCode.ADMIN_DASHBOARD_VIEW;
+        if (path.startsWith("/admin/companies")) return PermissionCode.ADMIN_USERS_MANAGE;
         if (path.startsWith("/admin/users")) return PermissionCode.ADMIN_USERS_MANAGE;
         if (path.startsWith("/admin/roles") || path.startsWith("/admin/permissions")) return PermissionCode.ADMIN_PERMISSIONS_MANAGE;
         if (path.startsWith("/admin/departments")) return PermissionCode.ADMIN_DEPARTMENTS_MANAGE;
@@ -23,6 +25,7 @@ public final class PermissionPolicy {
         if (path.startsWith("/admin/audit-logs")) return PermissionCode.ADMIN_AUDIT_VIEW;
 
         if (path.startsWith("/hr/dashboard")) return PermissionCode.HR_DASHBOARD_VIEW;
+        if (path.startsWith("/hr/company")) return PermissionCode.HR_DASHBOARD_VIEW;
         if (path.startsWith("/hr/jobs")) return PermissionCode.HR_JOBS_MANAGE;
         if (path.startsWith("/hr/applications") || path.startsWith("/hr/resumes")) return PermissionCode.HR_APPLICATIONS_MANAGE;
         if (path.startsWith("/hr/interviews")) return PermissionCode.HR_INTERVIEWS_MANAGE;

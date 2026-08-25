@@ -4,6 +4,7 @@ import vn.edu.eaut.recruitflow.controller.BaseController;
 import vn.edu.eaut.recruitflow.model.User;
 import vn.edu.eaut.recruitflow.service.UserService;
 import vn.edu.eaut.recruitflow.util.BusinessException;
+import vn.edu.eaut.recruitflow.util.AuthSession;
 import vn.edu.eaut.recruitflow.util.FlashMessage;
 import vn.edu.eaut.recruitflow.util.RequestUtil;
 
@@ -22,7 +23,6 @@ import java.util.Map;
 @WebServlet(name = "LoginController", urlPatterns = "/login")
 public class LoginController extends BaseController {
     private static final Set<String> VALID_ROLES = Set.of("ADMIN", "HR", "INTERVIEWER", "CANDIDATE");
-    private static final int SESSION_TIMEOUT_SECONDS = 30 * 60;
     private static final int MAX_FAILED_ATTEMPTS = 5;
     private static final long LOCK_MILLIS = 15L * 60L * 1000L;
     private static final Map<String, LoginAttempt> LOGIN_ATTEMPTS = new HashMap<>();
@@ -76,30 +76,13 @@ public class LoginController extends BaseController {
                 return;
             }
 
-            establishAuthenticatedSession(request, user, role);
+            AuthSession.establish(request, user);
             clearFailures(attemptKey);
             FlashMessage.success(request.getSession(false), "Đăng nhập thành công.");
             redirectByRole(request, response, role);
         } catch (BusinessException ex) {
             redirectWithError(request, response, "/login", ex.getMessage());
         }
-    }
-
-    /**
-     * Invalidating a possible anonymous session before creating the authenticated session
-     * prevents a session identifier supplied before login from being retained.
-     */
-    private void establishAuthenticatedSession(HttpServletRequest request, User user, String role) {
-        HttpSession previousSession = request.getSession(false);
-        if (previousSession != null) {
-            previousSession.invalidate();
-        }
-
-        HttpSession authenticatedSession = request.getSession(true);
-        authenticatedSession.setMaxInactiveInterval(SESSION_TIMEOUT_SECONDS);
-        authenticatedSession.setAttribute("userId", user.getId());
-        authenticatedSession.setAttribute("fullName", user.getFullName() == null ? "" : user.getFullName());
-        authenticatedSession.setAttribute("role", role);
     }
 
     private void redirectByRole(HttpServletRequest request, HttpServletResponse response, String role) throws IOException {

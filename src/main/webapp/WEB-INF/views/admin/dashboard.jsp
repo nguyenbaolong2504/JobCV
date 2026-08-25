@@ -25,6 +25,13 @@
                 <div class="col-sm-6 col-xl-3"><a class="admin-kpi" href="${pageContext.request.contextPath}/admin/departments"><span class="admin-kpi-icon admin-violet"><i class="bi bi-buildings"></i></span><div><small>Phòng ban</small><strong><c:out value="${stats.totalDepartments}" /></strong><em>Cơ cấu tổ chức</em></div><i class="bi bi-arrow-up-right"></i></a></div>
             </div>
 
+            <div class="row g-3 mb-4 admin-business-kpis">
+                <div class="col-md-6 col-xl-3"><a class="admin-kpi" href="${pageContext.request.contextPath}/admin/users?role=CANDIDATE"><span class="admin-kpi-icon admin-green"><i class="bi bi-person-workspace"></i></span><div><small>Ứng viên</small><strong><c:out value="${stats.candidates}" /></strong><em>Tài khoản tìm việc</em></div><i class="bi bi-arrow-up-right"></i></a></div>
+                <div class="col-md-6 col-xl-3"><a class="admin-kpi" href="${pageContext.request.contextPath}/admin/users?role=HR"><span class="admin-kpi-icon admin-violet"><i class="bi bi-building-check"></i></span><div><small>Nhà tuyển dụng</small><strong><c:out value="${stats.employers}" /></strong><em>Tài khoản nhân sự</em></div><i class="bi bi-arrow-up-right"></i></a></div>
+                <div class="col-md-6 col-xl-3"><a class="admin-kpi" href="${pageContext.request.contextPath}/admin/jobs?status=PUBLISHED"><span class="admin-kpi-icon admin-blue"><i class="bi bi-briefcase"></i></span><div><small>Tin đang tuyển</small><strong><c:out value="${stats.activeJobs}" /></strong><em>Đang hiển thị công khai</em></div><i class="bi bi-arrow-up-right"></i></a></div>
+                <div class="col-md-6 col-xl-3"><a class="admin-kpi" href="${pageContext.request.contextPath}/admin/applications"><span class="admin-kpi-icon admin-amber"><i class="bi bi-file-earmark-person"></i></span><div><small>Đơn ứng tuyển</small><strong><c:out value="${stats.totalApplications}" /></strong><em>Toàn hệ thống</em></div><i class="bi bi-arrow-up-right"></i></a></div>
+            </div>
+
             <div class="row g-4 mb-4">
                 <div class="col-xl-8">
                     <section class="admin-panel h-100">
@@ -34,6 +41,8 @@
                             <div class="col-md-6"><a href="${pageContext.request.contextPath}/admin/roles"><span class="admin-violet"><i class="bi bi-shield-lock"></i></span><div><strong>Vai trò và phân quyền</strong><small>Kiểm soát quyền truy cập theo vai trò</small></div><i class="bi bi-chevron-right"></i></a></div>
                             <div class="col-md-6"><a href="${pageContext.request.contextPath}/admin/departments"><span class="admin-green"><i class="bi bi-building-add"></i></span><div><strong>Cơ cấu phòng ban</strong><small>Cập nhật đơn vị trong tổ chức</small></div><i class="bi bi-chevron-right"></i></a></div>
                             <div class="col-md-6"><a href="${pageContext.request.contextPath}/admin/audit-logs"><span class="admin-amber"><i class="bi bi-journal-code"></i></span><div><strong>Nhật ký hệ thống</strong><small>Truy vết các thay đổi quan trọng</small></div><i class="bi bi-chevron-right"></i></a></div>
+                            <div class="col-md-6"><a href="${pageContext.request.contextPath}/admin/companies"><span class="admin-green"><i class="bi bi-buildings"></i></span><div><strong>Doanh nghiệp tuyển dụng</strong><small>Kiểm tra hồ sơ và tài khoản nhà tuyển dụng</small></div><i class="bi bi-chevron-right"></i></a></div>
+                            <div class="col-md-6"><a href="${pageContext.request.contextPath}/admin/reports"><span class="admin-blue"><i class="bi bi-bar-chart-line"></i></span><div><strong>Báo cáo tuyển dụng</strong><small>Theo dõi phễu và hiệu suất toàn nền tảng</small></div><i class="bi bi-chevron-right"></i></a></div>
                         </div>
                     </section>
                 </div>

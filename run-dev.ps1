@@ -16,8 +16,19 @@ if ($existingServer) {
     $process = Get-Process -Id $existingServer.OwningProcess -ErrorAction SilentlyContinue
     $processName = if ($process) { $process.ProcessName } else { "khong ro" }
     Write-Host "Cong 8080 dang duoc su dung boi PID $($existingServer.OwningProcess) ($processName)." -ForegroundColor Yellow
-    Write-Host "Neu RecruitFlow da mo tai http://localhost:8080/recruitflow/home thi khong can chay lai." -ForegroundColor Yellow
-    Write-Host "Muon khoi dong lai, dung server cu bang Ctrl+C hoac Stop-Process -Id $($existingServer.OwningProcess) -Force." -ForegroundColor Yellow
+    $recruitFlowHealthy = $false
+    try {
+        $healthResponse = Invoke-WebRequest "http://localhost:8080/recruitflow/home" -UseBasicParsing -TimeoutSec 2
+        $recruitFlowHealthy = $healthResponse.StatusCode -eq 200
+    } catch {
+        $recruitFlowHealthy = $false
+    }
+    if ($recruitFlowHealthy) {
+        Write-Host "RecruitFlow dang chay tai http://localhost:8080/recruitflow/home, khong can chay lai." -ForegroundColor Green
+    } else {
+        Write-Host "Tien trinh nay khong phuc vu RecruitFlow. Hay dung dung server dang chiem cong roi chay lai lenh." -ForegroundColor Red
+        Write-Host "Lenh dung: Stop-Process -Id $($existingServer.OwningProcess) -Force" -ForegroundColor Yellow
+    }
     exit 1
 }
 

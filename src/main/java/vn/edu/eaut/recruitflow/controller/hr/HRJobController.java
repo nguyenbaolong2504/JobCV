@@ -7,6 +7,7 @@ import vn.edu.eaut.recruitflow.model.PageResult;
 import vn.edu.eaut.recruitflow.model.Job;
 import vn.edu.eaut.recruitflow.service.DepartmentService;
 import vn.edu.eaut.recruitflow.service.JobService;
+import vn.edu.eaut.recruitflow.service.ApplicationService;
 import vn.edu.eaut.recruitflow.util.BusinessException;
 import vn.edu.eaut.recruitflow.util.RequestUtil;
 
@@ -20,11 +21,13 @@ import java.io.IOException;
 public class HRJobController extends BaseController {
     private JobService jobService;
     private DepartmentService departmentService;
+    private ApplicationService applicationService;
 
     @Override
     public void init() throws ServletException {
         jobService = new JobService();
         departmentService = new DepartmentService();
+        applicationService = new ApplicationService();
     }
 
     @Override
@@ -48,6 +51,7 @@ public class HRJobController extends BaseController {
             request.setAttribute("jobs", page.getItems());
             request.setAttribute("page", page);
             request.setAttribute("departments", departmentService.getAllDepartments());
+            request.setAttribute("applicationCounts", applicationService.countByJobForHr(RequestUtil.currentUserId(request)));
         } catch (BusinessException | IllegalArgumentException ex) {
             request.setAttribute("error", ex.getMessage());
         }

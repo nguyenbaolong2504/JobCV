@@ -377,6 +377,54 @@ public class ApplicationDAO extends DaoSupport {
         }
     }
 
+    public List<Application> searchByCandidate(int candidateId, String keyword, String status,
+                                                int page, int pageSize) throws SQLException {
+        StringBuilder sql = new StringBuilder(SELECT_APPLICATION + "WHERE a.candidate_id = ?");
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(candidateId);
+        appendCandidateFilters(sql, parameters, keyword, status);
+        sql.append(" ORDER BY a.applied_at DESC, a.id DESC LIMIT ? OFFSET ?");
+        try (Connection connection = openConnection();
+             PreparedStatement statement = connection.prepareStatement(sql.toString())) {
+            bind(statement, parameters);
+            int index = parameters.size() + 1;
+            statement.setInt(index++, pageSize(pageSize));
+            statement.setInt(index, offset(page, pageSize));
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return mapList(resultSet);
+            }
+        }
+    }
+
+    public long countByCandidate(int candidateId, String keyword, String status) throws SQLException {
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM applications a JOIN jobs j ON j.id = a.job_id WHERE a.candidate_id = ?");
+        List<Object> parameters = new ArrayList<>();
+        parameters.add(candidateId);
+        appendCandidateFilters(sql, parameters, keyword, status);
+        try (Connection connection = openConnection();
+             PreparedStatement statement = connection.prepareStatement(sql.toString())) {
+            bind(statement, parameters);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                resultSet.next();
+                return resultSet.getLong(1);
+            }
+        }
+    }
+
+    public Map<Integer, Long> countGroupedByJob(Integer jobOwnerId) throws SQLException {
+        String sql = "SELECT a.job_id, COUNT(*) AS total FROM applications a JOIN jobs j ON j.id = a.job_id"
+                + (jobOwnerId == null ? "" : " WHERE j.created_by = ?")
+                + " GROUP BY a.job_id";
+        Map<Integer, Long> result = new LinkedHashMap<>();
+        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+            if (jobOwnerId != null) statement.setInt(1, jobOwnerId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) result.put(resultSet.getInt("job_id"), resultSet.getLong("total"));
+            }
+        }
+        return result;
+    }
+
     public boolean updateStatusIfCurrent(Connection connection, int applicationId, String targetStatus,
                                          String expectedStatus) throws SQLException {
         String sql = "UPDATE applications SET status = ? WHERE id = ? AND status = ?";
@@ -421,6 +469,19 @@ public class ApplicationDAO extends DaoSupport {
         if (jobOwnerId != null && jobOwnerId > 0) {
             sql.append(" AND j.created_by = ?");
             parameters.add(jobOwnerId);
+        }
+    }
+
+    private void appendCandidateFilters(StringBuilder sql, List<Object> parameters, String keyword, String status) {
+        if (keyword != null && !keyword.isBlank()) {
+            sql.append(" AND (LOWER(j.title) LIKE ? OR LOWER(j.job_code) LIKE ?)");
+            String value = '%' + keyword.trim().toLowerCase(java.util.Locale.ROOT) + '%';
+            parameters.add(value);
+            parameters.add(value);
+        }
+        if (status != null && !status.isBlank()) {
+            sql.append(" AND a.status = ?");
+            parameters.add(status.trim().toUpperCase(java.util.Locale.ROOT));
         }
     }
 

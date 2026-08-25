@@ -13,6 +13,9 @@
                     <a class="${fn:contains(currentPath, '/admin/users') ? 'active' : ''}"
                         href="${pageContext.request.contextPath}/admin/users"><i class="bi bi-people"></i> Người
                         dùng</a>
+                    <a class="${fn:contains(currentPath, '/admin/companies') ? 'active' : ''}"
+                        href="${pageContext.request.contextPath}/admin/companies"><i class="bi bi-buildings"></i>
+                        Doanh nghiệp</a>
                     <a class="${fn:contains(currentPath, '/admin/roles') or fn:contains(currentPath, '/admin/permissions') ? 'active' : ''}"
                         href="${pageContext.request.contextPath}/admin/permissions"><i class="bi bi-shield-lock"></i> Phân
                         quyền</a>
@@ -22,6 +25,13 @@
                     <a class="${fn:contains(currentPath, '/admin/job-categories') ? 'active' : ''}"
                         href="${pageContext.request.contextPath}/admin/job-categories"><i class="bi bi-diagram-3"></i>
                         Danh mục nghề nghiệp</a>
+                    <p class="sidebar-label sidebar-label-inline">Vận hành tuyển dụng</p>
+                    <a class="${fn:contains(currentPath, '/admin/jobs') ? 'active' : ''}"
+                        href="${pageContext.request.contextPath}/admin/jobs"><i class="bi bi-briefcase"></i> Tin tuyển dụng</a>
+                    <a class="${fn:contains(currentPath, '/admin/applications') ? 'active' : ''}"
+                        href="${pageContext.request.contextPath}/admin/applications"><i class="bi bi-kanban"></i> Hồ sơ ứng tuyển</a>
+                    <a class="${fn:contains(currentPath, '/admin/reports') ? 'active' : ''}"
+                        href="${pageContext.request.contextPath}/admin/reports"><i class="bi bi-bar-chart-line"></i> Báo cáo</a>
                     <a class="${fn:contains(currentPath, '/admin/audit-logs') ? 'active' : ''}"
                         href="${pageContext.request.contextPath}/admin/audit-logs"><i class="bi bi-journal-text"></i>
                         Nhật ký hệ thống</a>

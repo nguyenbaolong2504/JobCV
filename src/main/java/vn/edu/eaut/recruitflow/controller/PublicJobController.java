@@ -1,9 +1,9 @@
 package vn.edu.eaut.recruitflow.controller;
 
-import vn.edu.eaut.recruitflow.enums.EmploymentType;
 import vn.edu.eaut.recruitflow.enums.JobStatus;
 import vn.edu.eaut.recruitflow.model.Job;
 import vn.edu.eaut.recruitflow.model.PageResult;
+import vn.edu.eaut.recruitflow.model.JobSearchCriteria;
 import vn.edu.eaut.recruitflow.service.DepartmentService;
 import vn.edu.eaut.recruitflow.service.JobService;
 import vn.edu.eaut.recruitflow.service.MatchingService;
@@ -11,8 +11,11 @@ import vn.edu.eaut.recruitflow.service.SavedJobService;
 import vn.edu.eaut.recruitflow.service.ResumeService;
 import vn.edu.eaut.recruitflow.service.ApplicationService;
 import vn.edu.eaut.recruitflow.service.CompanyProfileService;
+import vn.edu.eaut.recruitflow.service.JobCategoryService;
 import vn.edu.eaut.recruitflow.util.BusinessException;
+import vn.edu.eaut.recruitflow.util.JobSearchCriteriaFactory;
 import vn.edu.eaut.recruitflow.util.RequestUtil;
+import vn.edu.eaut.recruitflow.util.SimpleJson;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -20,18 +23,16 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
-import java.util.Locale;
 import java.util.Set;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.function.Function;
+import java.time.LocalDate;
+import java.util.Map;
+import java.util.Locale;
 
 /** Serves only publicly visible, published job advertisements. */
-@WebServlet(name = "PublicJobController", urlPatterns = {"/jobs", "/jobs/detail"})
+@WebServlet(name = "PublicJobController", urlPatterns = {"/jobs", "/jobs/detail", "/jobs/suggestions"})
 public class PublicJobController extends BaseController {
-    private static final Set<String> ALLOWED_SORTS = Set.of("newest", "deadline", "salary");
-    private static final int MAX_KEYWORD_LENGTH = 150;
-    private static final int MAX_LOCATION_LENGTH = 100;
+    private static final Set<String> ALLOWED_SORTS = Set.of("newest", "deadline", "salary", "experience");
 
     private JobService jobService;
     private DepartmentService departmentService;
@@ -40,6 +41,7 @@ public class PublicJobController extends BaseController {
     private ResumeService resumeService;
     private ApplicationService applicationService;
     private CompanyProfileService companyService;
+    private JobCategoryService categoryService;
 
     @Override
     public void init() throws ServletException {
@@ -50,6 +52,7 @@ public class PublicJobController extends BaseController {
         resumeService = new ResumeService();
         applicationService = new ApplicationService();
         companyService = new CompanyProfileService();
+        categoryService = new JobCategoryService();
     }
 
     @Override
@@ -58,6 +61,10 @@ public class PublicJobController extends BaseController {
         request.setCharacterEncoding("UTF-8");
         response.setCharacterEncoding("UTF-8");
 
+        if ("/jobs/suggestions".equals(request.getServletPath())) {
+            showSuggestions(request, response);
+            return;
+        }
         if ("/jobs/detail".equals(request.getServletPath())) {
             showDetail(request, response);
             return;
@@ -68,27 +75,30 @@ public class PublicJobController extends BaseController {
     private void showList(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         try {
-            String keyword = validateSearchText(RequestUtil.text(request, "keyword"), "Từ khóa", MAX_KEYWORD_LENGTH);
-            Integer departmentId = optionalPositiveInt(request, "departmentId", "Phòng ban");
-            String location = validateSearchText(RequestUtil.text(request, "location"), "Địa điểm", MAX_LOCATION_LENGTH);
-            String employmentType = optionalEmploymentType(RequestUtil.text(request, "employmentType"));
+            JobSearchCriteria criteria = JobSearchCriteriaFactory.fromRequest(request);
             String sort = allowedSort(RequestUtil.text(request, "sort"));
             int page = RequestUtil.page(request);
             int pageSize = RequestUtil.pageSize(request);
 
-            // The service contract performs a published-only search; no general job query is used here.
-            PageResult<Job> pageResult = jobService.searchPublishedJobs(
-                    keyword, departmentId, location, employmentType, page, pageSize, sort);
+            PageResult<Job> pageResult = jobService.searchPublishedJobs(criteria, page, pageSize, sort);
 
             request.setAttribute("page", pageResult);
             request.setAttribute("departments", departmentService.getAllDepartments());
-            request.setAttribute("companyByDepartment", companyService.getCompanies("").stream()
-                    .collect(Collectors.toMap(company -> company.getId(), Function.identity())));
-            request.setAttribute("keyword", keyword);
-            request.setAttribute("departmentId", departmentId);
-            request.setAttribute("location", location);
-            request.setAttribute("employmentType", employmentType);
+            request.setAttribute("categories", categoryService.getPublicHierarchy());
+            request.setAttribute("criteria", criteria);
+            request.setAttribute("keyword", criteria.getKeyword());
+            request.setAttribute("title", criteria.getTitle());
+            request.setAttribute("departmentId", criteria.getDepartmentId());
+            request.setAttribute("categoryId", criteria.getCategoryId());
+            request.setAttribute("location", criteria.getLocation());
+            request.setAttribute("employmentType", criteria.getEmploymentType());
+            request.setAttribute("salaryMin", criteria.getSalaryMin());
+            request.setAttribute("salaryMax", criteria.getSalaryMax());
+            request.setAttribute("experienceMin", criteria.getExperienceMin());
+            request.setAttribute("experienceMax", criteria.getExperienceMax());
             request.setAttribute("sort", sort);
+            request.setAttribute("savedJobIds", currentCandidateSavedJobIds(request));
+            request.setAttribute("pageDescription", "Tìm kiếm việc làm theo vị trí, kỹ năng, địa điểm, mức lương và kinh nghiệm trên RecruitFlow.");
             view(request, response, "/WEB-INF/views/public/jobs.jsp", "Việc làm đang tuyển | RecruitFlow");
         } catch (BusinessException ex) {
             // Invalid query input must never reach DAO SQL construction.
@@ -115,15 +125,37 @@ public class PublicJobController extends BaseController {
             }
 
             request.setAttribute("job", job);
+            request.setAttribute("jobExpired", job.getDeadline() != null
+                    && job.getDeadline().toLocalDate().isBefore(LocalDate.now()));
             request.setAttribute("skills", jobService.getSkills(jobId));
-            request.setAttribute("company", companyService.getCompany(job.getDepartmentId()));
+            var company = companyService.getCompanyByOwner(job.getCreatedBy());
+            request.setAttribute("company", company);
             List<Job> relatedJobs = jobService.searchPublishedJobs(null, job.getDepartmentId(), null, null, 1, 5, "newest").getItems();
             request.setAttribute("relatedJobs", relatedJobs.stream().filter(item -> item.getId() != jobId).limit(4).toList());
+            request.setAttribute("sameCompanyJobs", companyService.getOpenJobs(company.getId()).stream()
+                    .filter(item -> item.getId() != jobId).limit(4).toList());
             request.setAttribute("jobSaved", false);
             attachCandidateMatchWhenAvailable(request, jobId);
-            view(request, response, "/WEB-INF/views/public/job-detail.jsp", "Chi tiết việc làm | RecruitFlow");
+            request.setAttribute("pageDescription", "Ứng tuyển " + job.getTitle() + " tại " + company.getName()
+                    + ". Xem mức lương, yêu cầu, địa điểm và hạn nộp hồ sơ.");
+            view(request, response, "/WEB-INF/views/public/job-detail.jsp", job.getTitle() + " | RecruitFlow");
         } catch (BusinessException ex) {
             response.sendError(HttpServletResponse.SC_NOT_FOUND);
+        }
+    }
+
+    private void showSuggestions(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        response.setContentType("application/json;charset=UTF-8");
+        response.setHeader("Cache-Control", "private, max-age=60");
+        try {
+            List<Map<String, Object>> suggestions = jobService
+                    .getSearchSuggestions(RequestUtil.text(request, "q"), 8).stream()
+                    .map(label -> Map.<String, Object>of("label", label, "value", label))
+                    .toList();
+            response.getWriter().write(SimpleJson.stringify(Map.of("suggestions", suggestions)));
+        } catch (BusinessException exception) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            response.getWriter().write(SimpleJson.stringify(Map.of("suggestions", List.of())));
         }
     }
 
@@ -144,22 +176,15 @@ public class PublicJobController extends BaseController {
         }
     }
 
-    private Integer optionalPositiveInt(HttpServletRequest request, String parameter, String label)
-            throws BusinessException {
-        return RequestUtil.text(request, parameter).isEmpty()
-                ? null
-                : RequestUtil.requiredPositiveInt(request, parameter, label);
-    }
-
-    private String optionalEmploymentType(String rawEmploymentType) throws BusinessException {
-        if (rawEmploymentType == null || rawEmploymentType.isEmpty()) {
-            return null;
+    private Set<Integer> currentCandidateSavedJobIds(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session == null || !"CANDIDATE".equals(session.getAttribute("role"))) {
+            return Set.of();
         }
-        String normalized = rawEmploymentType.trim().toUpperCase(Locale.ROOT);
         try {
-            return EmploymentType.valueOf(normalized).name();
-        } catch (IllegalArgumentException ex) {
-            throw new BusinessException("Loại hình làm việc không hợp lệ.");
+            return savedJobService.getSavedJobIds(RequestUtil.currentUserId(request));
+        } catch (BusinessException exception) {
+            return Set.of();
         }
     }
 
@@ -168,11 +193,4 @@ public class PublicJobController extends BaseController {
         return ALLOWED_SORTS.contains(normalized) ? normalized : "newest";
     }
 
-    private String validateSearchText(String value, String label, int maxLength) throws BusinessException {
-        String normalized = value == null ? "" : value.trim();
-        if (normalized.length() > maxLength) {
-            throw new BusinessException(label + " không được vượt quá " + maxLength + " ký tự.");
-        }
-        return normalized;
-    }
 }

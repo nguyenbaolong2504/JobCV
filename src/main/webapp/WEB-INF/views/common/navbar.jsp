@@ -177,14 +177,17 @@
         </div>
 
         <c:if test="${sessionScope.role eq 'CANDIDATE'}">
-            <div class="dropdown candidate-profile-menu ms-auto">
+            <a class="candidate-notification-shortcut" href="${pageContext.request.contextPath}/candidate/notifications" aria-label="Thông báo tuyển dụng">
+                <i class="bi bi-bell"></i><c:if test="${unreadNotificationCount gt 0}"><span><c:out value="${unreadNotificationCount gt 99 ? '99+' : unreadNotificationCount}" /></span></c:if>
+            </a>
+            <div class="dropdown candidate-profile-menu ms-2">
                 <button class="candidate-profile-trigger" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Mở trang cá nhân">
-                    <span class="candidate-profile-trigger-avatar"><c:out value="${fn:toUpperCase(fn:substring(sessionScope.fullName, 0, 1))}" /></span>
+                    <span class="candidate-profile-trigger-avatar"><c:choose><c:when test="${not empty layoutCandidateProfile.avatarPath}"><img src="${pageContext.request.contextPath}/candidate/avatar" alt="Ảnh đại diện của bạn"></c:when><c:otherwise><c:out value="${fn:toUpperCase(fn:substring(sessionScope.fullName, 0, 1))}" /></c:otherwise></c:choose></span>
                     <span class="candidate-profile-trigger-copy"><small>Trang cá nhân</small><strong><c:out value="${sessionScope.fullName}" /></strong></span>
                     <i class="bi bi-chevron-down"></i>
                 </button>
                 <div class="dropdown-menu dropdown-menu-end candidate-profile-dropdown shadow-lg">
-                    <div class="candidate-profile-dropdown-head"><span><c:out value="${fn:toUpperCase(fn:substring(sessionScope.fullName, 0, 1))}" /></span><div><strong><c:out value="${sessionScope.fullName}" /></strong><small>Tài khoản người tìm việc</small></div></div>
+                    <div class="candidate-profile-dropdown-head"><span><c:choose><c:when test="${not empty layoutCandidateProfile.avatarPath}"><img src="${pageContext.request.contextPath}/candidate/avatar" alt="Ảnh đại diện của bạn"></c:when><c:otherwise><c:out value="${fn:toUpperCase(fn:substring(sessionScope.fullName, 0, 1))}" /></c:otherwise></c:choose></span><div><strong><c:out value="${sessionScope.fullName}" /></strong><small>Tài khoản người tìm việc</small></div></div>
                     <div class="candidate-profile-dropdown-grid">
                         <a href="${pageContext.request.contextPath}/candidate/profile"><span><i class="bi bi-person-vcard"></i></span><strong>Hồ sơ cá nhân</strong><small>Thông tin nghề nghiệp</small></a>
                         <a href="${pageContext.request.contextPath}/candidate/resumes"><span><i class="bi bi-file-earmark-person"></i></span><strong>CV của tôi</strong><small>Quản lý và đánh giá CV</small></a>

@@ -17,13 +17,13 @@
                     <c:choose><c:when test="${candidateHome}"><h1>Chào mừng trở lại,<br><span><c:out value="${sessionScope.fullName}" />.</span></h1><p class="hero-copy">Hồ sơ, CV, việc làm phù hợp và toàn bộ tiến trình ứng tuyển của bạn đã sẵn sàng ngay tại trang chủ.</p></c:when><c:otherwise><h1>Tìm đúng công việc.<br><span>Phát triển đúng tương lai.</span></h1><p class="hero-copy">Khám phá cơ hội chất lượng, ứng tuyển bằng CV tốt nhất và theo dõi toàn bộ hành trình tuyển dụng trong một không gian duy nhất.</p></c:otherwise></c:choose>
                     <form class="hero-search-card hero-search-v2" action="${pageContext.request.contextPath}${homeSearchTarget}" method="get">
                         <div class="row g-2 align-items-center">
-                            <div class="col-lg-5"><label class="visually-hidden" for="homeKeyword">Từ khóa công việc</label><div class="input-group"><span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span><input class="form-control border-start-0" id="homeKeyword" type="search" name="keyword" value="<c:out value='${param.keyword}'/>" placeholder="Vị trí tuyển dụng hoặc kỹ năng"></div></div>
+                            <div class="col-lg-5"><label class="visually-hidden" for="homeKeyword">Từ khóa công việc</label><div class="input-group job-suggest-field"><span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span><input class="form-control border-start-0" id="homeKeyword" type="search" name="keyword" autocomplete="off" maxlength="150" data-job-suggest-url="${pageContext.request.contextPath}/jobs/suggestions" value="<c:out value='${param.keyword}'/>" placeholder="Vị trí tuyển dụng hoặc kỹ năng"></div></div>
                             <div class="col-lg-3"><label class="visually-hidden" for="homeDepartment">Phòng ban</label><select class="form-select" id="homeDepartment" name="departmentId"><option value="">Mọi phòng ban</option><c:forEach var="department" items="${departments}"><option value="<c:out value='${department.id}'/>" ${param.departmentId eq department.id ? 'selected' : ''}><c:out value="${department.displayName}" /></option></c:forEach></select></div>
                             <div class="col-lg-2"><label class="visually-hidden" for="homeLocation">Địa điểm</label><input class="form-control" id="homeLocation" name="location" value="<c:out value='${param.location}'/>" placeholder="Địa điểm"></div>
                             <div class="col-lg-2 d-grid"><button class="btn btn-primary" type="submit"><i class="bi bi-search me-1"></i>Tìm kiếm</button></div>
                         </div>
                     </form>
-                    <div class="hero-trending"><span>Gợi ý:</span><c:forEach var="department" items="${departments}" end="3"><c:url var="quickDepartmentUrl" value="${homeSearchTarget}"><c:param name="departmentId" value="${department.id}" /></c:url><a href="${quickDepartmentUrl}"><c:out value="${department.displayName}" /></a></c:forEach><a href="${pageContext.request.contextPath}${homeSearchTarget}">Tất cả việc làm</a></div>
+                    <div class="hero-trending"><span>Tìm kiếm nhiều:</span><c:forEach var="popularKeyword" items="${popularKeywords}"><c:url var="popularKeywordUrl" value="${homeSearchTarget}"><c:param name="keyword" value="${popularKeyword}" /></c:url><a href="${popularKeywordUrl}"><c:out value="${popularKeyword}" /></a></c:forEach><c:if test="${empty popularKeywords}"><c:forEach var="department" items="${departments}" end="3"><c:url var="quickDepartmentUrl" value="${homeSearchTarget}"><c:param name="departmentId" value="${department.id}" /></c:url><a href="${quickDepartmentUrl}"><c:out value="${department.displayName}" /></a></c:forEach></c:if><a href="${pageContext.request.contextPath}${homeSearchTarget}">Tất cả việc làm</a></div>
                     <div class="hero-proof">
                         <span><strong><c:out value="${publishedJobCount}" />+</strong>Việc làm đang mở</span>
                         <span><strong><c:out value="${fn:length(departments)}" />+</strong>Lĩnh vực nghề nghiệp</span>
@@ -83,7 +83,7 @@
                     <c:url var="jobDetailUrl" value="/jobs/detail"><c:param name="id" value="${job.id}" /></c:url>
                     <div class="col-md-6 col-xl-4">
                         <article class="job-card job-card-v2">
-                            <div class="job-card-brand"><span><c:out value="${fn:toUpperCase(fn:substring(job.title, 0, 1))}" /></span><div><small><c:out value="${job.departmentName}" /></small><strong><c:out value="${job.jobCode}" /></strong></div><span class="job-fresh"><i class="bi bi-lightning-fill"></i>Mới</span></div>
+                            <div class="job-card-brand"><span><c:out value="${fn:toUpperCase(fn:substring(job.title, 0, 1))}" /></span><div><small><c:out value="${empty job.companyName ? job.departmentName : job.companyName}" /></small><strong><c:out value="${job.jobCode}" /></strong></div><span class="job-fresh"><i class="bi bi-lightning-fill"></i>Mới</span></div>
                             <a class="job-card-title d-block" href="${jobDetailUrl}"><c:out value="${job.title}" /></a>
                             <div class="job-meta-grid">
                                 <span><i class="bi bi-geo-alt"></i><c:out value="${job.location}" /></span>
@@ -91,7 +91,7 @@
                                 <span><i class="bi bi-people"></i><c:out value="${job.numberOfPositions}" /> vị trí</span>
                                 <span><i class="bi bi-calendar3"></i>Hạn <fmt:formatDate value="${job.deadline}" pattern="dd/MM/yyyy" /></span>
                             </div>
-                            <div class="job-card-footer"><span><fmt:formatNumber value="${job.salaryMin}" type="number" /> – <fmt:formatNumber value="${job.salaryMax}" type="number" /> ₫</span><a href="${jobDetailUrl}" aria-label="Xem việc ${job.title}"><i class="bi bi-arrow-up-right"></i></a></div>
+                            <div class="job-card-footer"><span><fmt:formatNumber value="${job.salaryMin}" type="number" /> – <fmt:formatNumber value="${job.salaryMax}" type="number" /> ₫</span><div class="job-card-actions"><a class="job-card-save" href="${pageContext.request.contextPath}/login" aria-label="Đăng nhập để lưu ${job.title}"><i class="bi bi-bookmark"></i></a><a href="${jobDetailUrl}" aria-label="Xem việc ${job.title}"><i class="bi bi-arrow-up-right"></i></a></div></div>
                         </article>
                     </div>
                 </c:forEach>
@@ -101,10 +101,7 @@
     </section>
     </c:if>
 
-    <c:url var="featuredEmployerAllUrl" value="${homeSearchTarget}" />
-    <c:url var="featuredInternshipUrl" value="${homeSearchTarget}"><c:param name="employmentType" value="INTERNSHIP" /></c:url>
-    <c:url var="featuredRemoteUrl" value="${homeSearchTarget}"><c:param name="employmentType" value="REMOTE" /></c:url>
-    <c:url var="featuredContractUrl" value="${homeSearchTarget}"><c:param name="employmentType" value="CONTRACT" /></c:url>
+    <c:url var="featuredEmployerAllUrl" value="/companies" />
     <section class="public-section featured-employers-section" aria-labelledby="featuredEmployersTitle" data-employer-showcase>
         <div class="container">
             <div class="featured-employers-shell">
@@ -115,21 +112,8 @@
                 </header>
 
                 <div class="featured-employers-toolbar">
-                    <div class="featured-employer-filters" role="group" aria-label="Lọc thương hiệu theo lĩnh vực">
-                        <button class="active" type="button" data-employer-filter="all" aria-pressed="true">Tất cả</button>
-                        <c:forEach var="employerDepartment" items="${departments}">
-                            <c:set var="employerFilterLabel" value="${employerDepartment.name}" />
-                            <c:choose>
-                                <c:when test="${employerDepartment.name eq 'Information Technology'}"><c:set var="employerFilterLabel" value="IT - Phần mềm" /></c:when>
-                                <c:when test="${employerDepartment.name eq 'Finance'}"><c:set var="employerFilterLabel" value="Tài chính" /></c:when>
-                                <c:when test="${employerDepartment.name eq 'Human Resources'}"><c:set var="employerFilterLabel" value="Nhân sự" /></c:when>
-                                <c:when test="${employerDepartment.name eq 'Sales'}"><c:set var="employerFilterLabel" value="Kinh doanh" /></c:when>
-                            </c:choose>
-                            <button type="button" data-employer-filter="department-${employerDepartment.id}" aria-pressed="false"><c:out value="${employerFilterLabel}" /></button>
-                        </c:forEach>
-                        <button type="button" data-employer-filter="internship" aria-pressed="false">Thực tập</button>
-                        <button type="button" data-employer-filter="remote" aria-pressed="false">Làm từ xa</button>
-                        <button type="button" data-employer-filter="contract" aria-pressed="false">Hợp đồng</button>
+                    <div class="featured-employer-filters" aria-label="Dữ liệu doanh nghiệp xác thực">
+                        <span class="featured-employer-data-note"><i class="bi bi-database-check"></i>Dữ liệu trực tiếp từ hồ sơ nhà tuyển dụng</span>
                     </div>
                     <div class="featured-employer-controls" aria-label="Điều khiển danh sách doanh nghiệp">
                         <button class="featured-employer-autoplay is-playing" type="button" data-employer-autoplay aria-label="Tạm dừng tự động trượt" aria-pressed="true"><i class="bi bi-pause-fill"></i></button>
@@ -138,47 +122,27 @@
                     </div>
                 </div>
 
+                <c:choose><c:when test="${not empty featuredCompanies}"><c:set var="spotlightCompany" value="${featuredCompanies[0]}" /><c:url var="spotlightCompanyUrl" value="/companies/detail"><c:param name="id" value="${spotlightCompany.id}" /></c:url>
                 <div class="featured-employers-layout">
-                    <a class="featured-employer-spotlight" href="${featuredEmployerAllUrl}">
+                    <a class="featured-employer-spotlight" href="${spotlightCompanyUrl}">
                         <span class="featured-employer-spotlight-label"><i class="bi bi-lightning-charge-fill"></i>Đang tuyển nổi bật</span>
-                        <span class="featured-employer-spotlight-logo"><img src="${pageContext.request.contextPath}/assets/images/employers/recruitflow-tech.svg" alt="Logo RecruitFlow Technology"></span>
-                        <div><h3>RecruitFlow Technology</h3><p>Công nghệ tuyển dụng &amp; phần mềm</p><span><i class="bi bi-briefcase"></i><c:out value="${publishedJobCount}" /> vị trí đang mở</span></div>
-                        <strong>Top Employer <i class="bi bi-patch-check-fill"></i></strong>
+                        <span class="featured-employer-spotlight-logo"><img src="${pageContext.request.contextPath}/companies/media?id=${spotlightCompany.id}&type=logo" alt="Logo ${fn:escapeXml(spotlightCompany.name)}"></span>
+                        <div><h3><c:out value="${spotlightCompany.name}" /></h3><p><c:out value="${empty spotlightCompany.industry ? 'Đang cập nhật lĩnh vực' : spotlightCompany.industry}" /></p><span><i class="bi bi-briefcase"></i><c:out value="${spotlightCompany.openJobs}" /> vị trí đang mở</span></div>
+                        <c:if test="${spotlightCompany.verified}"><strong>Đã xác thực <i class="bi bi-patch-check-fill"></i></strong></c:if>
                     </a>
 
                     <div class="featured-employer-grid" data-employer-grid>
-                        <c:forEach var="employerDepartment" items="${departments}" varStatus="employerStatus">
-                            <c:set var="employerName" value="${employerDepartment.name} Careers" />
-                            <c:set var="employerMark" value="${fn:toUpperCase(fn:substring(employerDepartment.name, 0, 1))}" />
-                            <c:set var="employerTheme" value="theme-${(employerStatus.index mod 5) + 1}" />
-                            <c:set var="employerIndustryLabel" value="${employerDepartment.name}" />
-                            <c:set var="employerLogoFile" value="generic-careers.svg" />
-                            <c:choose>
-                                <c:when test="${employerDepartment.name eq 'Information Technology'}"><c:set var="employerName" value="NovaTech Solutions" /><c:set var="employerMark" value="NT" /><c:set var="employerIndustryLabel" value="IT - Phần mềm" /><c:set var="employerLogoFile" value="novatech.svg" /></c:when>
-                                <c:when test="${employerDepartment.name eq 'Finance'}"><c:set var="employerName" value="Horizon Finance" /><c:set var="employerMark" value="HF" /><c:set var="employerIndustryLabel" value="Tài chính" /><c:set var="employerLogoFile" value="horizon-finance.svg" /></c:when>
-                                <c:when test="${employerDepartment.name eq 'Human Resources'}"><c:set var="employerName" value="PeopleFirst Group" /><c:set var="employerMark" value="PF" /><c:set var="employerIndustryLabel" value="Nhân sự" /><c:set var="employerLogoFile" value="peoplefirst.svg" /></c:when>
-                                <c:when test="${employerDepartment.name eq 'Marketing'}"><c:set var="employerName" value="Aurora Media" /><c:set var="employerMark" value="AM" /><c:set var="employerLogoFile" value="aurora-media.svg" /></c:when>
-                                <c:when test="${employerDepartment.name eq 'Sales'}"><c:set var="employerName" value="NextCommerce" /><c:set var="employerMark" value="NC" /><c:set var="employerIndustryLabel" value="Kinh doanh" /><c:set var="employerLogoFile" value="nextcommerce.svg" /></c:when>
-                            </c:choose>
-                            <c:url var="employerDepartmentUrl" value="/companies/detail"><c:param name="id" value="${employerDepartment.id}" /></c:url>
-                            <a class="featured-employer-card" href="${employerDepartmentUrl}" data-employer-industry="department-${employerDepartment.id}">
-                                <span class="featured-employer-logo ${employerTheme}"><img src="${pageContext.request.contextPath}/assets/images/employers/${employerLogoFile}" alt="Logo ${employerName}" loading="lazy"></span>
-                                <div><h3><c:out value="${employerName}" /></h3><p><c:out value="${employerIndustryLabel}" /></p><span><i class="bi bi-briefcase"></i>Xem việc đang tuyển</span></div>
+                        <c:forEach var="company" items="${featuredCompanies}" varStatus="companyStatus"><c:if test="${not companyStatus.first}">
+                            <c:url var="companyUrl" value="/companies/detail"><c:param name="id" value="${company.id}" /></c:url>
+                            <a class="featured-employer-card" href="${companyUrl}" data-employer-industry="all">
+                                <span class="featured-employer-logo theme-${(companyStatus.index mod 5) + 1}"><img src="${pageContext.request.contextPath}/companies/media?id=${company.id}&type=logo" alt="Logo ${fn:escapeXml(company.name)}" loading="lazy"></span>
+                                <div><h3><c:out value="${company.name}" /></h3><p><c:out value="${empty company.industry ? 'Đang cập nhật lĩnh vực' : company.industry}" /></p><span><i class="bi bi-briefcase"></i><c:out value="${company.openJobs}" /> việc đang tuyển</span></div>
                                 <i class="bi bi-arrow-up-right featured-employer-card-arrow"></i>
                             </a>
-                        </c:forEach>
-
-                        <a class="featured-employer-card" href="${featuredInternshipUrl}" data-employer-industry="internship">
-                            <span class="featured-employer-logo theme-6"><img src="${pageContext.request.contextPath}/assets/images/employers/futureskills.svg" alt="Logo FutureSkills Academy" loading="lazy"></span><div><h3>FutureSkills Academy</h3><p>Đào tạo &amp; phát triển tài năng</p><span><i class="bi bi-mortarboard"></i>Cơ hội thực tập</span></div><i class="bi bi-arrow-up-right featured-employer-card-arrow"></i>
-                        </a>
-                        <a class="featured-employer-card" href="${featuredRemoteUrl}" data-employer-industry="remote">
-                            <span class="featured-employer-logo theme-7"><img src="${pageContext.request.contextPath}/assets/images/employers/remoteworks.svg" alt="Logo RemoteWorks Asia" loading="lazy"></span><div><h3>RemoteWorks Asia</h3><p>Công nghệ &amp; làm việc linh hoạt</p><span><i class="bi bi-house-laptop"></i>Việc làm từ xa</span></div><i class="bi bi-arrow-up-right featured-employer-card-arrow"></i>
-                        </a>
-                        <a class="featured-employer-card" href="${featuredContractUrl}" data-employer-industry="contract">
-                            <span class="featured-employer-logo theme-8"><img src="${pageContext.request.contextPath}/assets/images/employers/projectlink.svg" alt="Logo ProjectLink Partners" loading="lazy"></span><div><h3>ProjectLink Partners</h3><p>Tư vấn &amp; triển khai dự án</p><span><i class="bi bi-file-earmark-text"></i>Việc làm hợp đồng</span></div><i class="bi bi-arrow-up-right featured-employer-card-arrow"></i>
-                        </a>
+                        </c:if></c:forEach>
                     </div>
                 </div>
+                </c:when><c:otherwise><div class="featured-company-empty"><i class="bi bi-building-add"></i><div><h3>Doanh nghiệp đang hoàn thiện hồ sơ</h3><p>Các thương hiệu đã xác thực và có tin tuyển dụng sẽ xuất hiện tại đây.</p></div><a class="btn btn-light" href="${pageContext.request.contextPath}/register?role=HR">Đăng ký nhà tuyển dụng</a></div></c:otherwise></c:choose>
             </div>
         </div>
     </section>
@@ -197,8 +161,12 @@
     <section class="public-section bg-white border-top border-bottom">
         <div class="container">
             <div class="section-header"><div><span class="section-kicker">LĨNH VỰC NGHỀ NGHIỆP</span><h2>Khám phá theo phòng ban</h2><p>Đi thẳng đến nhóm công việc phù hợp với chuyên môn của bạn.</p></div></div>
-            <div class="row g-3"><c:forEach var="department" items="${departments}"><c:url var="departmentJobsUrl" value="${homeSearchTarget}"><c:param name="departmentId" value="${department.id}" /></c:url><div class="col-sm-6 col-lg-4 col-xl-3"><a class="department-tile department-tile-v2" href="${departmentJobsUrl}"><span><i class="bi bi-building"></i></span><div><strong><c:out value="${department.displayName}" /></strong><small>Xem vị trí đang tuyển</small></div><i class="bi bi-arrow-right ms-auto"></i></a></div></c:forEach></div>
+            <div class="row g-3"><c:forEach var="department" items="${departments}"><c:url var="departmentJobsUrl" value="${homeSearchTarget}"><c:param name="departmentId" value="${department.id}" /></c:url><div class="col-sm-6 col-lg-4 col-xl-3"><a class="department-tile department-tile-v2" href="${departmentJobsUrl}"><span><i class="bi bi-building"></i></span><div><strong><c:out value="${department.displayName}" /></strong><small><c:choose><c:when test="${departmentJobCounts[department.id] gt 0}"><c:out value="${departmentJobCounts[department.id]}" /> việc đang tuyển</c:when><c:otherwise>Khám phá lĩnh vực</c:otherwise></c:choose></small></div><i class="bi bi-arrow-right ms-auto"></i></a></div></c:forEach></div>
         </div>
+    </section>
+
+    <section class="public-section employer-cta-section">
+        <div class="container"><div class="employer-cta-card"><div class="employer-cta-icon"><i class="bi bi-people-fill"></i></div><div><span class="section-kicker">DÀNH CHO NHÀ TUYỂN DỤNG</span><h2>Bạn đang cần tuyển đúng người?</h2><p>Quản lý tin đăng, hồ sơ ứng viên, lịch phỏng vấn và thư mời trong một quy trình thống nhất.</p></div><div class="employer-cta-actions"><a class="btn btn-light" href="${pageContext.request.contextPath}/register?role=HR"><i class="bi bi-plus-circle me-1"></i>Đăng tin tuyển dụng</a><a class="btn btn-outline-light" href="${pageContext.request.contextPath}/login"><i class="bi bi-kanban me-1"></i>Quản lý ứng viên</a></div></div></div>
     </section>
 
     <section class="public-section">

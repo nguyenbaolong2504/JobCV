@@ -3,6 +3,7 @@ package vn.edu.eaut.recruitflow.util;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import org.junit.jupiter.api.Test;
 
@@ -17,6 +18,14 @@ import java.util.List;
 import java.util.UUID;
 
 class UploadUtilTest {
+    @Test
+    void acceptsPdfHeaderWithinFirstKilobyteAndGenericBinaryMime() {
+        byte[] content = "exporter-comment\n%PDF-1.7\n".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        Part part = new InMemoryPart("professional-cv.pdf", "application/octet-stream", content);
+
+        assertDoesNotThrow(() -> UploadUtil.validateResumePart(part));
+    }
+
     @Test
     void acceptsAndStoresARealPngSignature() throws Exception {
         byte[] png = {(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0};

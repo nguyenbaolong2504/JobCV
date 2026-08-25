@@ -13,6 +13,7 @@ import java.util.Set;
 public final class UploadUtil {
     public static final long MAX_RESUME_SIZE = 5L * 1024L * 1024L;
     public static final long MAX_AVATAR_SIZE = 2L * 1024L * 1024L;
+    public static final long MAX_COMPANY_IMAGE_SIZE = MAX_AVATAR_SIZE;
     private static final Set<String> RESUME_EXTENSIONS = Set.of("pdf", "doc", "docx");
     private static final Set<String> AVATAR_EXTENSIONS = Set.of("jpg", "jpeg", "png", "webp");
     private static final Map<String, Set<String>> RESUME_CONTENT_TYPES = Map.of(
@@ -57,11 +58,13 @@ public final class UploadUtil {
         String extension = extension(part.getSubmittedFileName());
         String contentType = part.getContentType();
         String normalizedContentType = contentType == null ? "" : contentType.split(";", 2)[0].trim().toLowerCase(Locale.ROOT);
-        if (!RESUME_CONTENT_TYPES.get(extension).contains(normalizedContentType)) {
+        if (!RESUME_CONTENT_TYPES.get(extension).contains(normalizedContentType)
+                && !"application/octet-stream".equals(normalizedContentType)) {
             throw new BusinessException("Định dạng MIME của CV không hợp lệ.");
         }
         try (InputStream input = part.getInputStream()) {
-            byte[] header = input.readNBytes(8);
+            // Some valid PDF exporters prepend a short BOM/comment before %PDF-.
+            byte[] header = input.readNBytes("pdf".equals(extension) ? 1024 : 8);
             if (!hasExpectedSignature(extension, header)) {
                 throw new BusinessException("Nội dung tệp không khớp với định dạng CV đã chọn.");
             }
@@ -114,8 +117,18 @@ public final class UploadUtil {
 
     private static boolean hasExpectedSignature(String extension, byte[] header) {
         if ("pdf".equals(extension)) {
-            return header.length >= 5 && header[0] == '%' && header[1] == 'P' && header[2] == 'D'
-                    && header[3] == 'F' && header[4] == '-';
+            byte[] marker = {'%', 'P', 'D', 'F', '-'};
+            for (int offset = 0; offset <= header.length - marker.length; offset++) {
+                boolean match = true;
+                for (int index = 0; index < marker.length; index++) {
+                    if (header[offset + index] != marker[index]) {
+                        match = false;
+                        break;
+                    }
+                }
+                if (match) return true;
+            }
+            return false;
         }
         if ("doc".equals(extension)) {
             byte[] ole = {(byte) 0xD0, (byte) 0xCF, 0x11, (byte) 0xE0, (byte) 0xA1, (byte) 0xB1, 0x1A, (byte) 0xE1};
@@ -170,6 +183,28 @@ public final class UploadUtil {
         if (!destination.startsWith(normalizedDirectory)) {
             throw new BusinessException("Đường dẫn ảnh đại diện không hợp lệ.");
         }
+        try (InputStream stream = part.getInputStream()) {
+            Files.copy(stream, destination, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException exception) {
+            Files.deleteIfExists(destination);
+            throw exception;
+        }
+        return destination;
+    }
+
+    public static Path storeCompanyImage(Part part, int ownerUserId, String kind, Path uploadDirectory)
+            throws IOException, BusinessException {
+        if (part == null || part.getSize() == 0) return null;
+        if (part.getSize() > MAX_COMPANY_IMAGE_SIZE) throw new BusinessException("Ảnh doanh nghiệp không được vượt quá 3 MB.");
+        validateAvatarPart(part);
+        String extension = avatarExtension(part.getSubmittedFileName());
+        String safeKind = "cover".equals(kind) ? "cover" : "logo";
+        Path normalizedDirectory = uploadDirectory.toAbsolutePath().normalize();
+        Files.createDirectories(normalizedDirectory);
+        String storedName = "company_" + ownerUserId + "_" + safeKind + "_" + System.currentTimeMillis()
+                + "_" + java.util.UUID.randomUUID() + "." + extension;
+        Path destination = normalizedDirectory.resolve(storedName).normalize();
+        if (!destination.startsWith(normalizedDirectory)) throw new BusinessException("Đường dẫn ảnh doanh nghiệp không hợp lệ.");
         try (InputStream stream = part.getInputStream()) {
             Files.copy(stream, destination, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException exception) {

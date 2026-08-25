@@ -27,6 +27,9 @@ public class Job {
     private Date deadline;
     private String status;
     private int createdBy;
+    private Integer companyId;
+    private String companyName;
+    private String companyLogoFile;
     private Timestamp createdAt;
     private Timestamp updatedAt;
     private List<JobSkill> skills = new ArrayList<>();
@@ -74,6 +77,12 @@ public class Job {
     public void setStatus(JobStatus status) { this.status = status == null ? null : status.name(); }
     public int getCreatedBy() { return createdBy; }
     public void setCreatedBy(int createdBy) { this.createdBy = createdBy; }
+    public Integer getCompanyId() { return companyId; }
+    public void setCompanyId(Integer companyId) { this.companyId = companyId; }
+    public String getCompanyName() { return companyName; }
+    public void setCompanyName(String companyName) { this.companyName = companyName; }
+    public String getCompanyLogoFile() { return companyLogoFile; }
+    public void setCompanyLogoFile(String companyLogoFile) { this.companyLogoFile = companyLogoFile; }
     public Timestamp getCreatedAt() { return createdAt; }
     public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
     public Timestamp getUpdatedAt() { return updatedAt; }

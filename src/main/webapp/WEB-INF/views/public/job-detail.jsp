@@ -1,7 +1,7 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
-<c:set var="pageTitle" value="Chi tiết việc làm | RecruitFlow" scope="request" />
+<c:set var="pageTitle" value="${not empty job ? job.title : 'Chi tiết việc làm'} | RecruitFlow" scope="request" />
 <jsp:include page="/WEB-INF/views/common/header.jsp" />
 <jsp:include page="/WEB-INF/views/common/navbar.jsp" />
 
@@ -15,9 +15,9 @@
                     <div class="col-lg-8">
                         <section class="content-card job-detail-hero mb-4">
                             <div class="d-flex gap-3 align-items-start">
-                                <a class="company-mark" href="${pageContext.request.contextPath}/companies/detail?id=${company.id}"><img src="${pageContext.request.contextPath}/assets/images/employers/${company.logoFile}" alt="Logo ${company.name}"></a>
+                                <a class="company-mark" href="${pageContext.request.contextPath}/companies/detail?id=${company.id}"><img src="${pageContext.request.contextPath}/companies/media?id=${company.id}&type=logo" alt="Logo ${company.name}"></a>
                                 <div class="flex-grow-1">
-                            <span class="badge text-bg-primary-subtle text-primary mb-2">Đang tuyển · <c:out value="${job.departmentName}" /></span>
+                            <span class="badge ${jobExpired ? 'text-bg-secondary' : 'text-bg-primary-subtle text-primary'} mb-2">${jobExpired ? 'Đã hết hạn' : 'Đang tuyển'} · <c:out value="${job.departmentName}" /></span>
                             <h1 class="page-title mb-2"><c:out value="${job.title}" /></h1>
                             <p class="job-company-line mb-3"><a href="${pageContext.request.contextPath}/companies/detail?id=${company.id}"><c:out value="${company.name}" /></a> <span class="verified-company"><i class="bi bi-patch-check-fill"></i> Đã xác thực</span></p>
                             <div class="d-flex flex-wrap gap-3 text-muted">
@@ -54,6 +54,7 @@
                             </div>
                         </section>
                         <c:if test="${not empty relatedJobs}"><section class="content-card mt-4"><div class="d-flex justify-content-between align-items-center mb-3"><h2 class="h4 fw-bold mb-0">Việc làm tương tự</h2><a class="small fw-semibold" href="${pageContext.request.contextPath}/jobs?departmentId=${job.departmentId}">Xem tất cả</a></div><div class="related-job-list"><c:forEach var="related" items="${relatedJobs}"><a href="${pageContext.request.contextPath}/jobs/detail?id=${related.id}"><span><strong><c:out value="${related.title}" /></strong><small><i class="bi bi-geo-alt"></i><c:out value="${related.location}" /> · Hạn <c:out value="${related.deadline}" /></small></span><i class="bi bi-arrow-right"></i></a></c:forEach></div></section></c:if>
+                        <c:if test="${not empty sameCompanyJobs}"><section class="content-card mt-4"><div class="d-flex justify-content-between align-items-center mb-3"><h2 class="h4 fw-bold mb-0">Việc làm cùng công ty</h2><a class="small fw-semibold" href="${pageContext.request.contextPath}/companies/detail?id=${company.id}#open-jobs">Xem trang công ty</a></div><div class="related-job-list"><c:forEach var="sameCompanyJob" items="${sameCompanyJobs}"><a href="${pageContext.request.contextPath}/jobs/detail?id=${sameCompanyJob.id}"><span><strong><c:out value="${sameCompanyJob.title}" /></strong><small><i class="bi bi-geo-alt"></i><c:out value="${sameCompanyJob.location}" /> · Hạn <c:out value="${sameCompanyJob.deadline}" /></small></span><i class="bi bi-arrow-right"></i></a></c:forEach></div></section></c:if>
                     </div>
                     <aside class="col-lg-4">
                         <div class="content-card position-sticky" style="top: 5.5rem;">
@@ -65,6 +66,7 @@
                                 <dt class="col-5 text-muted fw-normal">Hạn nộp</dt><dd class="col-7"><c:out value="${job.deadline}" /></dd>
                             </dl>
                             <c:choose>
+                                <c:when test="${jobExpired}"><div class="job-expired-state"><span><i class="bi bi-calendar-x"></i></span><strong>Tin tuyển dụng đã hết hạn</strong><p>Nhà tuyển dụng không còn nhận hồ sơ cho vị trí này.</p><a class="btn btn-primary w-100" href="${pageContext.request.contextPath}/jobs?departmentId=${job.departmentId}">Xem việc tương tự</a></div></c:when>
                                 <c:when test="${sessionScope.role eq 'CANDIDATE'}">
                                     <div class="d-grid gap-2">
                                         <c:choose>
@@ -97,10 +99,10 @@
 
 <div class="mobile-job-action">
     <div><small>Mức lương</small><strong><fmt:formatNumber value="${job.salaryMin}" type="number" />–<fmt:formatNumber value="${job.salaryMax}" type="number" /> VNĐ</strong></div>
-    <c:choose><c:when test="${sessionScope.role eq 'CANDIDATE' and alreadyApplied}"><a class="btn btn-success" href="${pageContext.request.contextPath}/candidate/applications"><i class="bi bi-check-circle me-1"></i>Đã ứng tuyển</a></c:when><c:when test="${sessionScope.role eq 'CANDIDATE' and empty candidateResumes}"><a class="btn btn-primary" href="${pageContext.request.contextPath}/candidate/resumes">Tải CV ứng tuyển</a></c:when><c:when test="${sessionScope.role eq 'CANDIDATE'}"><button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#applyJobModal">Ứng tuyển ngay</button></c:when><c:when test="${empty sessionScope.userId}"><a class="btn btn-primary" href="${pageContext.request.contextPath}/login">Đăng nhập ứng tuyển</a></c:when></c:choose>
+    <c:choose><c:when test="${jobExpired}"><a class="btn btn-outline-primary" href="${pageContext.request.contextPath}/jobs?departmentId=${job.departmentId}">Xem việc tương tự</a></c:when><c:when test="${sessionScope.role eq 'CANDIDATE' and alreadyApplied}"><a class="btn btn-success" href="${pageContext.request.contextPath}/candidate/applications"><i class="bi bi-check-circle me-1"></i>Đã ứng tuyển</a></c:when><c:when test="${sessionScope.role eq 'CANDIDATE' and empty candidateResumes}"><a class="btn btn-primary" href="${pageContext.request.contextPath}/candidate/resumes">Tải CV ứng tuyển</a></c:when><c:when test="${sessionScope.role eq 'CANDIDATE'}"><button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#applyJobModal">Ứng tuyển ngay</button></c:when><c:when test="${empty sessionScope.userId}"><a class="btn btn-primary" href="${pageContext.request.contextPath}/login">Đăng nhập ứng tuyển</a></c:when></c:choose>
 </div>
 
-<c:if test="${sessionScope.role eq 'CANDIDATE' and not alreadyApplied and not empty candidateResumes}">
+<c:if test="${not jobExpired and sessionScope.role eq 'CANDIDATE' and not alreadyApplied and not empty candidateResumes}">
 <div class="modal fade" id="applyJobModal" tabindex="-1" aria-labelledby="applyJobModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content apply-modal">
         <div class="modal-header"><div><span class="modal-kicker">Hoàn tất ứng tuyển</span><h2 class="modal-title fs-4" id="applyJobModalLabel"><c:out value="${job.title}" /></h2></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button></div>

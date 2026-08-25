@@ -36,7 +36,7 @@
     <i class="bi bi-list" aria-hidden="true"></i>
 </button>
 <button class="portal-nav-backdrop" id="portalNavBackdrop" type="button" aria-label="Đóng menu chức năng" tabindex="-1"></button>
-<script src="${pageContext.request.contextPath}/assets/js/app.js?v=20260824-release-v1"></script>
+<script src="${pageContext.request.contextPath}/assets/js/app.js?v=20260825-platform-v2"></script>
 </body>
 
 </html>

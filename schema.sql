@@ -22,6 +22,22 @@ CREATE TABLE IF NOT EXISTS departments (
     UNIQUE KEY uq_departments_name (name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS job_categories (
+    id INT NOT NULL AUTO_INCREMENT,
+    parent_id INT NULL,
+    name VARCHAR(120) NOT NULL,
+    description VARCHAR(500) NULL,
+    display_order INT NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_job_categories_parent_name (parent_id, name),
+    KEY idx_job_categories_parent_active_order (parent_id, is_active, display_order),
+    CONSTRAINT chk_job_categories_display_order CHECK (display_order >= 0),
+    CONSTRAINT fk_job_categories_parent FOREIGN KEY (parent_id) REFERENCES job_categories (id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS users (
     id INT NOT NULL AUTO_INCREMENT,
     email VARCHAR(255) NOT NULL,
@@ -29,6 +45,7 @@ CREATE TABLE IF NOT EXISTS users (
     full_name VARCHAR(150) NOT NULL,
     role_id INT NOT NULL,
     status ENUM('ACTIVE', 'LOCKED', 'INACTIVE') NOT NULL DEFAULT 'ACTIVE',
+    session_version INT NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
@@ -36,6 +53,91 @@ CREATE TABLE IF NOT EXISTS users (
     KEY idx_users_role_status (role_id, status),
     KEY idx_users_status_created_at (status, created_at),
     CONSTRAINT fk_users_role FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS recruiter_profiles (
+    id INT NOT NULL AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    organization_name VARCHAR(150) NOT NULL,
+    job_title VARCHAR(100) NOT NULL,
+    work_phone VARCHAR(30) NOT NULL,
+    industry VARCHAR(120) NULL,
+    company_size VARCHAR(60) NULL,
+    address VARCHAR(255) NULL,
+    website VARCHAR(255) NULL,
+    description TEXT NULL,
+    logo_path VARCHAR(255) NULL,
+    cover_path VARCHAR(255) NULL,
+    is_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_recruiter_profiles_user_id (user_id),
+    CONSTRAINT fk_recruiter_profiles_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS permissions (
+    id INT NOT NULL AUTO_INCREMENT,
+    permission_code VARCHAR(100) NOT NULL,
+    module VARCHAR(100) NOT NULL,
+    display_name VARCHAR(150) NOT NULL,
+    description VARCHAR(500) NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_permissions_code (permission_code),
+    KEY idx_permissions_module (module)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS role_permissions (
+    role_id INT NOT NULL,
+    permission_id INT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (role_id, permission_id),
+    CONSTRAINT fk_role_permissions_role FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE,
+    CONSTRAINT fk_role_permissions_permission FOREIGN KEY (permission_id) REFERENCES permissions (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS password_reset_otps (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    otp_hash VARCHAR(60) NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    attempt_count TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    consumed_at TIMESTAMP NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_password_reset_otps_user_active (user_id, consumed_at, expires_at),
+    KEY idx_password_reset_otps_created_at (created_at),
+    CONSTRAINT chk_password_reset_otps_attempt_count CHECK (attempt_count <= 5),
+    CONSTRAINT fk_password_reset_otps_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS login_verification_otps (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    otp_hash VARCHAR(60) NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    attempt_count TINYINT UNSIGNED NOT NULL DEFAULT 0,
+    consumed_at TIMESTAMP NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_login_verification_otps_user_active (user_id, consumed_at, expires_at),
+    KEY idx_login_verification_otps_created_at (created_at),
+    CONSTRAINT chk_login_verification_otps_attempt_count CHECK (attempt_count <= 5),
+    CONSTRAINT fk_login_verification_otps_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS oauth_accounts (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    provider VARCHAR(30) NOT NULL,
+    provider_subject VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_login_at TIMESTAMP NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_oauth_accounts_provider_subject (provider, provider_subject),
+    UNIQUE KEY uq_oauth_accounts_user_provider (user_id, provider),
+    CONSTRAINT fk_oauth_accounts_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS candidate_profiles (
@@ -89,6 +191,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     job_code VARCHAR(50) NOT NULL,
     title VARCHAR(255) NOT NULL,
     department_id INT NOT NULL,
+    category_id INT NULL,
     location VARCHAR(255) NOT NULL,
     employment_type ENUM('FULL_TIME', 'PART_TIME', 'INTERNSHIP', 'CONTRACT', 'REMOTE') NOT NULL,
     number_of_positions INT NOT NULL,
@@ -106,6 +209,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     UNIQUE KEY uq_jobs_job_code (job_code),
     KEY idx_jobs_status_deadline (status, deadline),
     KEY idx_jobs_department_status (department_id, status),
+    KEY idx_jobs_category_status (category_id, status),
     KEY idx_jobs_location_type_status (location, employment_type, status),
     KEY idx_jobs_created_by (created_by),
     CONSTRAINT chk_jobs_positions CHECK (number_of_positions > 0),
@@ -113,6 +217,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     CONSTRAINT chk_jobs_salary_range CHECK (salary_max >= salary_min),
     CONSTRAINT chk_jobs_experience_required CHECK (experience_required >= 0),
     CONSTRAINT fk_jobs_department FOREIGN KEY (department_id) REFERENCES departments (id) ON DELETE RESTRICT,
+    CONSTRAINT fk_jobs_category FOREIGN KEY (category_id) REFERENCES job_categories (id) ON DELETE RESTRICT,
     CONSTRAINT fk_jobs_created_by FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -355,6 +460,15 @@ INSERT INTO users (email, password_hash, full_name, role_id, status)
 SELECT 'candidate@recruitflow.com', '$2a$12$v5qHyl5qQU5TBVS4ZNOclulg2e9nBQ7D91WZ/bIayPjPK2ACDA3xe', 'Candidate User', id, 'ACTIVE'
 FROM roles WHERE role_name = 'CANDIDATE'
 ON DUPLICATE KEY UPDATE password_hash = VALUES(password_hash), full_name = VALUES(full_name), role_id = VALUES(role_id), status = VALUES(status);
+
+INSERT INTO recruiter_profiles
+    (user_id, organization_name, job_title, work_phone, industry, company_size, address, website, description, logo_path, is_verified)
+SELECT id, 'RecruitFlow Technology', 'HR Manager', '024 7300 1234', 'Công nghệ tuyển dụng & phần mềm',
+       '100–500 nhân sự', 'Hà Nội · TP.HCM · Làm việc linh hoạt', 'https://recruitflow.local',
+       'Nền tảng công nghệ tuyển dụng tập trung vào trải nghiệm ứng viên, dữ liệu minh bạch và quy trình tuyển dụng liền mạch.',
+       'recruitflow-tech.svg', TRUE
+FROM users WHERE email = 'hr@recruitflow.com'
+ON DUPLICATE KEY UPDATE user_id = VALUES(user_id);
 
 INSERT INTO candidate_profiles (user_id, experience_years, skills, summary)
 SELECT id, 0, 'Java, JDBC, MySQL, Git', 'Seed candidate account for RecruitFlow demonstrations.'

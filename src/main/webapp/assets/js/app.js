@@ -227,12 +227,69 @@
             });
         }
 
+        var pendingConfirmForm = null;
+        var pendingConfirmSubmitter = null;
+        var confirmationHost = document.createElement('div');
+        confirmationHost.innerHTML = '<div class="modal fade" id="rfConfirmationModal" tabindex="-1" aria-labelledby="rfConfirmationTitle" aria-hidden="true">'
+            + '<div class="modal-dialog modal-dialog-centered"><div class="modal-content rf-confirmation-modal">'
+            + '<div class="modal-body"><span class="rf-confirmation-icon"><i class="bi bi-exclamation-triangle"></i></span>'
+            + '<div><small>X\u00C1C NH\u1EACN THAO T\u00C1C</small><h2 id="rfConfirmationTitle">B\u1EA1n c\u00F3 ch\u1EAFc ch\u1EAFn?</h2><p data-confirmation-message></p></div></div>'
+            + '<div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">H\u1EE7y</button>'
+            + '<button type="button" class="btn btn-danger" data-confirmation-accept>Ti\u1EBFp t\u1EE5c</button></div></div></div></div>';
+        var confirmationModalElement = confirmationHost.firstElementChild;
+        document.body.appendChild(confirmationModalElement);
+        var confirmationMessage = confirmationModalElement.querySelector('[data-confirmation-message]');
+        var confirmationAccept = confirmationModalElement.querySelector('[data-confirmation-accept]');
         document.querySelectorAll('form[data-confirm]').forEach(function (form) {
             form.addEventListener('submit', function (event) {
-                if (!window.confirm(form.dataset.confirm)) {
-                    event.preventDefault();
+                if (form.dataset.confirmed === 'true') {
+                    delete form.dataset.confirmed;
+                    return;
+                }
+                event.preventDefault();
+                pendingConfirmForm = form;
+                pendingConfirmSubmitter = event.submitter || null;
+                confirmationMessage.textContent = form.dataset.confirm || 'H\u00E0nh \u0111\u1ED9ng n\u00E0y c\u00F3 th\u1EC3 l\u00E0m thay \u0111\u1ED5i d\u1EEF li\u1EC7u.';
+                if (window.bootstrap && window.bootstrap.Modal) {
+                    window.bootstrap.Modal.getOrCreateInstance(confirmationModalElement).show();
+                } else if (window.confirm(confirmationMessage.textContent)) {
+                    form.dataset.confirmed = 'true';
+                    form.requestSubmit(event.submitter || undefined);
                 }
             });
+        });
+
+        var flashAlerts = Array.from(document.querySelectorAll('.alert[role="alert"]'));
+        if (flashAlerts.length) {
+            var toastStack = document.createElement('div');
+            toastStack.className = 'rf-toast-stack';
+            toastStack.setAttribute('aria-live', 'polite');
+            document.body.appendChild(toastStack);
+            flashAlerts.forEach(function (alert, index) {
+                alert.classList.add('rf-toast-alert');
+                alert.style.setProperty('--toast-index', String(index));
+                toastStack.appendChild(alert);
+                window.requestAnimationFrame(function () { alert.classList.add('is-visible'); });
+                if (alert.classList.contains('alert-success')) {
+                    window.setTimeout(function () {
+                        if (window.bootstrap && window.bootstrap.Alert) {
+                            window.bootstrap.Alert.getOrCreateInstance(alert).close();
+                        }
+                    }, 5200);
+                }
+            });
+        }
+        confirmationAccept.addEventListener('click', function () {
+            if (!pendingConfirmForm) return;
+            var form = pendingConfirmForm;
+            var submitter = pendingConfirmSubmitter;
+            pendingConfirmForm = null;
+            pendingConfirmSubmitter = null;
+            form.dataset.confirmed = 'true';
+            if (window.bootstrap && window.bootstrap.Modal) {
+                window.bootstrap.Modal.getOrCreateInstance(confirmationModalElement).hide();
+            }
+            form.requestSubmit(submitter || undefined);
         });
 
         document.querySelectorAll('input[type="file"][data-resume-upload]').forEach(function (input) {
@@ -579,6 +636,13 @@
         var confirmPassword = document.getElementById('confirmPassword');
         var strength = document.querySelector('[data-password-strength]');
         function updatePasswordUi() {
+            if (strength && newPassword) {
+                var candidatePassword = newPassword.value;
+                var containsLetter = /[A-Za-z\u00C0-\u024F]/.test(candidatePassword);
+                var containsDigit = /\d/.test(candidatePassword);
+                newPassword.setCustomValidity(candidatePassword && (candidatePassword.length < 8 || !containsLetter || !containsDigit)
+                    ? 'M\u1EADt kh\u1EA9u c\u1EA7n \u00EDt nh\u1EA5t 8 k\u00FD t\u1EF1, g\u1ED3m ch\u1EEF c\u00E1i v\u00E0 ch\u1EEF s\u1ED1.' : '');
+            }
             if (confirmPassword && newPassword) {
                 confirmPassword.setCustomValidity(confirmPassword.value && confirmPassword.value !== newPassword.value
                     ? 'M\u1EADt kh\u1EA9u x\u00E1c nh\u1EADn kh\u00F4ng kh\u1EDBp.' : '');
@@ -586,7 +650,7 @@
             if (!strength || !newPassword) return;
             var value = newPassword.value;
             var score = 0;
-            if (value.length >= 6) score++;
+            if (value.length >= 8) score++;
             if (value.length >= 10) score++;
             if (/[A-Z]/.test(value) && /[a-z]/.test(value)) score++;
             if (/\d/.test(value) && /[^A-Za-z0-9]/.test(value)) score++;
@@ -596,6 +660,20 @@
         }
         if (newPassword) newPassword.addEventListener('input', updatePasswordUi);
         if (confirmPassword) confirmPassword.addEventListener('input', updatePasswordUi);
+
+        var recruiterFields = document.querySelector('[data-recruiter-fields]');
+        var accountTypeInputs = document.querySelectorAll('input[name="accountType"]');
+        function updateRecruiterFields() {
+            if (!recruiterFields || !accountTypeInputs.length) return;
+            var selected = document.querySelector('input[name="accountType"]:checked');
+            var recruiterSelected = selected && selected.value === 'HR';
+            recruiterFields.hidden = !recruiterSelected;
+            recruiterFields.querySelectorAll('input, select, textarea').forEach(function (field) {
+                field.required = recruiterSelected;
+            });
+        }
+        accountTypeInputs.forEach(function (input) { input.addEventListener('change', updateRecruiterFields); });
+        updateRecruiterFields();
 
         var rememberedEmailField = document.getElementById('email');
         var rememberEmail = document.querySelector('input[name="rememberEmail"]');
@@ -626,6 +704,153 @@
                 }, 250);
             }
         }
+
+        document.querySelectorAll('[data-job-suggest-url]').forEach(function (input) {
+            var field = input.closest('.job-suggest-field') || input.parentElement;
+            var menu = document.createElement('div');
+            var debounceTimer;
+            var activeRequest;
+            var activeIndex = -1;
+            menu.className = 'job-suggestion-menu';
+            menu.setAttribute('role', 'listbox');
+            menu.hidden = true;
+            input.setAttribute('role', 'combobox');
+            input.setAttribute('aria-autocomplete', 'list');
+            input.setAttribute('aria-expanded', 'false');
+            field.appendChild(menu);
+
+            function closeSuggestions() {
+                menu.hidden = true;
+                menu.replaceChildren();
+                input.setAttribute('aria-expanded', 'false');
+                activeIndex = -1;
+            }
+
+            function selectSuggestion(button) {
+                input.value = button.dataset.value || button.textContent.trim();
+                closeSuggestions();
+                input.focus();
+            }
+
+            function renderSuggestions(items) {
+                menu.replaceChildren();
+                items.forEach(function (item, index) {
+                    var button = document.createElement('button');
+                    var icon = document.createElement('i');
+                    var copy = document.createElement('span');
+                    button.type = 'button';
+                    button.setAttribute('role', 'option');
+                    button.dataset.value = item.value || item.label;
+                    button.dataset.index = String(index);
+                    icon.className = 'bi bi-search';
+                    copy.textContent = item.label;
+                    button.append(icon, copy);
+                    button.addEventListener('mousedown', function (event) {
+                        event.preventDefault();
+                        selectSuggestion(button);
+                    });
+                    menu.appendChild(button);
+                });
+                menu.hidden = items.length === 0;
+                input.setAttribute('aria-expanded', String(items.length > 0));
+                activeIndex = -1;
+            }
+
+            input.addEventListener('input', function () {
+                window.clearTimeout(debounceTimer);
+                if (activeRequest) activeRequest.abort();
+                var query = input.value.trim();
+                if (query.length < 2) {
+                    closeSuggestions();
+                    return;
+                }
+                debounceTimer = window.setTimeout(function () {
+                    activeRequest = new AbortController();
+                    var separator = input.dataset.jobSuggestUrl.indexOf('?') === -1 ? '?' : '&';
+                    window.fetch(input.dataset.jobSuggestUrl + separator + 'q=' + encodeURIComponent(query), {
+                        credentials: 'same-origin',
+                        headers: { 'Accept': 'application/json' },
+                        signal: activeRequest.signal
+                    }).then(function (response) {
+                        if (!response.ok) throw new Error('suggestion_failed');
+                        return response.json();
+                    }).then(function (payload) {
+                        if (input.value.trim() === query) renderSuggestions(payload.suggestions || []);
+                    }).catch(function (error) {
+                        if (error.name !== 'AbortError') closeSuggestions();
+                    });
+                }, 220);
+            });
+
+            input.addEventListener('keydown', function (event) {
+                var options = Array.from(menu.querySelectorAll('button'));
+                if (menu.hidden || options.length === 0) return;
+                if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    activeIndex = event.key === 'ArrowDown'
+                        ? (activeIndex + 1) % options.length
+                        : (activeIndex - 1 + options.length) % options.length;
+                    options.forEach(function (option, index) {
+                        option.classList.toggle('is-active', index === activeIndex);
+                        option.setAttribute('aria-selected', String(index === activeIndex));
+                    });
+                } else if (event.key === 'Enter' && activeIndex >= 0) {
+                    event.preventDefault();
+                    selectSuggestion(options[activeIndex]);
+                } else if (event.key === 'Escape') {
+                    closeSuggestions();
+                }
+            });
+            input.addEventListener('blur', function () {
+                window.setTimeout(closeSuggestions, 120);
+            });
+        });
+
+        document.querySelectorAll('[data-resume-dropzone]').forEach(function (dropzone) {
+            var fileInput = dropzone.querySelector('input[type="file"]');
+            if (!fileInput) return;
+            ['dragenter', 'dragover'].forEach(function (eventName) {
+                dropzone.addEventListener(eventName, function (event) {
+                    event.preventDefault();
+                    if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+                    dropzone.classList.add('is-dragging');
+                });
+            });
+            ['dragleave', 'drop'].forEach(function (eventName) {
+                dropzone.addEventListener(eventName, function (event) {
+                    event.preventDefault();
+                    dropzone.classList.remove('is-dragging');
+                });
+            });
+            dropzone.addEventListener('drop', function (event) {
+                if (!event.dataTransfer || !event.dataTransfer.files.length) return;
+                try {
+                    fileInput.files = event.dataTransfer.files;
+                    fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+                } catch (ignored) {
+                    fileInput.focus();
+                }
+            });
+        });
+
+        var filterPanel = document.getElementById('jobFilterPanel');
+        var filterToggle = document.querySelector('[data-filter-toggle]');
+        var filterClose = document.querySelector('[data-filter-close]');
+        function setFilterOpen(open) {
+            if (!filterPanel || !filterToggle) return;
+            filterPanel.classList.toggle('is-open', open);
+            document.body.classList.toggle('job-filter-open', open);
+            filterToggle.setAttribute('aria-expanded', String(open));
+            if (open) {
+                var firstField = filterPanel.querySelector('select, input');
+                if (firstField) window.setTimeout(function () { firstField.focus(); }, 80);
+            }
+        }
+        if (filterToggle && filterPanel) filterToggle.addEventListener('click', function () { setFilterOpen(true); });
+        if (filterClose) filterClose.addEventListener('click', function () { setFilterOpen(false); });
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && filterPanel && filterPanel.classList.contains('is-open')) setFilterOpen(false);
+        });
 
         document.querySelectorAll('form').forEach(function (form) {
             form.addEventListener('submit', function (event) {
