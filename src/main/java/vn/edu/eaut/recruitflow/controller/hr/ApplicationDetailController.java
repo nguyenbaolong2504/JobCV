@@ -48,7 +48,7 @@ public class ApplicationDetailController extends BaseController {
             request.setAttribute("feedbackByInterview", feedbackByInterview);
             var offer = applicationService.getOfferForHr(applicationId, actorId);
             request.setAttribute("offers", offer == null ? List.of() : List.of(offer));
-            view(request, response, "/WEB-INF/views/hr/application-detail.jsp", "Hồ sơ ứng viên | RecruitFlow");
+            view(request, response, "/WEB-INF/views/hr/application-detail.jsp", "Hồ sơ ứng viên | JobCV");
         } catch (BusinessException | IllegalArgumentException ex) {
             redirectWithError(request, response, "/hr/applications", ex.getMessage());
         }

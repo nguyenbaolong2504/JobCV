@@ -30,6 +30,6 @@ public class CandidateInterviewController extends CandidateBaseController {
         } catch (BusinessException ex) {
             request.setAttribute("error", ex.getMessage());
         }
-        view(request, response, "/WEB-INF/views/candidate/interviews.jsp", "Lịch phỏng vấn | RecruitFlow");
+        view(request, response, "/WEB-INF/views/candidate/interviews.jsp", "Lịch phỏng vấn | JobCV");
     }
 }

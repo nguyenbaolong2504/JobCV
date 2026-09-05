@@ -5,6 +5,7 @@ import vn.edu.eaut.recruitflow.dao.OnboardingTaskDAO;
 import vn.edu.eaut.recruitflow.dao.UserDAO;
 import vn.edu.eaut.recruitflow.dao.ApplicationDAO;
 import vn.edu.eaut.recruitflow.dao.JobDAO;
+import vn.edu.eaut.recruitflow.dao.CompanyDAO;
 import vn.edu.eaut.recruitflow.enums.OnboardingStatus;
 import vn.edu.eaut.recruitflow.enums.OnboardingTaskStatus;
 import vn.edu.eaut.recruitflow.model.Application;
@@ -32,6 +33,7 @@ public class OnboardingService {
     private final UserDAO userDAO;
     private final ApplicationDAO applicationDAO;
     private final JobDAO jobDAO;
+    private final CompanyDAO companyDAO = new CompanyDAO();
 
     public OnboardingService() {
         this(new OnboardingDAO(), new OnboardingTaskDAO(), new UserDAO(), new ApplicationDAO(), new JobDAO());
@@ -120,7 +122,7 @@ public class OnboardingService {
         try {
             return "ADMIN".equals(actor.getRoleName())
                     ? onboardingDAO.findAll()
-                    : onboardingDAO.findByJobOwner(actorId);
+                    : onboardingDAO.findByJobOwner(companyIdFor(actorId));
         } catch (SQLException exception) {
             throw new BusinessException("Không thể tải danh sách quy trình tiếp nhận.", exception);
         }
@@ -251,12 +253,22 @@ public class OnboardingService {
                 throw new BusinessException("Không tìm thấy đơn ứng tuyển của quy trình tiếp nhận.");
             }
             var job = jobDAO.findById(application.getJobId());
-            if (!"ADMIN".equals(actor.getRoleName()) && (job == null || job.getCreatedBy() != actorId)) {
-                throw new BusinessException("Bạn chỉ được quản lý quy trình tiếp nhận của tin do mình tạo.");
+            if (!"ADMIN".equals(actor.getRoleName()) && (job == null || job.getCompanyId() != companyIdFor(actorId))) {
+                throw new BusinessException("Bạn chỉ được quản lý quy trình tiếp nhận thuộc công ty của mình.");
             }
             return onboarding;
         } catch (SQLException exception) {
             throw new BusinessException("Không thể xác thực quyền quản lý quy trình tiếp nhận.", exception);
+        }
+    }
+
+    private int companyIdFor(int userId) throws BusinessException {
+        try {
+            Integer companyId = companyDAO.findCompanyIdByUserId(userId);
+            if (companyId == null) throw new BusinessException("Tài khoản HR chưa được liên kết với công ty.");
+            return companyId;
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể xác thực công ty của HR.", exception);
         }
     }
 }

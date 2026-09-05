@@ -33,7 +33,7 @@ public class ForgotPasswordVerifyController extends BaseController {
             return;
         }
         request.setAttribute("resetEmail", email);
-        view(request, response, "/WEB-INF/views/auth/forgot-password-verify.jsp", "Xác minh OTP | RecruitFlow");
+        view(request, response, "/WEB-INF/views/auth/forgot-password-verify.jsp", "Xác minh OTP | JobCV");
     }
 
     @Override

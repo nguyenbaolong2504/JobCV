@@ -8,6 +8,7 @@ import vn.edu.eaut.recruitflow.dao.JobDAO;
 import vn.edu.eaut.recruitflow.dao.RecruiterProfileDAO;
 import vn.edu.eaut.recruitflow.dao.RoleDAO;
 import vn.edu.eaut.recruitflow.dao.UserDAO;
+import vn.edu.eaut.recruitflow.dao.CompanyDAO;
 import vn.edu.eaut.recruitflow.enums.RoleName;
 import vn.edu.eaut.recruitflow.enums.UserStatus;
 import vn.edu.eaut.recruitflow.model.AdminDashboardStats;
@@ -25,6 +26,7 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import vn.edu.eaut.recruitflow.model.CompanyProfile;
 
 /** Admin-only user state and audit log operations. */
 public class AdminService {
@@ -37,6 +39,7 @@ public class AdminService {
     private final RoleDAO roleDAO;
     private final CandidateProfileDAO candidateProfileDAO;
     private final RecruiterProfileDAO recruiterProfileDAO;
+    private final CompanyDAO companyDAO = new CompanyDAO();
 
     public AdminService() {
         this(new UserDAO(), new DepartmentDAO(), new JobDAO(), new ApplicationDAO(), new AuditLogDAO(), new AuditLogService(),
@@ -114,6 +117,29 @@ public class AdminService {
         }
     }
 
+    public List<CompanyProfile> getCompanies(int actorId) throws BusinessException {
+        requireAdmin(actorId);
+        try { return companyDAO.findActive(""); }
+        catch (SQLException exception) { throw new BusinessException("Không thể tải danh sách công ty.", exception); }
+    }
+
+    public Map<Integer,Integer> getCompanyMemberships(List<User> users, int actorId) throws BusinessException {
+        requireAdmin(actorId);
+        try { return companyDAO.findMembershipCompanyIds(users.stream().map(User::getId).toList()); }
+        catch (SQLException exception) { throw new BusinessException("Không thể tải liên kết công ty.", exception); }
+    }
+
+    public void assignCompany(int userId, int companyId, int actorId) throws BusinessException {
+        requireAdmin(actorId);
+        try (Connection connection=DBUtil.getConnection()) {
+            User user=userDAO.findById(connection,userId);
+            if (user==null || !(RoleName.HR.name().equals(user.getRoleName()) || RoleName.INTERVIEWER.name().equals(user.getRoleName())))
+                throw new BusinessException("Chỉ tài khoản HR hoặc Interviewer được liên kết với công ty.");
+            if (companyDAO.findById(companyId)==null) throw new BusinessException("Không tìm thấy công ty.");
+            companyDAO.assignMembership(connection,userId,companyId,user.getRoleName());
+        } catch (SQLException exception) { throw new BusinessException("Không thể liên kết tài khoản với công ty.", exception); }
+    }
+
     public void updateUserRole(int userId, int roleId, int actorId) throws BusinessException {
         requireAdmin(actorId);
         if (actorId == userId) {
@@ -189,14 +215,34 @@ public class AdminService {
         if (actorId == userId) {
             throw new BusinessException("Không thể thay đổi trạng thái tài khoản của chính bạn.");
         }
-        try {
-            User target = userDAO.findById(userId);
-            if (target == null) throw new BusinessException("Không tìm thấy người dùng.");
-            if (!userDAO.updateStatus(userId, status.name())) {
-                throw new BusinessException("Không thể cập nhật trạng thái người dùng.");
+        try (Connection connection = DBUtil.getConnection()) {
+            boolean originalAutoCommit = connection.getAutoCommit();
+            connection.setAutoCommit(false);
+            try {
+                User target = userDAO.findById(connection, userId);
+                if (target == null) throw new BusinessException("Không tìm thấy người dùng.");
+                if (status == UserStatus.ACTIVE && RoleName.HR.name().equals(target.getRoleName())) {
+                    RecruiterProfile profile = recruiterProfileDAO.findByUserId(connection, userId);
+                    if (profile == null || profile.getOrganizationName() == null || profile.getOrganizationName().isBlank()) {
+                        throw new BusinessException("HR chưa có hồ sơ tổ chức để liên kết với công ty.");
+                    }
+                    companyDAO.ensureCompanyMembership(connection, userId, profile.getOrganizationName(), profile.getJobTitle());
+                }
+                if (!userDAO.updateStatus(connection, userId, status.name())) {
+                    throw new BusinessException("Không thể cập nhật trạng thái người dùng.");
+                }
+                AuditLog audit = new AuditLog();
+                audit.setUserId(actorId); audit.setAction("USER_STATUS_CHANGED"); audit.setEntityName("users");
+                audit.setEntityId(userId); audit.setDetails("Changed status to " + status.name());
+                auditLogDAO.insert(connection, audit);
+                connection.commit();
+            } catch (BusinessException exception) {
+                connection.rollback(); throw exception;
+            } catch (SQLException exception) {
+                connection.rollback(); throw exception;
+            } finally {
+                connection.setAutoCommit(originalAutoCommit);
             }
-            auditLogService.record(actorId, "USER_STATUS_CHANGED", "users", userId,
-                    "Changed status to " + status.name(), null);
         } catch (SQLException exception) {
             throw new BusinessException("Không thể cập nhật trạng thái người dùng.", exception);
         }

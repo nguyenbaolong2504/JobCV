@@ -10,6 +10,7 @@ import vn.edu.eaut.recruitflow.service.CompanyProfileService;
 import vn.edu.eaut.recruitflow.service.ResumeService;
 import vn.edu.eaut.recruitflow.util.BusinessException;
 import vn.edu.eaut.recruitflow.util.RequestUtil;
+import vn.edu.eaut.recruitflow.util.ResumeStorageUtil;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -63,9 +64,10 @@ public class CandidateJobController extends CandidateBaseController {
                     candidateId, keyword, departmentId, location, employmentType, page, pageSize, sort));
             request.setAttribute("departments", departmentService.getAllDepartments());
             request.setAttribute("savedJobIds", savedJobService.getSavedJobIds(candidateId));
-            request.setAttribute("companyByDepartment", companyService.getCompanies("").stream()
-                    .collect(Collectors.toMap(company -> company.getId(), Function.identity())));
-            request.setAttribute("hasCandidateResume", !resumeService.getResumes(candidateId).isEmpty());
+            request.setAttribute("companyById", companyService.getCompanies("").stream()
+                    .collect(Collectors.toMap(company -> company.getId(), Function.identity(), (left, right) -> left)));
+            request.setAttribute("hasCandidateResume",
+                    !ResumeStorageUtil.availableResumes(getServletContext(), resumeService.getResumes(candidateId)).isEmpty());
         } catch (BusinessException | IllegalArgumentException ex) {
             request.setAttribute("error", ex.getMessage());
             try {
@@ -75,7 +77,7 @@ public class CandidateJobController extends CandidateBaseController {
             }
         }
 
-        view(request, response, "/WEB-INF/views/candidate/jobs.jsp", "Tìm việc làm | RecruitFlow");
+        view(request, response, "/WEB-INF/views/candidate/jobs.jsp", "Tìm việc làm | JobCV");
     }
 
     private String optionalEmploymentType(String rawEmploymentType) {

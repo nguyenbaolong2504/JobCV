@@ -15,6 +15,7 @@ public final class UploadUtil {
     public static final long MAX_AVATAR_SIZE = 2L * 1024L * 1024L;
     private static final Set<String> RESUME_EXTENSIONS = Set.of("pdf", "doc", "docx");
     private static final Set<String> AVATAR_EXTENSIONS = Set.of("jpg", "jpeg", "png", "webp");
+    private static final int PDF_HEADER_SCAN_LIMIT = 1024;
     private static final Map<String, Set<String>> RESUME_CONTENT_TYPES = Map.of(
             "pdf", Set.of("application/pdf"),
             "doc", Set.of("application/msword", "application/vnd.ms-word"),
@@ -61,7 +62,7 @@ public final class UploadUtil {
             throw new BusinessException("Định dạng MIME của CV không hợp lệ.");
         }
         try (InputStream input = part.getInputStream()) {
-            byte[] header = input.readNBytes(8);
+            byte[] header = input.readNBytes("pdf".equals(extension) ? PDF_HEADER_SCAN_LIMIT : 8);
             if (!hasExpectedSignature(extension, header)) {
                 throw new BusinessException("Nội dung tệp không khớp với định dạng CV đã chọn.");
             }
@@ -114,8 +115,7 @@ public final class UploadUtil {
 
     private static boolean hasExpectedSignature(String extension, byte[] header) {
         if ("pdf".equals(extension)) {
-            return header.length >= 5 && header[0] == '%' && header[1] == 'P' && header[2] == 'D'
-                    && header[3] == 'F' && header[4] == '-';
+            return hasPdfHeaderAfterSafePrefix(header);
         }
         if ("doc".equals(extension)) {
             byte[] ole = {(byte) 0xD0, (byte) 0xCF, 0x11, (byte) 0xE0, (byte) 0xA1, (byte) 0xB1, 0x1A, (byte) 0xE1};
@@ -124,6 +124,35 @@ public final class UploadUtil {
         return "docx".equals(extension) && header.length >= 4 && header[0] == 'P' && header[1] == 'K'
                 && (header[2] == 3 || header[2] == 5 || header[2] == 7)
                 && (header[3] == 4 || header[3] == 6 || header[3] == 8);
+    }
+
+    /**
+     * PDF readers are required in practice to locate the header near the beginning of the file.
+     * Some valid exporters prepend a line break (or an UTF-8 BOM), so requiring byte zero to be
+     * '%' rejects readable CVs. Only harmless leading whitespace/BOM is accepted here; arbitrary
+     * executable or HTML prefixes remain rejected to avoid accepting polyglot uploads.
+     */
+    private static boolean hasPdfHeaderAfterSafePrefix(byte[] bytes) {
+        int index = 0;
+        if (bytes.length >= 3
+                && (bytes[0] & 0xFF) == 0xEF
+                && (bytes[1] & 0xFF) == 0xBB
+                && (bytes[2] & 0xFF) == 0xBF) {
+            index = 3;
+        }
+        while (index < bytes.length && isAsciiWhitespace(bytes[index])) {
+            index++;
+        }
+        return index + 5 <= bytes.length
+                && bytes[index] == '%'
+                && bytes[index + 1] == 'P'
+                && bytes[index + 2] == 'D'
+                && bytes[index + 3] == 'F'
+                && bytes[index + 4] == '-';
+    }
+
+    private static boolean isAsciiWhitespace(byte value) {
+        return value == 0x00 || value == 0x09 || value == 0x0A || value == 0x0C || value == 0x0D || value == 0x20;
     }
 
     private static boolean hasExpectedAvatarSignature(String extension, byte[] header) {
@@ -170,6 +199,42 @@ public final class UploadUtil {
         if (!destination.startsWith(normalizedDirectory)) {
             throw new BusinessException("Đường dẫn ảnh đại diện không hợp lệ.");
         }
+        try (InputStream stream = part.getInputStream()) {
+            Files.copy(stream, destination, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException exception) {
+            Files.deleteIfExists(destination);
+            throw exception;
+        }
+        return destination;
+    }
+
+    public static Path storeCompanyLogo(Part part, int companyId, Path uploadDirectory)
+            throws IOException, BusinessException {
+        validateAvatarPart(part);
+        String extension = avatarExtension(part.getSubmittedFileName());
+        Path normalizedDirectory = uploadDirectory.toAbsolutePath().normalize();
+        Files.createDirectories(normalizedDirectory);
+        String storedName = "company_" + companyId + "_" + System.currentTimeMillis() + "_"
+                + java.util.UUID.randomUUID() + "." + extension;
+        Path destination = normalizedDirectory.resolve(storedName).normalize();
+        if (!destination.startsWith(normalizedDirectory)) throw new BusinessException("Đường dẫn logo không hợp lệ.");
+        try (InputStream stream = part.getInputStream()) {
+            Files.copy(stream, destination, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException exception) {
+            Files.deleteIfExists(destination); throw exception;
+        }
+        return destination;
+    }
+
+    /** Stores a campaign/banner image after the same signature validation used for avatars and logos. */
+    public static Path storeHomeBanner(Part part, Path uploadDirectory) throws IOException, BusinessException {
+        validateAvatarPart(part);
+        String extension = avatarExtension(part.getSubmittedFileName());
+        Path normalizedDirectory = uploadDirectory.toAbsolutePath().normalize();
+        Files.createDirectories(normalizedDirectory);
+        String storedName = "home_banner_" + System.currentTimeMillis() + "_" + java.util.UUID.randomUUID() + "." + extension;
+        Path destination = normalizedDirectory.resolve(storedName).normalize();
+        if (!destination.startsWith(normalizedDirectory)) throw new BusinessException("Đường dẫn banner không hợp lệ.");
         try (InputStream stream = part.getInputStream()) {
             Files.copy(stream, destination, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException exception) {

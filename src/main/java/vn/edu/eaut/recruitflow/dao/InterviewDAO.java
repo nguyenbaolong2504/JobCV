@@ -71,7 +71,7 @@ public class InterviewDAO extends DaoSupport {
 
     public List<Interview> findUpcoming(Integer jobOwnerId) throws SQLException {
         String sql = SELECT_INTERVIEW + "WHERE i.interview_date >= CURRENT_DATE AND i.status IN ('SCHEDULED', 'RESCHEDULED') "
-                + (jobOwnerId == null ? "" : "AND j.created_by = ? ")
+                + (jobOwnerId == null ? "" : "AND j.company_id = ? ")
                 + "ORDER BY i.interview_date, i.start_time";
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
             if (jobOwnerId != null) {
@@ -104,7 +104,7 @@ public class InterviewDAO extends DaoSupport {
             sql.append(" AND i.status = ?");
         }
         if (jobOwnerId != null && jobOwnerId > 0) {
-            sql.append(" AND j.created_by = ?");
+            sql.append(" AND j.company_id = ?");
         }
         sql.append(" ORDER BY i.interview_date DESC, i.start_time DESC");
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql.toString())) {
@@ -287,7 +287,7 @@ public class InterviewDAO extends DaoSupport {
         String sql = "SELECT COUNT(*) FROM interviews i"
                 + (jobOwnerId == null ? "" : " JOIN applications a ON a.id = i.application_id JOIN jobs j ON j.id = a.job_id")
                 + " WHERE i.interview_date >= CURRENT_DATE AND i.status IN ('SCHEDULED', 'RESCHEDULED')"
-                + (jobOwnerId == null ? "" : " AND j.created_by = ?");
+                + (jobOwnerId == null ? "" : " AND j.company_id = ?");
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
             if (jobOwnerId != null) {
                 statement.setInt(1, jobOwnerId);

@@ -28,6 +28,6 @@ public class JobCategoryController extends BaseController {
         } catch (BusinessException exception) {
             request.setAttribute("error", exception.getMessage());
         }
-        view(request, response, "/WEB-INF/views/admin/job-categories.jsp", "Danh mục nghề nghiệp | RecruitFlow");
+        view(request, response, "/WEB-INF/views/admin/job-categories.jsp", "Danh mục nghề nghiệp | JobCV");
     }
 }

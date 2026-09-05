@@ -3,6 +3,7 @@ package vn.edu.eaut.recruitflow.service;
 import vn.edu.eaut.recruitflow.dao.ApplicationDAO;
 import vn.edu.eaut.recruitflow.dao.OfferDAO;
 import vn.edu.eaut.recruitflow.dao.UserDAO;
+import vn.edu.eaut.recruitflow.dao.CompanyDAO;
 import vn.edu.eaut.recruitflow.enums.ApplicationStatus;
 import vn.edu.eaut.recruitflow.enums.OfferStatus;
 import vn.edu.eaut.recruitflow.model.User;
@@ -20,6 +21,7 @@ public class ReportService {
     private final ApplicationDAO applicationDAO;
     private final OfferDAO offerDAO;
     private final UserDAO userDAO;
+    private final CompanyDAO companyDAO = new CompanyDAO();
 
     public ReportService() {
         this(new ApplicationDAO(), new OfferDAO(), new UserDAO());
@@ -43,7 +45,8 @@ public class ReportService {
             if (actor == null || !("HR".equals(actor.getRoleName()) || "ADMIN".equals(actor.getRoleName()))) {
                 throw new BusinessException("Bạn không có quyền xem báo cáo tuyển dụng.");
             }
-            Integer ownerId = "ADMIN".equals(actor.getRoleName()) ? null : actorId;
+            Integer ownerId = "ADMIN".equals(actor.getRoleName()) ? null : companyDAO.findCompanyIdByUserId(actorId);
+            if (!"ADMIN".equals(actor.getRoleName()) && ownerId == null) throw new BusinessException("HR chưa được liên kết với công ty.");
             return buildRecruitmentReport(fromDate, toDate, ownerId);
         } catch (SQLException exception) {
             throw new BusinessException("Không thể xác thực quyền xem báo cáo.", exception);

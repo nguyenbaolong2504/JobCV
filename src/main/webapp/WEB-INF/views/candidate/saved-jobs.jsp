@@ -1,7 +1,7 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
-<c:set var="pageTitle" value="Việc làm đã lưu | RecruitFlow" scope="request" />
+<c:set var="pageTitle" value="Việc làm đã lưu | JobCV" scope="request" />
 <jsp:include page="/WEB-INF/views/common/header.jsp" />
 
 <div class="container-fluid candidate-shell"><div class="row g-0">
@@ -59,7 +59,7 @@
                 <div class="col-12"><div class="candidate-panel empty-state saved-jobs-empty"><div class="empty-icon"><i class="bi bi-bookmark-heart"></i></div><h2 class="h4">Chưa có việc làm nào được lưu</h2><p class="mb-3">Khi gặp một cơ hội phù hợp, hãy bấm biểu tượng lưu để quay lại xem sau.</p><a class="btn btn-primary" href="${pageContext.request.contextPath}/candidate/jobs">Tìm việc ngay</a></div></div>
             </c:if>
         </div>
-        <jsp:include page="/WEB-INF/views/common/pagination.jsp" />
+        <c:set var="paginationPath" value="/candidate/saved-jobs" scope="request" /><jsp:include page="/WEB-INF/views/common/pagination.jsp" />
     </main>
 </div></div>
 <jsp:include page="/WEB-INF/views/common/footer.jsp" />

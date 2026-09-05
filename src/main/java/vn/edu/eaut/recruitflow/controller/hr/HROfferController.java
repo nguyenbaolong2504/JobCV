@@ -36,6 +36,6 @@ public class HROfferController extends BaseController {
         } catch (BusinessException | IllegalArgumentException ex) {
             request.setAttribute("error", ex.getMessage());
         }
-        view(request, response, "/WEB-INF/views/hr/offers.jsp", "Quản lý thư mời | RecruitFlow");
+        view(request, response, "/WEB-INF/views/hr/offers.jsp", "Quản lý thư mời | JobCV");
     }
 }

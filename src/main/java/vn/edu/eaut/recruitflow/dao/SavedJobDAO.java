@@ -15,10 +15,10 @@ import java.util.Set;
 public class SavedJobDAO extends DaoSupport {
     private static final String SELECT_SAVED_JOBS = "SELECT j.id, j.job_code, j.title, j.department_id, "
             + "d.name AS department_name, j.location, j.employment_type, j.number_of_positions, "
-            + "j.salary_min, j.salary_max, j.description, j.requirements, j.experience_required, "
-            + "j.deadline, j.status, j.created_by, j.created_at, j.updated_at "
+            + "j.salary_min, j.salary_max, j.description, j.requirements, j.benefits, j.experience_required, "
+            + "j.deadline, j.status, j.created_by, j.company_id, c.name AS company_name, c.logo_path AS company_logo_path, j.created_at, j.updated_at "
             + "FROM saved_jobs s JOIN jobs j ON j.id = s.job_id "
-            + "JOIN departments d ON d.id = j.department_id ";
+            + "JOIN departments d ON d.id = j.department_id JOIN companies c ON c.id = j.company_id ";
 
     public boolean save(int candidateId, int jobId) throws SQLException {
         String sql = "INSERT IGNORE INTO saved_jobs (candidate_id, job_id) VALUES (?, ?)";
@@ -107,10 +107,14 @@ public class SavedJobDAO extends DaoSupport {
         job.setSalaryMax(resultSet.getBigDecimal("salary_max"));
         job.setDescription(resultSet.getString("description"));
         job.setRequirements(resultSet.getString("requirements"));
+        job.setBenefits(resultSet.getString("benefits"));
         job.setExperienceRequired(resultSet.getInt("experience_required"));
         job.setDeadline(resultSet.getDate("deadline"));
         job.setStatus(resultSet.getString("status"));
         job.setCreatedBy(resultSet.getInt("created_by"));
+        job.setCompanyId(resultSet.getInt("company_id"));
+        job.setCompanyName(resultSet.getString("company_name"));
+        job.setCompanyLogoPath(resultSet.getString("company_logo_path"));
         job.setCreatedAt(resultSet.getTimestamp("created_at"));
         job.setUpdatedAt(resultSet.getTimestamp("updated_at"));
         return job;

@@ -25,6 +25,7 @@ public class CompanyProfile {
     public void setIndustry(String industry) { this.industry = industry; }
     public String getLogoFile() { return logoFile; }
     public void setLogoFile(String logoFile) { this.logoFile = logoFile; }
+    public boolean isUploadedLogo() { return logoFile != null && logoFile.startsWith("company_"); }
     public String getLocation() { return location; }
     public void setLocation(String location) { this.location = location; }
     public String getSize() { return size; }

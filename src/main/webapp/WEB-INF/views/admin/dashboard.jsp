@@ -2,7 +2,7 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
-<c:set var="pageTitle" value="Bảng điều khiển quản trị | RecruitFlow" />
+<c:set var="pageTitle" value="Bảng điều khiển quản trị | JobCV" />
 <c:set var="activeRate" value="${stats.totalUsers gt 0 ? stats.activeUsers * 100 / stats.totalUsers : 0}" />
 <jsp:include page="/WEB-INF/views/common/header.jsp" />
 
@@ -14,8 +14,8 @@
             <jsp:include page="/WEB-INF/views/common/flash.jsp" />
 
             <section class="admin-welcome mb-4">
-                <div><span><i class="bi bi-shield-check"></i>Hệ thống đang hoạt động ổn định</span><h1>Xin chào, <c:out value="${sessionScope.fullName}" />!</h1><p>Kiểm soát người dùng, phân quyền và theo dõi toàn bộ hoạt động RecruitFlow từ một nơi.</p><div class="d-flex flex-wrap gap-2"><a class="btn btn-light" href="${pageContext.request.contextPath}/admin/audit-logs"><i class="bi bi-journal-text me-1"></i>Xem nhật ký</a><a class="btn btn-outline-light" href="${pageContext.request.contextPath}/admin/roles"><i class="bi bi-shield-lock me-1"></i>Kiểm tra phân quyền</a></div></div>
-                <div class="admin-system-mark"><i class="bi bi-hdd-stack"></i><strong>RecruitFlow</strong><small>Trung tâm quản trị</small></div>
+                <div><span><i class="bi bi-shield-check"></i>Hệ thống đang hoạt động ổn định</span><h1>Xin chào, <c:out value="${sessionScope.fullName}" />!</h1><p>Kiểm soát người dùng, phân quyền và theo dõi toàn bộ hoạt động JobCV từ một nơi.</p><div class="d-flex flex-wrap gap-2"><a class="btn btn-light" href="${pageContext.request.contextPath}/admin/audit-logs"><i class="bi bi-journal-text me-1"></i>Xem nhật ký</a><a class="btn btn-outline-light" href="${pageContext.request.contextPath}/admin/roles"><i class="bi bi-shield-lock me-1"></i>Kiểm tra phân quyền</a></div></div>
+                <div class="admin-system-mark"><i class="bi bi-hdd-stack"></i><strong>JobCV</strong><small>Trung tâm quản trị</small></div>
             </section>
 
             <div class="row g-3 mb-4">

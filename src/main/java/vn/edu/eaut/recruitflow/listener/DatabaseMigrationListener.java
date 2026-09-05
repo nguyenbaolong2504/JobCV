@@ -1,5 +1,6 @@
 package vn.edu.eaut.recruitflow.listener;
 
+import com.mysql.cj.jdbc.AbandonedConnectionCleanupThread;
 import vn.edu.eaut.recruitflow.util.DBUtil;
 
 import javax.servlet.ServletContext;
@@ -8,9 +9,12 @@ import javax.servlet.ServletContextListener;
 import javax.servlet.annotation.WebListener;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
+import java.sql.Driver;
+import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Enumeration;
 
 /** Applies small, backward-compatible schema changes required by newer deployments. */
 @WebListener
@@ -24,14 +28,14 @@ public class DatabaseMigrationListener implements ServletContextListener {
                     statement.executeUpdate(
                             "ALTER TABLE candidate_profiles ADD COLUMN avatar_path VARCHAR(255) NULL AFTER summary");
                 }
-                context.log("RecruitFlow migration applied: candidate_profiles.avatar_path");
+                context.log("JobCV migration applied: candidate_profiles.avatar_path");
             }
             if (!columnExists(connection, "applications", "cover_letter")) {
                 try (Statement statement = connection.createStatement()) {
                     statement.executeUpdate(
                             "ALTER TABLE applications ADD COLUMN cover_letter VARCHAR(2000) NULL AFTER match_score");
                 }
-                context.log("RecruitFlow migration applied: applications.cover_letter");
+                context.log("JobCV migration applied: applications.cover_letter");
             }
             addColumnIfMissing(connection, context, "candidate_profiles", "phone",
                     "ALTER TABLE candidate_profiles ADD COLUMN phone VARCHAR(20) NULL AFTER avatar_path");
@@ -58,7 +62,7 @@ public class DatabaseMigrationListener implements ServletContextListener {
                         + "REFERENCES jobs (id) ON DELETE CASCADE"
                         + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
             }
-            context.log("RecruitFlow migration checked: saved_jobs");
+            context.log("JobCV migration checked: saved_jobs");
             try (Statement statement = connection.createStatement()) {
                 statement.executeUpdate("CREATE TABLE IF NOT EXISTS job_alerts ("
                         + "id INT NOT NULL AUTO_INCREMENT, candidate_id INT NOT NULL, "
@@ -77,13 +81,37 @@ public class DatabaseMigrationListener implements ServletContextListener {
                         + "REFERENCES departments (id) ON DELETE SET NULL"
                         + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
             }
-            context.log("RecruitFlow migration checked: job_alerts");
+            context.log("JobCV migration checked: job_alerts");
             int insertedDemoJobs = DemoJobDataSeeder.seed(connection);
-            context.log("RecruitFlow demo catalog checked: " + insertedDemoJobs + " new jobs added");
+            context.log("JobCV demo catalog checked: " + insertedDemoJobs + " new jobs added");
         } catch (SQLException exception) {
             // Keep the application deployable when the database is temporarily unavailable.
             // The error remains visible in the Tomcat log and the existing pages can report it.
-            context.log("RecruitFlow database migration could not be applied.", exception);
+            context.log("JobCV database migration could not be applied.", exception);
+        }
+    }
+
+    @Override
+    public void contextDestroyed(ServletContextEvent event) {
+        ServletContext context = event.getServletContext();
+        try {
+            AbandonedConnectionCleanupThread.checkedShutdown();
+        } catch (RuntimeException exception) {
+            context.log("MySQL cleanup thread could not be stopped cleanly.", exception);
+        }
+
+        ClassLoader applicationClassLoader = DatabaseMigrationListener.class.getClassLoader();
+        Enumeration<Driver> drivers = DriverManager.getDrivers();
+        while (drivers.hasMoreElements()) {
+            Driver driver = drivers.nextElement();
+            if (driver.getClass().getClassLoader() != applicationClassLoader) {
+                continue;
+            }
+            try {
+                DriverManager.deregisterDriver(driver);
+            } catch (SQLException exception) {
+                context.log("JDBC driver could not be deregistered cleanly.", exception);
+            }
         }
     }
 
@@ -102,6 +130,6 @@ public class DatabaseMigrationListener implements ServletContextListener {
         try (Statement statement = connection.createStatement()) {
             statement.executeUpdate(ddl);
         }
-        context.log("RecruitFlow migration applied: " + table + "." + column);
+        context.log("JobCV migration applied: " + table + "." + column);
     }
 }

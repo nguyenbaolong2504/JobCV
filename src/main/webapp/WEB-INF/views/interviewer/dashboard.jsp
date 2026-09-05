@@ -2,7 +2,7 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
-<c:set var="pageTitle" value="Bảng điều khiển phỏng vấn | RecruitFlow" />
+<c:set var="pageTitle" value="Bảng điều khiển phỏng vấn | JobCV" />
 <c:set var="onlineInterviewCount" value="0" /><c:forEach var="countInterview" items="${interviews}"><c:if test="${countInterview.interviewType eq 'ONLINE'}"><c:set var="onlineInterviewCount" value="${onlineInterviewCount + 1}" /></c:if></c:forEach>
 <jsp:include page="/WEB-INF/views/common/header.jsp" />
 
@@ -15,7 +15,7 @@
                 <jsp:include page="/WEB-INF/views/common/flash.jsp" />
 
                 <section class="interviewer-welcome mb-4">
-                    <div><span><i class="bi bi-person-workspace"></i>Không gian phỏng vấn RecruitFlow</span><h1>Sẵn sàng cho buổi phỏng vấn tiếp theo?</h1><p>Chào <strong><c:out value="${sessionScope.fullName}" /></strong>. Xem trước hồ sơ, ghi chú trọng tâm và hoàn thiện đánh giá ngay sau cuộc trao đổi.</p><a class="btn btn-light" href="${pageContext.request.contextPath}/interviewer/interviews">Xem toàn bộ lịch<i class="bi bi-arrow-right ms-1"></i></a></div>
+                    <div><span><i class="bi bi-person-workspace"></i>Không gian phỏng vấn JobCV</span><h1>Sẵn sàng cho buổi phỏng vấn tiếp theo?</h1><p>Chào <strong><c:out value="${sessionScope.fullName}" /></strong>. Xem trước hồ sơ, ghi chú trọng tâm và hoàn thiện đánh giá ngay sau cuộc trao đổi.</p><a class="btn btn-light" href="${pageContext.request.contextPath}/interviewer/interviews">Xem toàn bộ lịch<i class="bi bi-arrow-right ms-1"></i></a></div>
                     <div class="interviewer-hero-icon"><i class="bi bi-chat-square-quote"></i><small>Đánh giá công bằng</small></div>
                 </section>
 

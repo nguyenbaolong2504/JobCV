@@ -36,6 +36,6 @@ public class HRInterviewController extends BaseController {
         } catch (BusinessException | IllegalArgumentException ex) {
             request.setAttribute("error", ex.getMessage());
         }
-        view(request, response, "/WEB-INF/views/hr/interviews.jsp", "Lịch phỏng vấn | RecruitFlow");
+        view(request, response, "/WEB-INF/views/hr/interviews.jsp", "Lịch phỏng vấn | JobCV");
     }
 }

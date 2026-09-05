@@ -23,9 +23,8 @@
             <c:url var="sidebarAvatarUrl" value="/candidate/avatar"><c:param name="v" value="${layoutCandidateProfile.updatedAt.time}" /></c:url>
 
             <aside class="candidate-sidebar col-lg-3 col-xl-2">
-                <a class="brand" href="${pageContext.request.contextPath}/home" title="Về trang chủ RecruitFlow">
-                    <span class="rf-brand-mark">R</span>
-                    <span>RecruitFlow</span>
+                <a class="brand" href="${pageContext.request.contextPath}/home" title="Về trang chủ JobCV">
+                    <img class="jobcv-brand-logo jobcv-brand-logo-sidebar" src="${pageContext.request.contextPath}/assets/images/jobcv-logo.png" alt="JobCV">
                 </a>
                 <a class="candidate-home-return" href="${pageContext.request.contextPath}/home">
                     <span class="candidate-home-return-icon"><i class="bi bi-house-door-fill"></i></span>

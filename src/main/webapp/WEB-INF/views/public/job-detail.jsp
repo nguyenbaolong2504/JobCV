@@ -1,7 +1,7 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
-<c:set var="pageTitle" value="Chi tiết việc làm | RecruitFlow" scope="request" />
+<c:set var="pageTitle" value="Chi tiết việc làm | JobCV" scope="request" />
 <jsp:include page="/WEB-INF/views/common/header.jsp" />
 <jsp:include page="/WEB-INF/views/common/navbar.jsp" />
 
@@ -15,7 +15,7 @@
                     <div class="col-lg-8">
                         <section class="content-card job-detail-hero mb-4">
                             <div class="d-flex gap-3 align-items-start">
-                                <a class="company-mark" href="${pageContext.request.contextPath}/companies/detail?id=${company.id}"><img src="${pageContext.request.contextPath}/assets/images/employers/${company.logoFile}" alt="Logo ${company.name}"></a>
+                                <a class="company-mark" href="${pageContext.request.contextPath}/companies/detail?id=${company.id}"><img src="${pageContext.request.contextPath}${company.uploadedLogo ? '/company-logo?id=' : '/assets/images/employers/'}${company.uploadedLogo ? company.id : company.logoFile}" alt="Logo ${company.name}"></a>
                                 <div class="flex-grow-1">
                             <span class="badge text-bg-primary-subtle text-primary mb-2">Đang tuyển · <c:out value="${job.departmentName}" /></span>
                             <h1 class="page-title mb-2"><c:out value="${job.title}" /></h1>
@@ -23,7 +23,7 @@
                             <div class="d-flex flex-wrap gap-3 text-muted">
                                 <span class="meta-item"><i class="bi bi-geo-alt"></i><c:out value="${job.location}" /></span>
                                 <span class="meta-item"><i class="bi bi-briefcase"></i><span data-enum-label="${job.employmentType}"><c:out value="${job.employmentType}" /></span></span>
-                                <span class="meta-item"><i class="bi bi-people"></i><c:out value="${job.numberOfPositions}" /> vị trí</span>
+                                <span class="meta-item"><i class="bi bi-people"></i>Còn <c:out value="${job.remainingPositions}" />/<c:out value="${job.numberOfPositions}" /> vị trí</span>
                                 <span class="meta-item"><i class="bi bi-calendar3"></i>Hạn nộp: <c:out value="${job.deadline}" /></span>
                             </div>
                                 </div>
@@ -37,6 +37,10 @@
                         <section class="content-card mb-4">
                             <h2 class="h4 fw-bold mb-3">Yêu cầu ứng viên</h2>
                             <div class="text-secondary" style="white-space: pre-line;"><c:out value="${job.requirements}" /></div>
+                        </section>
+                        <section class="content-card mb-4">
+                            <h2 class="h4 fw-bold mb-3">Quyền lợi</h2>
+                            <div class="text-secondary" style="white-space: pre-line;"><c:out value="${job.benefits}" /></div>
                         </section>
                         <section class="content-card">
                             <h2 class="h4 fw-bold mb-3">Kỹ năng mong muốn</h2>
@@ -83,7 +87,7 @@
                                 <c:otherwise><a class="btn btn-outline-primary w-100" href="${pageContext.request.contextPath}/candidate/jobs">Xem trong cổng ứng viên</a></c:otherwise>
                             </c:choose>
                             <a class="btn btn-link w-100 mt-2" href="${pageContext.request.contextPath}/jobs"><i class="bi bi-arrow-left me-1"></i>Quay lại danh sách</a>
-                            <div class="job-safety-note"><i class="bi bi-shield-check"></i><span><strong>Ứng tuyển an toàn</strong>RecruitFlow không yêu cầu ứng viên chuyển khoản hoặc cung cấp mật khẩu.</span></div>
+                            <div class="job-safety-note"><i class="bi bi-shield-check"></i><span><strong>Ứng tuyển an toàn</strong>JobCV không yêu cầu ứng viên chuyển khoản hoặc cung cấp mật khẩu.</span></div>
                         </div>
                     </aside>
                 </div>

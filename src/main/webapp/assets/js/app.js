@@ -575,6 +575,23 @@
             });
         });
 
+        var recruiterFields = document.querySelector('[data-recruiter-fields]');
+        var accountTypeInputs = document.querySelectorAll('input[name="accountType"]');
+        function syncRegistrationRole() {
+            if (!recruiterFields || !accountTypeInputs.length) return;
+            var selected = document.querySelector('input[name="accountType"]:checked');
+            var isRecruiter = selected && selected.value === 'HR';
+            recruiterFields.hidden = !isRecruiter;
+            recruiterFields.querySelectorAll('input').forEach(function (field) {
+                field.required = Boolean(isRecruiter);
+                if (!isRecruiter) field.setCustomValidity('');
+            });
+        }
+        accountTypeInputs.forEach(function (input) {
+            input.addEventListener('change', syncRegistrationRole);
+        });
+        syncRegistrationRole();
+
         var newPassword = document.getElementById('password');
         var confirmPassword = document.getElementById('confirmPassword');
         var strength = document.querySelector('[data-password-strength]');
@@ -670,28 +687,71 @@
             message.textContent = text;
             chatMessages.appendChild(message);
             chatMessages.scrollTop = chatMessages.scrollHeight;
+            return message;
+        }
+
+        function addChatResponse(reply) {
+            var response = typeof reply === 'string' ? { text: reply, actions: [] } : reply;
+            var message = addChatMessage(response.text, 'bot');
+            if (response.actions && response.actions.length) {
+                var actions = document.createElement('div');
+                actions.className = 'rf-chatbot-actions';
+                response.actions.forEach(function (action) {
+                    var link = document.createElement('a');
+                    link.className = 'rf-chatbot-action';
+                    var context = document.body.dataset.contextPath || '';
+                    link.href = action.href && action.href.charAt(0) === '/' ? context + action.href : action.href;
+                    link.textContent = action.label;
+                    actions.appendChild(link);
+                });
+                message.appendChild(actions);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
         }
 
         function chatbotReply(question) {
             var value = question.toLowerCase();
             var context = document.body.dataset.contextPath || '';
             var normalized = value.normalize ? value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\u0111/g, 'd') : value;
-            if (/ung tuyen|apply|nop don/.test(normalized)) return 'B\u1ea1n m\u1edf m\u1ee5c Vi\u1ec7c l\u00e0m, ch\u1ecdn v\u1ecb tr\u00ed ph\u00f9 h\u1ee3p r\u1ed3i nh\u1ea5n \u1ee8ng tuy\u1ec3n. H\u00e3y \u0111\u0103ng nh\u1eadp Candidate v\u00e0 t\u1ea3i CV l\u00ean tr\u01b0\u1edbc.';
-            if (/tai cv|upload cv|quan ly cv|ho so/.test(normalized)) return 'V\u00e0o Candidate \u2192 CV c\u1ee7a t\u00f4i \u0111\u1ec3 t\u1ea3i PDF, DOC ho\u1eb7c DOCX t\u1ed1i \u0111a 5 MB, \u0111\u1eb7t CV m\u1eb7c \u0111\u1ecbnh v\u00e0 d\u00f9ng AI CV Coach.';
-            if (/cv|resume/.test(normalized)) return 'CV n\u00ean c\u00f3 th\u00f4ng tin li\u00ean h\u1ec7, m\u1ee5c ti\u00eau, k\u1ef9 n\u0103ng, kinh nghi\u1ec7m v\u00e0 h\u1ecdc v\u1ea5n. B\u1ea1n c\u00f3 th\u1ec3 d\u00f9ng AI CV Coach \u0111\u1ec3 nh\u1eadn g\u1ee3i \u00fd.';
-            if (/trang thai|don cua toi|application/.test(normalized)) return 'V\u00e0o Candidate \u2192 \u0110\u01a1n \u1ee9ng tuy\u1ec3n \u0111\u1ec3 xem tr\u1ea1ng th\u00e1i v\u00e0 d\u00f2ng th\u1eddi gian x\u1eed l\u00fd c\u1ee7a t\u1eebng h\u1ed3 s\u01a1.';
-            if (/viec|job|tuyen/.test(normalized)) return 'B\u1ea1n xem c\u00e1c v\u1ecb tr\u00ed \u0111ang tuy\u1ec3n t\u1ea1i ' + context + '/jobs v\u00e0 d\u00f9ng t\u1eeb kh\u00f3a, ph\u00f2ng ban ho\u1eb7c tr\u1ea1ng th\u00e1i \u0111\u1ec3 l\u1ecdc.';
-            if (/dang ky|register/.test(normalized)) return 'Nh\u1ea5n \u0110\u0103ng k\u00fd, nh\u1eadp th\u00f4ng tin v\u00e0 t\u1ea1o t\u00e0i kho\u1ea3n Candidate. Sau \u0111\u00f3 b\u1ea1n c\u00f3 th\u1ec3 t\u1ea3i CV v\u00e0 \u1ee9ng tuy\u1ec3n.';
-            if (/dang nhap|login|tai khoan|mat khau/.test(normalized)) return 'V\u00e0o trang \u0110\u0103ng nh\u1eadp v\u00e0 d\u00f9ng email, m\u1eadt kh\u1ea9u c\u1ee7a b\u1ea1n. T\u00e0i kho\u1ea3n demo d\u00f9ng m\u1eadt kh\u1ea9u 123456.';
-            if (/phong van|interview|lich hen/.test(normalized)) return 'L\u1ecbch ph\u1ecfng v\u1ea5n n\u1eb1m trong khu v\u1ef1c Candidate. B\u1ea1n h\u00e3y ki\u1ec3m tra th\u1eddi gian, \u0111\u1ecba \u0111i\u1ec3m ho\u1eb7c li\u00ean k\u1ebft h\u1ecdp tr\u01b0\u1edbc bu\u1ed5i h\u1eb9n.';
-            if (/offer|nhan viec|thu moi/.test(normalized)) return 'Khi HR g\u1eedi offer, b\u1ea1n s\u1ebd nh\u1eadn th\u00f4ng b\u00e1o v\u00e0 c\u00f3 th\u1ec3 xem, ch\u1ea5p nh\u1eadn ho\u1eb7c t\u1eeb ch\u1ed1i trong m\u1ee5c Offer.';
-            if (/thong bao|notification/.test(normalized)) return 'M\u1ee5c Th\u00f4ng b\u00e1o hi\u1ec3n th\u1ecb c\u00e1c c\u1eadp nh\u1eadt v\u1ec1 \u0111\u01a1n, ph\u1ecfng v\u1ea5n v\u00e0 offer. B\u1ea1n c\u00f3 th\u1ec3 \u0111\u00e1nh d\u1ea5u \u0111\u00e3 \u0111\u1ecdc.';
-            if (/onboarding|hoi nhap|nhan vien moi/.test(normalized)) return 'Sau khi ch\u1ea5p nh\u1eadn offer, h\u1ec7 th\u1ed1ng t\u1ea1o quy tr\u00ecnh onboarding. H\u00e3y ho\u00e0n th\u00e0nh t\u1ea5t c\u1ea3 nhi\u1ec7m v\u1ee5 b\u1eaft bu\u1ed9c.';
-            if (/hr|nhan su|dang tin/.test(normalized)) return 'HR c\u00f3 th\u1ec3 t\u1ea1o v\u00e0 \u0111\u0103ng tin tuy\u1ec3n d\u1ee5ng, s\u00e0ng l\u1ecdc h\u1ed3 s\u01a1, x\u1ebfp l\u1ecbch ph\u1ecfng v\u1ea5n, g\u1eedi offer v\u00e0 theo d\u00f5i onboarding.';
-            if (/admin|quan tri/.test(normalized)) return 'Admin qu\u1ea3n l\u00fd ng\u01b0\u1eddi d\u00f9ng, vai tr\u00f2, ph\u00f2ng ban v\u00e0 nh\u1eadt k\u00fd ho\u1ea1t \u0111\u1ed9ng trong khu v\u1ef1c qu\u1ea3n tr\u1ecb.';
-            if (/xin chao|hello|(^| )hi($| )|chao/.test(normalized)) return 'Ch\u00e0o b\u1ea1n! B\u1ea1n mu\u1ed1n t\u00ecm vi\u1ec7c, chu\u1ea9n b\u1ecb CV hay ki\u1ec3m tra \u0111\u01a1n \u1ee9ng tuy\u1ec3n?';
-            if (/cam on|thanks|thank you/.test(normalized)) return 'Kh\u00f4ng c\u00f3 g\u00ec! N\u1ebfu c\u1ea7n, b\u1ea1n c\u1ee9 h\u1ecfi th\u00eam nh\u00e9.';
-            return 'M\u00ecnh ch\u01b0a hi\u1ec3u r\u00f5. B\u1ea1n c\u00f3 th\u1ec3 h\u1ecfi v\u1ec1: t\u00ecm vi\u1ec7c, \u1ee9ng tuy\u1ec3n, CV, tr\u1ea1ng th\u00e1i h\u1ed3 s\u01a1, ph\u1ecfng v\u1ea5n, offer, onboarding ho\u1eb7c t\u00e0i kho\u1ea3n.';
+            var reply = function (text, label, path) {
+                return { text: text, actions: label && path ? [{ label: label, href: context + path }] : [] };
+            };
+            if (/ung tuyen|apply|nop don/.test(normalized)) return reply('B\u1ea1n h\u00e3y ch\u1ecdn v\u1ecb tr\u00ed ph\u00f9 h\u1ee3p, ki\u1ec3m tra CV r\u1ed3i g\u1eedi \u0111\u01a1n. H\u1ec7 th\u1ed1ng s\u1ebd l\u01b0u ti\u1ebfn tr\u00ecnh \u0111\u1ec3 b\u1ea1n theo d\u00f5i.', 'T\u00ecm vi\u1ec7c \u0111\u1ec3 \u1ee9ng tuy\u1ec3n', '/jobs');
+            if (/tai cv|upload cv|quan ly cv|ho so/.test(normalized)) return reply('B\u1ea1n c\u00f3 th\u1ec3 t\u1ea3i PDF, DOC ho\u1eb7c DOCX t\u1ed1i \u0111a 5 MB, \u0111\u1eb7t CV m\u1eb7c \u0111\u1ecbnh v\u00e0 nh\u1edd AI \u0111\u00e1nh gi\u00e1.', 'M\u1edf trang CV c\u1ee7a t\u00f4i', '/candidate/resumes');
+            if (/tao cv|viet cv|cv mau|mau cv/.test(normalized)) return reply('Tr\u00ecnh t\u1ea1o CV c\u00f3 m\u1eabu s\u1eb5n v\u00e0 h\u01b0\u1edbng d\u1eabn t\u1eebng ph\u1ea7n \u0111\u1ec3 b\u1ea1n ho\u00e0n thi\u1ec7n h\u1ed3 s\u01a1 \u0111\u00fang nghi\u1ec7p v\u1ee5.', 'T\u1ea1o CV theo m\u1eabu', '/candidate/cv-builder');
+            if (/cv|resume/.test(normalized)) return reply('CV n\u00ean c\u00f3 th\u00f4ng tin li\u00ean h\u1ec7, m\u1ee5c ti\u00eau, k\u1ef9 n\u0103ng, kinh nghi\u1ec7m v\u00e0 h\u1ecdc v\u1ea5n. B\u1ea1n c\u00f3 th\u1ec3 b\u1eaft \u0111\u1ea7u t\u1eeb m\u1eabu c\u00f3 s\u1eb5n.', 'Xem m\u1eabu v\u00e0 t\u1ea1o CV', '/candidate/cv-builder');
+            if (/trang thai|don cua toi|application/.test(normalized)) return reply('Trang \u0110\u01a1n \u1ee9ng tuy\u1ec3n hi\u1ec3n th\u1ecb tr\u1ea1ng th\u00e1i v\u00e0 d\u00f2ng th\u1eddi gian x\u1eed l\u00fd c\u1ee7a t\u1eebng h\u1ed3 s\u01a1.', 'Theo d\u00f5i \u0111\u01a1n \u1ee9ng tuy\u1ec3n', '/candidate/applications');
+            if (/viec|job|tuyen/.test(normalized)) {
+                var keyword = question.replace(/^(t\u00f4i|m\u00ecnh|em|cho t\u00f4i)?\s*(mu\u1ed1n|c\u1ea7n)?\s*(t\u00ecm|ki\u1ebfm|xem)?\s*(vi\u1ec7c l\u00e0m|c\u00f4ng vi\u1ec7c|vi\u1ec7c|job)?\s*/i, '').trim();
+                var jobPath = '/jobs' + (keyword ? '?keyword=' + encodeURIComponent(keyword) : '');
+                return reply(keyword ? 'M\u00ecnh \u0111\u00e3 chu\u1ea9n b\u1ecb k\u1ebft qu\u1ea3 tuy\u1ec3n d\u1ee5ng cho \u201c' + keyword + '\u201d. Nh\u1ea5n n\u00fat b\u00ean d\u01b0\u1edbi \u0111\u1ec3 xem ngay.' : 'B\u1ea1n c\u00f3 th\u1ec3 t\u00ecm theo v\u1ecb tr\u00ed, k\u1ef9 n\u0103ng, \u0111\u1ecba \u0111i\u1ec3m, lo\u1ea1i h\u00ecnh v\u00e0 m\u1ee9c l\u01b0\u01a1ng.', keyword ? 'Xem vi\u1ec7c ' + keyword : 'M\u1edf trang t\u00ecm vi\u1ec7c', jobPath);
+            }
+            if (/dang ky|register/.test(normalized)) return reply('Khi \u0111\u0103ng k\u00fd, h\u00e3y ch\u1ecdn \u0111\u00fang Ng\u01b0\u1eddi t\u00ecm vi\u1ec7c ho\u1eb7c Nh\u00e0 tuy\u1ec3n d\u1ee5ng. Nh\u00e0 tuy\u1ec3n d\u1ee5ng c\u1ea7n khai b\u00e1o t\u1ed5 ch\u1ee9c \u0111\u1ec3 qu\u1ea3n tr\u1ecb vi\u00ean x\u00e9t duy\u1ec7t.', '\u0110\u0103ng k\u00fd t\u00e0i kho\u1ea3n', '/register');
+            if (/dang nhap|login|tai khoan|mat khau/.test(normalized)) return reply('H\u00e3y d\u00f9ng email v\u00e0 m\u1eadt kh\u1ea9u c\u1ee7a ch\u00ednh b\u1ea1n. JobCV kh\u00f4ng hi\u1ec3n th\u1ecb hay cung c\u1ea5p m\u1eadt kh\u1ea9u t\u00e0i kho\u1ea3n trong chatbot.', '\u0110\u1ebfn trang \u0111\u0103ng nh\u1eadp', '/login');
+            if (/phong van|interview|lich hen/.test(normalized)) return reply('B\u1ea1n c\u00f3 th\u1ec3 xem th\u1eddi gian, h\u00ecnh th\u1ee9c, \u0111\u1ecba \u0111i\u1ec3m ho\u1eb7c li\u00ean k\u1ebft h\u1ecdp c\u1ee7a t\u1eebng l\u1ecbch ph\u1ecfng v\u1ea5n.', 'Xem l\u1ecbch ph\u1ecfng v\u1ea5n', '/candidate/interviews');
+            if (/offer|nhan viec|thu moi/.test(normalized)) return reply('Khi HR g\u1eedi offer, b\u1ea1n c\u00f3 th\u1ec3 xem n\u1ed9i dung, ch\u1ea5p nh\u1eadn ho\u1eb7c t\u1eeb ch\u1ed1i trong trang Offer.', 'Xem Offer', '/candidate/offers');
+            if (/thong bao|notification/.test(normalized)) return reply('Th\u00f4ng b\u00e1o t\u1eadp h\u1ee3p c\u1eadp nh\u1eadt v\u1ec1 \u0111\u01a1n, ph\u1ecfng v\u1ea5n, offer v\u00e0 onboarding.', 'M\u1edf th\u00f4ng b\u00e1o', '/candidate/notifications');
+            if (/onboarding|hoi nhap|nhan vien moi/.test(normalized)) return reply('Sau khi ch\u1ea5p nh\u1eadn offer, quy tr\u00ecnh onboarding s\u1ebd hi\u1ec3n th\u1ecb c\u00e1c nhi\u1ec7m v\u1ee5 c\u1ea7n ho\u00e0n th\u00e0nh.', 'Xem Onboarding', '/candidate/onboarding');
+            if (/hr|nhan su|dang tin/.test(normalized)) return reply('HR qu\u1ea3n l\u00fd tin tuy\u1ec3n d\u1ee5ng, \u1ee9ng vi\u00ean, l\u1ecbch ph\u1ecfng v\u1ea5n, offer v\u00e0 onboarding trong \u0111\u00fang khu v\u1ef1c nghi\u1ec7p v\u1ee5.', 'M\u1edf khu v\u1ef1c HR', '/hr/dashboard');
+            if (/admin|quan tri/.test(normalized)) return reply('Admin qu\u1ea3n l\u00fd ng\u01b0\u1eddi d\u00f9ng, ph\u00e2n quy\u1ec1n, danh m\u1ee5c v\u00e0 nh\u1eadt k\u00fd ho\u1ea1t \u0111\u1ed9ng.', 'M\u1edf trang qu\u1ea3n tr\u1ecb', '/admin/dashboard');
+            if (/xin chao|hello|(^| )hi($| )|chao/.test(normalized)) return { text: 'Ch\u00e0o b\u1ea1n! B\u1ea1n mu\u1ed1n t\u00ecm vi\u1ec7c, chu\u1ea9n b\u1ecb CV hay ki\u1ec3m tra \u0111\u01a1n \u1ee9ng tuy\u1ec3n?', actions: [{ label: 'T\u00ecm vi\u1ec7c', href: context + '/jobs' }, { label: 'T\u1ea1o CV', href: context + '/candidate/cv-builder' }] };
+            if (/cam on|thanks|thank you/.test(normalized)) return { text: 'Kh\u00f4ng c\u00f3 g\u00ec! N\u1ebfu c\u1ea7n, b\u1ea1n c\u1ee9 h\u1ecfi th\u00eam nh\u00e9.', actions: [] };
+            return { text: 'M\u00ecnh ch\u01b0a hi\u1ec3u r\u00f5. B\u1ea1n c\u00f3 th\u1ec3 h\u1ecfi v\u1ec1 t\u00ecm vi\u1ec7c, \u1ee9ng tuy\u1ec3n, CV, tr\u1ea1ng th\u00e1i h\u1ed3 s\u01a1, ph\u1ecfng v\u1ea5n, offer, onboarding ho\u1eb7c t\u00e0i kho\u1ea3n.', actions: [{ label: 'Kh\u00e1m ph\u00e1 vi\u1ec7c l\u00e0m', href: context + '/jobs' }, { label: 'T\u1ea1o CV theo m\u1eabu', href: context + '/candidate/cv-builder' }] };
+        }
+
+        function askCareerAgent(question) {
+            var context = document.body.dataset.contextPath || '';
+            return window.fetch(context + '/assistant?q=' + encodeURIComponent(question), {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' },
+                credentials: 'same-origin',
+                cache: 'no-store'
+            }).then(function (response) {
+                return response.json().catch(function () { return {}; }).then(function (payload) {
+                    if (!response.ok) throw new Error(payload.error || 'Tr\u1ee3 l\u00fd ch\u01b0a th\u1ec3 ph\u1ea3n h\u1ed3i.');
+                    return payload;
+                });
+            });
         }
 
         if (chatToggle && chatPanel && chatForm && chatMessages) {
@@ -703,7 +763,14 @@
                 if (!question) return;
                 addChatMessage(question, 'user');
                 chatInput.value = '';
-                window.setTimeout(function () { addChatMessage(chatbotReply(question), 'bot'); }, 350);
+                var pending = addChatMessage('\u0110ang ph\u00e2n t\u00edch d\u1eef li\u1ec7u h\u1ec7 th\u1ed1ng\u2026', 'bot');
+                askCareerAgent(question).then(function (reply) {
+                    pending.remove();
+                    addChatResponse(reply);
+                }).catch(function () {
+                    pending.remove();
+                    addChatResponse(chatbotReply(question));
+                });
             });
             chatSuggestions.addEventListener('click', function (event) {
                 if (event.target.tagName !== 'BUTTON') return;

@@ -1,6 +1,6 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<c:set var="pageTitle" value="Đơn ứng tuyển | RecruitFlow" scope="request" />
+<c:set var="pageTitle" value="Đơn ứng tuyển | JobCV" scope="request" />
 <jsp:include page="/WEB-INF/views/common/header.jsp" />
 
 <div class="container-fluid candidate-shell"><div class="row g-0">
@@ -13,7 +13,7 @@
             <c:forEach var="application" items="${page.items}"><c:url var="applicationDetailUrl" value="/candidate/applications/detail"><c:param name="id" value="${application.id}" /></c:url><tr><td><a class="fw-semibold text-decoration-none" href="${applicationDetailUrl}"><c:out value="${application.jobTitle}" /></a><div class="small text-muted"><c:out value="${application.jobCode}" /></div></td><td><c:out value="${application.appliedAt}" /></td><td><span class="match-badge"><c:out value="${application.matchScore}" />%</span></td><td><span class="status-badge status-${application.status}"><c:out value="${application.status}" /></span></td><td class="text-end"><a class="btn btn-sm btn-outline-primary" href="${applicationDetailUrl}">Chi tiết <i class="bi bi-arrow-right ms-1"></i></a></td></tr></c:forEach>
             <c:if test="${empty page.items}"><tr><td colspan="5"><div class="empty-state"><div class="empty-icon"><i class="bi bi-send"></i></div><h2 class="h5">Chưa có đơn ứng tuyển</h2><p class="mb-3">Hãy khám phá vị trí đang mở và ứng tuyển bằng CV của bạn.</p><a class="btn btn-primary" href="${pageContext.request.contextPath}/candidate/jobs">Tìm việc làm</a></div></td></tr></c:if>
         </tbody></table></div></section>
-        <jsp:include page="/WEB-INF/views/common/pagination.jsp" />
+        <c:set var="paginationPath" value="/candidate/applications" scope="request" /><jsp:include page="/WEB-INF/views/common/pagination.jsp" />
     </main>
 </div></div>
 <jsp:include page="/WEB-INF/views/common/footer.jsp" />

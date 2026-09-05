@@ -1,5 +1,5 @@
 -- RECRUITFLOW_SAFE_ADDITIVE_MIGRATION
--- Add a credential/session version to the currently selected RecruitFlow database.
+-- Add a credential/session version to the currently selected JobCV database.
 -- This migration is idempotent and never deletes, resets, or seeds user data.
 -- MySQL 8.0.16+; run it after choosing the intended schema (for example `jobcvdb`).
 

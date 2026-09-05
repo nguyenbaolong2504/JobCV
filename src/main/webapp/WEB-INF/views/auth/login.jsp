@@ -1,14 +1,14 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<c:set var="pageTitle" value="Đăng nhập | RecruitFlow" scope="request" />
+<c:set var="pageTitle" value="Đăng nhập | JobCV" scope="request" />
 <jsp:include page="/WEB-INF/views/common/header.jsp" />
 
 <main class="auth-page"><div class="auth-shell">
     <section class="auth-brand-panel">
-        <a class="auth-brand" href="${pageContext.request.contextPath}/"><span>R</span><strong>RecruitFlow</strong></a>
+        <a class="auth-brand" href="${pageContext.request.contextPath}/"><img class="jobcv-brand-logo jobcv-brand-logo-auth" src="${pageContext.request.contextPath}/assets/images/jobcv-logo.png" alt="JobCV"></a>
         <div class="auth-brand-copy"><span class="auth-eyebrow"><i class="bi bi-stars"></i> NỀN TẢNG TUYỂN DỤNG TOÀN TRÌNH</span><h1>Mỗi cơ hội tốt bắt đầu từ một kết nối đúng.</h1><p>Tìm việc phù hợp, quản lý CV và theo dõi toàn bộ hành trình ứng tuyển trong một không gian thống nhất.</p></div>
         <div class="auth-feature-list"><div><i class="bi bi-search-heart"></i><span><strong>Gợi ý việc làm phù hợp</strong><small>Đối chiếu kỹ năng trong CV với yêu cầu vị trí.</small></span></div><div><i class="bi bi-signpost-split"></i><span><strong>Theo dõi tiến trình rõ ràng</strong><small>Từ nộp đơn, phỏng vấn đến nhận việc.</small></span></div><div><i class="bi bi-shield-check"></i><span><strong>Hồ sơ được bảo vệ</strong><small>Chỉ chia sẻ CV khi bạn chủ động ứng tuyển.</small></span></div></div>
-        <div class="auth-proof"><div><strong>36+</strong><span>việc đang mở</span></div><div><strong>9</strong><span>lĩnh vực</span></div><div><strong>24/7</strong><span>quản lý hồ sơ</span></div></div>
+        <div class="auth-proof"><div><strong><c:out value="${openJobCount}" />+</strong><span>việc đang mở</span></div><div><strong><c:out value="${departmentCount}" /></strong><span>lĩnh vực</span></div><div><strong>24/7</strong><span>quản lý hồ sơ</span></div></div>
     </section>
     <section class="auth-form-panel"><div class="auth-form-wrap">
         <a class="auth-back" href="${pageContext.request.contextPath}/"><i class="bi bi-arrow-left"></i>Về trang chủ</a>
@@ -22,7 +22,7 @@
             <button class="btn btn-primary auth-submit" type="submit" data-loading-button><span>Đăng nhập</span><i class="bi bi-arrow-right"></i></button>
         </form>
         <div class="auth-divider"><span>Chưa có tài khoản?</span></div><a class="btn btn-outline-primary w-100" href="${pageContext.request.contextPath}/register">Tạo tài khoản miễn phí</a>
-        <p class="auth-terms">Bằng việc tiếp tục, bạn đồng ý tuân thủ điều khoản sử dụng và chính sách bảo mật của RecruitFlow.</p>
+        <p class="auth-terms">Bằng việc tiếp tục, bạn đồng ý tuân thủ điều khoản sử dụng và chính sách bảo mật của JobCV.</p>
     </div></section>
 </div></main>
 <jsp:include page="/WEB-INF/views/common/footer.jsp" />

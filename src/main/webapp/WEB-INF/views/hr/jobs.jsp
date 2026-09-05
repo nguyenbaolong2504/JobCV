@@ -1,7 +1,7 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
-<c:set var="pageTitle" value="Quản lý tin tuyển dụng | RecruitFlow" />
+<c:set var="pageTitle" value="Quản lý tin tuyển dụng | JobCV" />
 <jsp:include page="/WEB-INF/views/common/header.jsp" />
 
 <div class="container-fluid p-0">
@@ -46,13 +46,13 @@
                                         <td><div class="fw-semibold"><c:out value="${job.title}" /></div><small class="text-muted"><c:out value="${job.location}" /> · <span data-enum-label="${job.employmentType}"><c:out value="${job.employmentType}" /></span></small></td>
                                         <td><c:out value="${job.departmentName}" /></td>
                                         <td><c:out value="${job.deadline}" /></td>
-                                        <td><c:choose><c:when test="${job.status eq 'PUBLISHED'}"><span class="badge text-bg-success">Đã đăng</span></c:when><c:when test="${job.status eq 'DRAFT'}"><span class="badge text-bg-warning">Bản nháp</span></c:when><c:when test="${job.status eq 'CLOSED'}"><span class="badge text-bg-danger">Đã đóng</span></c:when><c:otherwise><span class="badge text-bg-secondary">Lưu trữ</span></c:otherwise></c:choose></td>
+                                        <td><c:choose><c:when test="${job.status eq 'PUBLISHED'}"><span class="badge text-bg-success">Đã đăng</span></c:when><c:when test="${job.status eq 'DRAFT'}"><span class="badge text-bg-warning">Bản nháp</span></c:when><c:when test="${job.status eq 'CLOSED' and job.autoClosed}"><span class="badge text-bg-primary">Đã tuyển đủ</span><small class="d-block text-muted mt-1">0/${job.numberOfPositions} chỗ trống</small></c:when><c:when test="${job.status eq 'CLOSED'}"><span class="badge text-bg-danger">Đã đóng</span></c:when><c:otherwise><span class="badge text-bg-secondary">Lưu trữ</span></c:otherwise></c:choose></td>
                                         <td class="text-end pe-4">
                                             <div class="dropdown">
                                                 <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" type="button">Thao tác</button>
                                                 <ul class="dropdown-menu dropdown-menu-end">
                                                     <li><a class="dropdown-item" href="${pageContext.request.contextPath}/hr/jobs/edit?id=${job.id}"><i class="bi bi-pencil me-2"></i>Chỉnh sửa</a></li>
-                                                    <c:if test="${job.status eq 'DRAFT' or job.status eq 'CLOSED'}"><li><form action="${pageContext.request.contextPath}/hr/jobs/status" method="post"><input type="hidden" name="jobId" value="${job.id}"><input type="hidden" name="status" value="PUBLISHED"><button class="dropdown-item text-success" type="submit"><i class="bi bi-globe2 me-2"></i>Đăng tin</button></form></li></c:if>
+                                                    <c:if test="${job.status eq 'DRAFT' or (job.status eq 'CLOSED' and not job.autoClosed)}"><li><form action="${pageContext.request.contextPath}/hr/jobs/status" method="post"><input type="hidden" name="jobId" value="${job.id}"><input type="hidden" name="status" value="PUBLISHED"><button class="dropdown-item text-success" type="submit"><i class="bi bi-globe2 me-2"></i>Đăng tin</button></form></li></c:if>
                                                     <c:if test="${job.status eq 'PUBLISHED'}"><li><form action="${pageContext.request.contextPath}/hr/jobs/status" method="post"><input type="hidden" name="jobId" value="${job.id}"><input type="hidden" name="status" value="CLOSED"><button class="dropdown-item text-warning" type="submit"><i class="bi bi-pause-circle me-2"></i>Đóng tin</button></form></li></c:if>
                                                     <li><hr class="dropdown-divider"></li>
                                                     <li><form action="${pageContext.request.contextPath}/hr/jobs/status" method="post"><input type="hidden" name="jobId" value="${job.id}"><input type="hidden" name="status" value="ARCHIVED"><button class="dropdown-item text-danger" type="submit"><i class="bi bi-archive me-2"></i>Lưu trữ</button></form></li>

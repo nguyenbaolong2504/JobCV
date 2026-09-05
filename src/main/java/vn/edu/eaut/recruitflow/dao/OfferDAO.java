@@ -101,7 +101,7 @@ public class OfferDAO extends DaoSupport {
             sql.append(" AND o.expiry_date <= ?");
         }
         if (jobOwnerId != null && jobOwnerId > 0) {
-            sql.append(" AND j.created_by = ?");
+            sql.append(" AND j.company_id = ?");
         }
         sql.append(" ORDER BY o.expiry_date ASC, o.created_at DESC");
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql.toString())) {
@@ -223,7 +223,7 @@ public class OfferDAO extends DaoSupport {
     public long countByStatus(String status, Integer jobOwnerId) throws SQLException {
         String sql = "SELECT COUNT(*) FROM offers o"
                 + (jobOwnerId == null ? "" : " JOIN applications a ON a.id = o.application_id JOIN jobs j ON j.id = a.job_id")
-                + " WHERE o.status = ?" + (jobOwnerId == null ? "" : " AND j.created_by = ?");
+                + " WHERE o.status = ?" + (jobOwnerId == null ? "" : " AND j.company_id = ?");
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, status);
             if (jobOwnerId != null) {

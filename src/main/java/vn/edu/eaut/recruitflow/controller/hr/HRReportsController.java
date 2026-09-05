@@ -34,7 +34,7 @@ public class HRReportsController extends BaseController {
         } catch (BusinessException | IllegalArgumentException ex) {
             request.setAttribute("error", ex.getMessage());
         }
-        view(request, response, "/WEB-INF/views/hr/reports.jsp", "Báo cáo tuyển dụng | RecruitFlow");
+        view(request, response, "/WEB-INF/views/hr/reports.jsp", "Báo cáo tuyển dụng | JobCV");
     }
 
     private LocalDate optionalDate(HttpServletRequest request, String field, String label) throws BusinessException {

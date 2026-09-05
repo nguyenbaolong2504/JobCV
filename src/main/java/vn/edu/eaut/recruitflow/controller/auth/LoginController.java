@@ -3,9 +3,12 @@ package vn.edu.eaut.recruitflow.controller.auth;
 import vn.edu.eaut.recruitflow.controller.BaseController;
 import vn.edu.eaut.recruitflow.model.User;
 import vn.edu.eaut.recruitflow.service.UserService;
+import vn.edu.eaut.recruitflow.service.JobService;
+import vn.edu.eaut.recruitflow.service.DepartmentService;
 import vn.edu.eaut.recruitflow.util.BusinessException;
 import vn.edu.eaut.recruitflow.util.FlashMessage;
 import vn.edu.eaut.recruitflow.util.RequestUtil;
+import vn.edu.eaut.recruitflow.util.AuthSession;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -14,24 +17,25 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.Locale;
-import java.util.Set;
 import java.util.HashMap;
 import java.util.Map;
 
 /** Handles authentication only; credential verification is delegated to {@link UserService}. */
 @WebServlet(name = "LoginController", urlPatterns = "/login")
 public class LoginController extends BaseController {
-    private static final Set<String> VALID_ROLES = Set.of("ADMIN", "HR", "INTERVIEWER", "CANDIDATE");
-    private static final int SESSION_TIMEOUT_SECONDS = 30 * 60;
     private static final int MAX_FAILED_ATTEMPTS = 5;
     private static final long LOCK_MILLIS = 15L * 60L * 1000L;
     private static final Map<String, LoginAttempt> LOGIN_ATTEMPTS = new HashMap<>();
 
     private UserService userService;
+    private JobService jobService;
+    private DepartmentService departmentService;
 
     @Override
     public void init() throws ServletException {
         userService = new UserService();
+        jobService = new JobService();
+        departmentService = new DepartmentService();
     }
 
     @Override
@@ -40,13 +44,21 @@ public class LoginController extends BaseController {
         setUtf8(request, response);
 
         HttpSession session = request.getSession(false);
-        if (session != null && session.getAttribute("userId") instanceof Integer
-                && session.getAttribute("role") instanceof String) {
-            redirectByRole(request, response, (String) session.getAttribute("role"));
+        if (AuthSession.isAuthenticated(session)) {
+            redirect(request, response, AuthSession.landingPath((String) session.getAttribute("role")));
             return;
         }
 
-        view(request, response, "/WEB-INF/views/auth/login.jsp", "Đăng nhập | RecruitFlow");
+        request.setAttribute("openJobCount", 0L);
+        request.setAttribute("departmentCount", 0);
+        try {
+            request.setAttribute("openJobCount", jobService.countPublishedJobs());
+            request.setAttribute("departmentCount", departmentService.getAllDepartments().size());
+        } catch (BusinessException ignored) {
+            // Authentication must remain available even when supplementary counters cannot load.
+        }
+
+        view(request, response, "/WEB-INF/views/auth/login.jsp", "Đăng nhập | JobCV");
     }
 
     @Override
@@ -69,57 +81,18 @@ public class LoginController extends BaseController {
                 return;
             }
 
-            String role = normalizeRole(user.getRoleName());
-            if (!VALID_ROLES.contains(role)) {
+            if (!AuthSession.isSupportedRole(user.getRoleName())) {
                 // Do not create an authenticated session for a malformed account record.
                 redirectWithError(request, response, "/login", "Tài khoản chưa được gán quyền truy cập hợp lệ.");
                 return;
             }
 
-            establishAuthenticatedSession(request, user, role);
+            HttpSession authenticatedSession = AuthSession.establish(request, user);
             clearFailures(attemptKey);
-            FlashMessage.success(request.getSession(false), "Đăng nhập thành công.");
-            redirectByRole(request, response, role);
+            FlashMessage.success(authenticatedSession, "Đăng nhập thành công.");
+            redirect(request, response, AuthSession.landingPath(user.getRoleName()));
         } catch (BusinessException ex) {
             redirectWithError(request, response, "/login", ex.getMessage());
-        }
-    }
-
-    /**
-     * Invalidating a possible anonymous session before creating the authenticated session
-     * prevents a session identifier supplied before login from being retained.
-     */
-    private void establishAuthenticatedSession(HttpServletRequest request, User user, String role) {
-        HttpSession previousSession = request.getSession(false);
-        if (previousSession != null) {
-            previousSession.invalidate();
-        }
-
-        HttpSession authenticatedSession = request.getSession(true);
-        authenticatedSession.setMaxInactiveInterval(SESSION_TIMEOUT_SECONDS);
-        authenticatedSession.setAttribute("userId", user.getId());
-        authenticatedSession.setAttribute("fullName", user.getFullName() == null ? "" : user.getFullName());
-        authenticatedSession.setAttribute("role", role);
-    }
-
-    private void redirectByRole(HttpServletRequest request, HttpServletResponse response, String role) throws IOException {
-        String normalizedRole = normalizeRole(role);
-        switch (normalizedRole) {
-            case "ADMIN":
-                redirect(request, response, "/admin/dashboard");
-                break;
-            case "HR":
-                redirect(request, response, "/hr/dashboard");
-                break;
-            case "INTERVIEWER":
-                redirect(request, response, "/interviewer/dashboard");
-                break;
-            case "CANDIDATE":
-                redirect(request, response, "/home");
-                break;
-            default:
-                redirect(request, response, "/home");
-                break;
         }
     }
 
@@ -141,10 +114,6 @@ public class LoginController extends BaseController {
             throw new BusinessException("Mật khẩu không được vượt quá 72 byte.");
         }
         return password;
-    }
-
-    private String normalizeRole(String role) {
-        return role == null ? "" : role.trim().toUpperCase(Locale.ROOT);
     }
 
     private String clientAddress(HttpServletRequest request) {

@@ -1,6 +1,6 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<c:set var="pageTitle" value="Thông báo | RecruitFlow" scope="request" />
+<c:set var="pageTitle" value="Thông báo | JobCV" scope="request" />
 <jsp:include page="/WEB-INF/views/common/header.jsp" />
 
 <div class="container-fluid candidate-shell"><div class="row g-0">

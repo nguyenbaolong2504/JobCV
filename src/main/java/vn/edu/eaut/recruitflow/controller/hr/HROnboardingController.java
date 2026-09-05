@@ -34,6 +34,6 @@ public class HROnboardingController extends BaseController {
         } catch (BusinessException | IllegalArgumentException ex) {
             request.setAttribute("error", ex.getMessage());
         }
-        view(request, response, "/WEB-INF/views/hr/onboarding.jsp", "Tiếp nhận nhân sự | RecruitFlow");
+        view(request, response, "/WEB-INF/views/hr/onboarding.jsp", "Tiếp nhận nhân sự | JobCV");
     }
 }

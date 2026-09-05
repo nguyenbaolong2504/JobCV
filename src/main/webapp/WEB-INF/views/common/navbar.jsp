@@ -5,8 +5,7 @@
 <nav class="navbar navbar-expand-lg rf-navbar sticky-top">
     <div class="container">
         <a class="navbar-brand d-flex align-items-center gap-2" href="${pageContext.request.contextPath}/">
-            <span class="rf-brand-mark">R</span>
-            <span class="rf-brand-name">RecruitFlow</span>
+            <img class="jobcv-brand-logo jobcv-brand-logo-navbar" src="${pageContext.request.contextPath}/assets/images/jobcv-logo.png" alt="JobCV">
         </a>
 
         <div class="collapse navbar-collapse" id="publicNavbar">
@@ -177,14 +176,15 @@
         </div>
 
         <c:if test="${sessionScope.role eq 'CANDIDATE'}">
+            <c:url var="navbarCandidateAvatarUrl" value="/candidate/avatar"><c:param name="v" value="${layoutCandidateProfile.updatedAt.time}" /></c:url>
             <div class="dropdown candidate-profile-menu ms-auto">
                 <button class="candidate-profile-trigger" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Mở trang cá nhân">
-                    <span class="candidate-profile-trigger-avatar"><c:out value="${fn:toUpperCase(fn:substring(sessionScope.fullName, 0, 1))}" /></span>
+                    <span class="candidate-profile-trigger-avatar"><img class="${empty layoutCandidateProfile.avatarPath ? 'd-none' : ''}" src="${empty layoutCandidateProfile.avatarPath ? 'data:image/gif;base64,R0lGODlhAQABAAAAACw=' : navbarCandidateAvatarUrl}" alt="" data-avatar-image data-fallback-target="navbarCandidateAvatarFallback"><span id="navbarCandidateAvatarFallback" class="${empty layoutCandidateProfile.avatarPath ? '' : 'd-none'}" data-avatar-fallback><c:out value="${fn:toUpperCase(fn:substring(sessionScope.fullName, 0, 1))}" /></span></span>
                     <span class="candidate-profile-trigger-copy"><small>Trang cá nhân</small><strong><c:out value="${sessionScope.fullName}" /></strong></span>
                     <i class="bi bi-chevron-down"></i>
                 </button>
                 <div class="dropdown-menu dropdown-menu-end candidate-profile-dropdown shadow-lg">
-                    <div class="candidate-profile-dropdown-head"><span><c:out value="${fn:toUpperCase(fn:substring(sessionScope.fullName, 0, 1))}" /></span><div><strong><c:out value="${sessionScope.fullName}" /></strong><small>Tài khoản người tìm việc</small></div></div>
+                    <div class="candidate-profile-dropdown-head"><span><img class="${empty layoutCandidateProfile.avatarPath ? 'd-none' : ''}" src="${empty layoutCandidateProfile.avatarPath ? 'data:image/gif;base64,R0lGODlhAQABAAAAACw=' : navbarCandidateAvatarUrl}" alt=""><c:if test="${empty layoutCandidateProfile.avatarPath}"><c:out value="${fn:toUpperCase(fn:substring(sessionScope.fullName, 0, 1))}" /></c:if></span><div><strong><c:out value="${sessionScope.fullName}" /></strong><small>Tài khoản người tìm việc</small></div></div>
                     <div class="candidate-profile-dropdown-grid">
                         <a href="${pageContext.request.contextPath}/candidate/profile"><span><i class="bi bi-person-vcard"></i></span><strong>Hồ sơ cá nhân</strong><small>Thông tin nghề nghiệp</small></a>
                         <a href="${pageContext.request.contextPath}/candidate/resumes"><span><i class="bi bi-file-earmark-person"></i></span><strong>CV của tôi</strong><small>Quản lý và đánh giá CV</small></a>

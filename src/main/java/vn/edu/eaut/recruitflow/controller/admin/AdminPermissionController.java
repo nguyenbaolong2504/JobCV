@@ -37,7 +37,7 @@ public class AdminPermissionController extends BaseController {
         } catch (BusinessException | IllegalArgumentException exception) {
             request.setAttribute("error", exception.getMessage());
         }
-        view(request, response, "/WEB-INF/views/admin/permissions.jsp", "Phân quyền nâng cao | RecruitFlow");
+        view(request, response, "/WEB-INF/views/admin/permissions.jsp", "Phân quyền nâng cao | JobCV");
     }
 
     private int selectedRoleId(HttpServletRequest request, List<Role> roles) throws BusinessException {

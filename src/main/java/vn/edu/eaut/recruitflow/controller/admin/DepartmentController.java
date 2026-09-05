@@ -25,7 +25,7 @@ public class DepartmentController extends BaseController {
             throws ServletException, IOException {
         try {
             request.setAttribute("departments", departmentService.getAllDepartments());
-            view(request, response, "/WEB-INF/views/admin/departments.jsp", "Quản lý phòng ban | RecruitFlow");
+            view(request, response, "/WEB-INF/views/admin/departments.jsp", "Quản lý phòng ban | JobCV");
         } catch (BusinessException ex) {
             redirectWithError(request, response, "/admin/dashboard", "Không thể tải danh sách phòng ban.");
         }

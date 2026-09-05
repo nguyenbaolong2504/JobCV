@@ -47,7 +47,7 @@ public class CandidateOnboardingController extends CandidateBaseController {
             request.setAttribute("error", ex.getMessage());
         }
 
-        view(request, response, "/WEB-INF/views/candidate/onboarding.jsp", "Tiếp nhận nhân sự | RecruitFlow");
+        view(request, response, "/WEB-INF/views/candidate/onboarding.jsp", "Tiếp nhận nhân sự | JobCV");
     }
 
     @Override

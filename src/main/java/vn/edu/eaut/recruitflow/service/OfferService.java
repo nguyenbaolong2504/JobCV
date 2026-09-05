@@ -4,6 +4,7 @@ import vn.edu.eaut.recruitflow.dao.ApplicationDAO;
 import vn.edu.eaut.recruitflow.dao.JobDAO;
 import vn.edu.eaut.recruitflow.dao.OfferDAO;
 import vn.edu.eaut.recruitflow.dao.UserDAO;
+import vn.edu.eaut.recruitflow.dao.CompanyDAO;
 import vn.edu.eaut.recruitflow.enums.ApplicationStatus;
 import vn.edu.eaut.recruitflow.enums.OfferStatus;
 import vn.edu.eaut.recruitflow.model.Application;
@@ -28,6 +29,7 @@ public class OfferService {
     private final ApplicationService applicationService;
     private final OnboardingService onboardingService;
     private final NotificationService notificationService;
+    private final CompanyDAO companyDAO = new CompanyDAO();
 
     public OfferService() {
         this(new OfferDAO(), new ApplicationDAO(), new JobDAO(), new UserDAO(), new ApplicationService(),
@@ -161,7 +163,7 @@ public class OfferService {
                     offerDAO.updateStatus(connection, offerId, OfferStatus.ACCEPTED.name());
                     applicationService.transition(connection, application, ApplicationStatus.HIRED, candidateId, "Ứng viên chấp nhận thư mời.");
                     onboardingService.createForHired(connection, application);
-                    notificationService.create(connection, candidateId, "Chào mừng bạn gia nhập RecruitFlow",
+                    notificationService.create(connection, candidateId, "Chào mừng bạn gia nhập JobCV",
                             "Quy trình tiếp nhận cho vị trí " + application.getJobTitle() + " đã được khởi tạo.");
                     int hrId = jobDAO.findById(connection, application.getJobId()).getCreatedBy();
                     notificationService.create(connection, hrId, "Ứng viên đã chấp nhận thư mời",
@@ -229,7 +231,7 @@ public class OfferService {
 
     public List<Offer> searchForHr(String keyword, String status, Date expiryDate, int actorId) throws BusinessException {
         User actor = requireHrActor(actorId);
-        Integer ownerId = "ADMIN".equals(actor.getRoleName()) ? null : actorId;
+        Integer ownerId = "ADMIN".equals(actor.getRoleName()) ? null : companyIdFor(actorId);
         try {
             return offerDAO.search(keyword, status, expiryDate, ownerId);
         } catch (SQLException exception) {
@@ -267,6 +269,16 @@ public class OfferService {
             return user;
         } catch (SQLException exception) {
             throw new BusinessException("Không thể xác thực quyền người dùng.", exception);
+        }
+    }
+
+    private int companyIdFor(int userId) throws BusinessException {
+        try {
+            Integer companyId = companyDAO.findCompanyIdByUserId(userId);
+            if (companyId == null) throw new BusinessException("Tài khoản HR chưa được liên kết với công ty.");
+            return companyId;
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể xác thực công ty của HR.", exception);
         }
     }
 }

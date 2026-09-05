@@ -201,9 +201,14 @@ final class DemoJobDataSeeder {
     }
 
     private static int insertJobs(Connection connection, int hrUserId) throws SQLException {
+        Integer companyId = findId(connection, "SELECT company_id AS id FROM company_members WHERE user_id = ?", String.valueOf(hrUserId));
+        if (companyId == null) {
+            // Company migration is intentionally responsible for tenant creation.
+            return 0;
+        }
         String jobSql = "INSERT IGNORE INTO jobs (job_code, title, department_id, location, employment_type, "
-                + "number_of_positions, salary_min, salary_max, description, requirements, experience_required, "
-                + "deadline, status, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PUBLISHED', ?)";
+                + "number_of_positions, salary_min, salary_max, description, requirements, benefits, experience_required, "
+                + "deadline, status, created_by, company_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PUBLISHED', ?, ?)";
         String skillSql = "INSERT IGNORE INTO job_skills (job_id, skill_name, weight, is_required) VALUES (?, ?, ?, ?)";
         int inserted = 0;
         Date deadline = Date.valueOf(LocalDate.now().plusMonths(18));
@@ -225,9 +230,11 @@ final class DemoJobDataSeeder {
                 jobStatement.setBigDecimal(index++, BigDecimal.valueOf(job.salaryMax()));
                 jobStatement.setString(index++, job.description());
                 jobStatement.setString(index++, job.requirements());
+                jobStatement.setString(index++, "Bảo hiểm theo quy định, môi trường chuyên nghiệp và cơ hội đào tạo phát triển nghề nghiệp.");
                 jobStatement.setInt(index++, job.experienceYears());
                 jobStatement.setDate(index++, deadline);
-                jobStatement.setInt(index, hrUserId);
+                jobStatement.setInt(index++, hrUserId);
+                jobStatement.setInt(index, companyId);
                 inserted += jobStatement.executeUpdate();
 
                 Integer jobId = findId(connection, "SELECT id FROM jobs WHERE job_code = ?", job.code());

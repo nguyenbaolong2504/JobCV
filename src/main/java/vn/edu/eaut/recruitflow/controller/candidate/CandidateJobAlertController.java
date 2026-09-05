@@ -46,7 +46,7 @@ public class CandidateJobAlertController extends CandidateBaseController {
         } catch (BusinessException ex) {
             request.setAttribute("error", ex.getMessage());
         }
-        view(request, response, "/WEB-INF/views/candidate/job-alerts.jsp", "Thông báo việc làm | RecruitFlow");
+        view(request, response, "/WEB-INF/views/candidate/job-alerts.jsp", "Thông báo việc làm | JobCV");
     }
 
     @Override

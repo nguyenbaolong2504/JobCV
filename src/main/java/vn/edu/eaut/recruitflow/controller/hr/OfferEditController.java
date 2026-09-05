@@ -31,7 +31,7 @@ public class OfferEditController extends BaseController {
             int actorId = RequestUtil.currentUserId(request);
             request.setAttribute("offer", offerService.getForHr(offerId, actorId));
             request.setAttribute("applications", applicationService.findInterviewed(actorId));
-            view(request, response, "/WEB-INF/views/hr/offer-form.jsp", "Chỉnh sửa thư mời | RecruitFlow");
+            view(request, response, "/WEB-INF/views/hr/offer-form.jsp", "Chỉnh sửa thư mời | JobCV");
         } catch (BusinessException | IllegalArgumentException ex) {
             redirectWithError(request, response, "/hr/offers", ex.getMessage());
         }

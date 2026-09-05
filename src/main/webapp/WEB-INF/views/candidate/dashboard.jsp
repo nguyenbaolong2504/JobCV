@@ -2,7 +2,7 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
-<c:set var="pageTitle" value="Bảng điều khiển ứng viên | RecruitFlow" scope="request" />
+<c:set var="pageTitle" value="Bảng điều khiển ứng viên | JobCV" scope="request" />
 <jsp:include page="/WEB-INF/views/common/header.jsp" />
 
 <div class="container-fluid candidate-shell">

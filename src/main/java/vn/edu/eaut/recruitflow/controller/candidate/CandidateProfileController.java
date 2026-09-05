@@ -60,7 +60,7 @@ public class CandidateProfileController extends CandidateBaseController {
             request.setAttribute("error", ex.getMessage());
         }
 
-        view(request, response, "/WEB-INF/views/candidate/profile.jsp", "Hồ sơ ứng viên | RecruitFlow");
+        view(request, response, "/WEB-INF/views/candidate/profile.jsp", "Hồ sơ ứng viên | JobCV");
     }
 
     @Override

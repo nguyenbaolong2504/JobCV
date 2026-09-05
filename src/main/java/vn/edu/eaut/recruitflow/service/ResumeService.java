@@ -6,6 +6,7 @@ import vn.edu.eaut.recruitflow.util.BusinessException;
 import vn.edu.eaut.recruitflow.util.ResumeParser;
 import vn.edu.eaut.recruitflow.util.UploadUtil;
 import vn.edu.eaut.recruitflow.util.DBUtil;
+import vn.edu.eaut.recruitflow.util.ResumeStorageUtil;
 
 import javax.servlet.http.Part;
 import java.io.IOException;
@@ -84,7 +85,7 @@ public class ResumeService {
             Resume resume = new Resume();
             resume.setCandidateId(candidateId);
             resume.setFileName(originalFileName(part.getSubmittedFileName(), extension));
-            resume.setFilePath(storedFile.toAbsolutePath().toString());
+            resume.setFilePath(ResumeStorageUtil.portableStoredPath(storedFile));
             resume.setFileType(extension);
             resume.setFileSize(part.getSize());
             resume.setExtractedText(extractedText);
@@ -113,7 +114,7 @@ public class ResumeService {
         }
     }
 
-    public void delete(int candidateId, int resumeId) throws BusinessException {
+    public void delete(int candidateId, int resumeId, Path uploadDirectory) throws BusinessException {
         Resume resume = getResumeForCandidate(candidateId, resumeId);
         try (Connection connection = DBUtil.getConnection()) {
             boolean originalAutoCommit = connection.getAutoCommit();
@@ -142,8 +143,8 @@ public class ResumeService {
             throw new BusinessException("CV đã được dùng cho đơn ứng tuyển nên không thể xóa.", exception);
         }
         try {
-            Files.deleteIfExists(Path.of(resume.getFilePath()));
-        } catch (IOException ignored) {
+            Files.deleteIfExists(ResumeStorageUtil.resolveStoredFile(uploadDirectory, resume.getFilePath()));
+        } catch (IOException | BusinessException ignored) {
             // Metadata has been deleted successfully; an administrator can clean an orphan file later.
         }
     }

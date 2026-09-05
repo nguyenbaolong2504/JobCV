@@ -18,6 +18,22 @@ import java.util.UUID;
 
 class UploadUtilTest {
     @Test
+    void acceptsPdfHeaderAfterLeadingLineBreak() throws Exception {
+        byte[] pdf = "\n%PDF-1.7\n1 0 obj\n<<>>\nendobj\n%%EOF".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+        Part part = new InMemoryPart("cv.pdf", "application/pdf", pdf);
+
+        UploadUtil.validateResumePart(part);
+    }
+
+    @Test
+    void rejectsPdfMarkerAfterUnsafeContentPrefix() {
+        byte[] polyglot = "<html>%PDF-1.7\n%%EOF".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+        Part part = new InMemoryPart("cv.pdf", "application/pdf", polyglot);
+
+        assertThrows(BusinessException.class, () -> UploadUtil.validateResumePart(part));
+    }
+
+    @Test
     void acceptsAndStoresARealPngSignature() throws Exception {
         byte[] png = {(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0};
         Part part = new InMemoryPart("avatar.png", "image/png", png);

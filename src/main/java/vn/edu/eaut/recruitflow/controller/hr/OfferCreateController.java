@@ -36,7 +36,7 @@ public class OfferCreateController extends BaseController {
                         RequestUtil.requiredPositiveInt(request, "applicationId", "Đơn ứng tuyển"), actorId));
             }
             request.setAttribute("applications", applicationService.findInterviewed(actorId));
-            view(request, response, "/WEB-INF/views/hr/offer-form.jsp", "Tạo thư mời | RecruitFlow");
+            view(request, response, "/WEB-INF/views/hr/offer-form.jsp", "Tạo thư mời | JobCV");
         } catch (BusinessException | IllegalArgumentException ex) {
             redirectWithError(request, response, "/hr/offers", ex.getMessage());
         }

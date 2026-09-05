@@ -51,6 +51,28 @@ public final class AuthSession {
         return VALID_ROLES.contains(normalizeRole(role));
     }
 
+    /**
+     * Returns {@code true} only for a complete authenticated principal. Keeping this
+     * check in one place prevents public navigation and protected filters from
+     * disagreeing about whether a browser is signed in.
+     */
+    public static boolean isAuthenticated(HttpSession session) {
+        return session != null
+                && session.getAttribute("userId") instanceof Integer userId
+                && userId > 0
+                && session.getAttribute("role") instanceof String role
+                && isSupportedRole(role)
+                && session.getAttribute(SESSION_VERSION_ATTRIBUTE) instanceof Integer sessionVersion
+                && sessionVersion >= 0;
+    }
+
+    /** Detects a stale/partially-created principal left by an older login flow. */
+    public static boolean hasPrincipalAttributes(HttpSession session) {
+        return session != null && (session.getAttribute("userId") != null
+                || session.getAttribute("role") != null
+                || session.getAttribute(SESSION_VERSION_ATTRIBUTE) != null);
+    }
+
     public static String normalizeRole(String role) {
         return role == null ? "" : role.trim().toUpperCase(Locale.ROOT);
     }

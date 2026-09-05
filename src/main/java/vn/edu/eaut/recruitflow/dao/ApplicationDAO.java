@@ -188,7 +188,7 @@ public class ApplicationDAO extends DaoSupport {
         sql.append(" WHERE 1 = 1");
         appendAppliedDateRange(sql, fromDate, toDate);
         if (jobOwnerId != null) {
-            sql.append(" AND j.created_by = ?");
+            sql.append(" AND j.company_id = ?");
         }
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql.toString())) {
             int index = bindAppliedDateRange(statement, fromDate, toDate);
@@ -209,7 +209,7 @@ public class ApplicationDAO extends DaoSupport {
     public Map<String, Long> countGroupedByStatus(Integer jobOwnerId) throws SQLException {
         String sql = "SELECT a.status, COUNT(*) AS total FROM applications a"
                 + (jobOwnerId == null ? "" : " JOIN jobs j ON j.id = a.job_id")
-                + (jobOwnerId == null ? "" : " WHERE j.created_by = ?")
+                + (jobOwnerId == null ? "" : " WHERE j.company_id = ?")
                 + " GROUP BY a.status ORDER BY a.status";
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
             if (jobOwnerId != null) {
@@ -239,7 +239,7 @@ public class ApplicationDAO extends DaoSupport {
         sql.append(" WHERE 1 = 1");
         appendAppliedDateRange(sql, fromDate, toDate);
         if (jobOwnerId != null) {
-            sql.append(" AND j.created_by = ?");
+            sql.append(" AND j.company_id = ?");
         }
         sql.append(" GROUP BY a.status ORDER BY a.status");
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql.toString())) {
@@ -266,7 +266,7 @@ public class ApplicationDAO extends DaoSupport {
         String sql = "SELECT DATE_FORMAT(a.applied_at, '%Y-%m') AS month_key, COUNT(*) AS total FROM applications a "
                 + (jobOwnerId == null ? "" : "JOIN jobs j ON j.id = a.job_id ")
                 + "WHERE a.applied_at >= DATE_SUB(CURRENT_DATE, INTERVAL ? MONTH) "
-                + (jobOwnerId == null ? "" : "AND j.created_by = ? ")
+                + (jobOwnerId == null ? "" : "AND j.company_id = ? ")
                 + "GROUP BY DATE_FORMAT(a.applied_at, '%Y-%m') ORDER BY month_key";
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, months - 1);
@@ -301,7 +301,7 @@ public class ApplicationDAO extends DaoSupport {
         sql.append(" WHERE 1 = 1");
         appendAppliedDateRange(sql, fromDate, toDate);
         if (jobOwnerId != null) {
-            sql.append(" AND j.created_by = ?");
+            sql.append(" AND j.company_id = ?");
         }
         sql.append(" GROUP BY DATE_FORMAT(a.applied_at, '%Y-%m') ORDER BY month_key");
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql.toString())) {
@@ -362,6 +362,15 @@ public class ApplicationDAO extends DaoSupport {
         }
     }
 
+    /** Applications that currently reserve one recruitment slot. */
+    public long countActiveByJobId(Connection connection, int jobId) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT COUNT(*) FROM applications WHERE job_id=? AND status NOT IN ('REJECTED','WITHDRAWN')")) {
+            statement.setInt(1,jobId);
+            try (ResultSet resultSet=statement.executeQuery()) { resultSet.next(); return resultSet.getLong(1); }
+        }
+    }
+
     public boolean updateStatus(int applicationId, String status) throws SQLException {
         try (Connection connection = openConnection()) {
             return updateStatus(connection, applicationId, status);
@@ -419,7 +428,7 @@ public class ApplicationDAO extends DaoSupport {
             parameters.add(minMatchScore);
         }
         if (jobOwnerId != null && jobOwnerId > 0) {
-            sql.append(" AND j.created_by = ?");
+            sql.append(" AND j.company_id = ?");
             parameters.add(jobOwnerId);
         }
     }

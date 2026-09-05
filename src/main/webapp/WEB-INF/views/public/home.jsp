@@ -2,7 +2,7 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
-<c:set var="pageTitle" value="RecruitFlow | Tìm đúng công việc, xây đúng sự nghiệp" scope="request" />
+<c:set var="pageTitle" value="JobCV | Tìm đúng công việc, xây đúng sự nghiệp" scope="request" />
 <jsp:include page="/WEB-INF/views/common/header.jsp" />
 <jsp:include page="/WEB-INF/views/common/navbar.jsp" />
 <c:set var="homeSearchTarget" value="${candidateHome ? '/candidate/jobs' : '/jobs'}" />
@@ -52,19 +52,55 @@
         </div>
     </section>
 
+    <c:if test="${not empty homeBanners}">
+    <section class="home-banner-section" aria-label="Thông tin nổi bật từ JobCV">
+        <div class="container">
+            <div id="homeBannerCarousel" class="carousel slide home-banner-carousel" data-bs-ride="carousel" data-bs-interval="6000">
+                <div class="carousel-indicators">
+                    <c:forEach var="banner" items="${homeBanners}" varStatus="bannerStatus"><button type="button" data-bs-target="#homeBannerCarousel" data-bs-slide-to="${bannerStatus.index}" class="${bannerStatus.first ? 'active' : ''}" ${bannerStatus.first ? 'aria-current=true' : ''} aria-label="Banner ${bannerStatus.count}"></button></c:forEach>
+                </div>
+                <div class="carousel-inner">
+                    <c:forEach var="banner" items="${homeBanners}" varStatus="bannerStatus">
+                        <div class="carousel-item ${bannerStatus.first ? 'active' : ''}">
+                            <c:choose><c:when test="${not empty banner.targetUrl}"><a href="${pageContext.request.contextPath}${banner.targetUrl}" class="home-banner-link" aria-label="Mở nội dung banner"></c:when><c:otherwise><div class="home-banner-link"></c:otherwise></c:choose>
+                                <img src="${pageContext.request.contextPath}/home-banner?id=${banner.id}" alt="Banner JobCV" class="d-block w-100">
+                                <c:if test="${not empty banner.title or not empty banner.subtitle}"><div class="home-banner-caption"><c:if test="${not empty banner.title}"><h2><c:out value="${banner.title}" /></h2></c:if><c:if test="${not empty banner.subtitle}"><p><c:out value="${banner.subtitle}" /></p></c:if></div></c:if>
+                            <c:choose><c:when test="${not empty banner.targetUrl}"></a></c:when><c:otherwise></div></c:otherwise></c:choose>
+                        </div>
+                    </c:forEach>
+                </div>
+                <c:if test="${fn:length(homeBanners) gt 1}"><button class="carousel-control-prev" type="button" data-bs-target="#homeBannerCarousel" data-bs-slide="prev"><span class="carousel-control-prev-icon"></span><span class="visually-hidden">Trước</span></button><button class="carousel-control-next" type="button" data-bs-target="#homeBannerCarousel" data-bs-slide="next"><span class="carousel-control-next-icon"></span><span class="visually-hidden">Sau</span></button></c:if>
+            </div>
+        </div>
+    </section>
+    </c:if>
+
     <c:if test="${candidateHome}">
     <section class="candidate-home-section">
         <div class="container">
             <div class="section-header candidate-home-jobs-header">
-                <div><span class="section-kicker">GỢI Ý CÁ NHÂN HÓA</span><h2>Việc làm dành cho bạn</h2><p>Xếp hạng dựa trên hồ sơ và CV hiện tại; hãy cập nhật CV để điểm phù hợp chính xác hơn.</p></div>
-                <a class="btn btn-outline-primary" href="${pageContext.request.contextPath}/candidate/jobs">Xem tất cả<i class="bi bi-arrow-right ms-1"></i></a>
+                <div><span class="section-kicker">GỢI Ý TỪ CV CỦA BẠN</span><h2>Công việc phù hợp</h2><p>4 vị trí được xếp hạng dựa trên kỹ năng thể hiện trong CV mặc định của bạn.</p></div>
+                <a class="btn btn-outline-primary" href="${pageContext.request.contextPath}/candidate/jobs">Xem thêm việc phù hợp<i class="bi bi-arrow-right ms-1"></i></a>
             </div>
             <div class="row g-4">
-                <c:forEach var="jobMatch" items="${candidateJobs}">
+                <c:forEach var="jobMatch" items="${candidateRecommendedJobs}">
                     <c:url var="candidateHomeJobUrl" value="/jobs/detail"><c:param name="id" value="${jobMatch.job.id}" /></c:url>
                     <c:set var="candidateHomeJobSaved" value="${candidateSavedJobIds.contains(jobMatch.job.id)}" />
-                    <div class="col-md-6 col-xl-4"><article class="job-card job-card-v2 candidate-home-job-card"><div class="job-card-brand"><span><c:out value="${fn:toUpperCase(fn:substring(jobMatch.job.title, 0, 1))}" /></span><div><small><c:out value="${jobMatch.job.departmentName}" /></small><strong><c:out value="${jobMatch.job.jobCode}" /></strong></div><c:choose><c:when test="${candidateHasResume}"><b class="candidate-home-match"><fmt:formatNumber value="${jobMatch.matchScore}" maxFractionDigits="0" />% phù hợp</b></c:when><c:otherwise><a class="candidate-home-match is-pending" href="${pageContext.request.contextPath}/candidate/resumes"><i class="bi bi-file-earmark-plus"></i> Thêm CV để chấm điểm</a></c:otherwise></c:choose></div><a class="job-card-title d-block" href="${candidateHomeJobUrl}"><c:out value="${jobMatch.job.title}" /></a><div class="job-meta-grid"><span><i class="bi bi-geo-alt"></i><c:out value="${jobMatch.job.location}" /></span><span><i class="bi bi-briefcase"></i><span data-enum-label="${jobMatch.job.employmentType}"><c:out value="${jobMatch.job.employmentType}" /></span></span><span><i class="bi bi-people"></i><c:out value="${jobMatch.job.numberOfPositions}" /> vị trí</span><span><i class="bi bi-calendar3"></i>Hạn <fmt:formatDate value="${jobMatch.job.deadline}" pattern="dd/MM/yyyy" /></span></div><div class="job-card-footer"><span><fmt:formatNumber value="${jobMatch.job.salaryMin}" type="number" /> – <fmt:formatNumber value="${jobMatch.job.salaryMax}" type="number" /> ₫</span><div class="d-flex gap-2"><form action="${pageContext.request.contextPath}/candidate/saved-jobs/${candidateHomeJobSaved ? 'remove' : 'save'}" method="post"><input type="hidden" name="jobId" value="<c:out value='${jobMatch.job.id}'/>"><input type="hidden" name="returnTo" value="/home"><button class="candidate-home-card-action ${candidateHomeJobSaved ? 'is-saved' : ''}" type="submit" aria-label="${candidateHomeJobSaved ? 'Bỏ lưu việc làm' : 'Lưu việc làm'}"><i class="bi ${candidateHomeJobSaved ? 'bi-bookmark-heart-fill' : 'bi-bookmark-heart'}"></i></button></form><a href="${candidateHomeJobUrl}" aria-label="Xem việc ${jobMatch.job.title}"><i class="bi bi-arrow-up-right"></i></a></div></div></article></div>
+                    <div class="col-md-6 col-xl-3"><article class="job-card job-card-v2 candidate-home-job-card"><div class="job-card-brand"><span><c:out value="${fn:toUpperCase(fn:substring(jobMatch.job.title, 0, 1))}" /></span><div><small><c:out value="${jobMatch.job.companyName}" /></small><strong><c:out value="${jobMatch.job.departmentName}" /></strong></div><c:choose><c:when test="${candidateHasResume}"><b class="candidate-home-match"><fmt:formatNumber value="${jobMatch.matchScore}" maxFractionDigits="0" />% phù hợp</b></c:when><c:otherwise><a class="candidate-home-match is-pending" href="${pageContext.request.contextPath}/candidate/resumes"><i class="bi bi-file-earmark-plus"></i> Thêm CV để chấm điểm</a></c:otherwise></c:choose></div><a class="job-card-title d-block" href="${candidateHomeJobUrl}"><c:out value="${jobMatch.job.title}" /></a><div class="job-meta-grid"><span><i class="bi bi-geo-alt"></i><c:out value="${jobMatch.job.location}" /></span><span><i class="bi bi-briefcase"></i><span data-enum-label="${jobMatch.job.employmentType}"><c:out value="${jobMatch.job.employmentType}" /></span></span><span><i class="bi bi-people"></i>Còn <c:out value="${jobMatch.job.remainingPositions}" /> vị trí</span><span><i class="bi bi-calendar3"></i>Hạn <fmt:formatDate value="${jobMatch.job.deadline}" pattern="dd/MM/yyyy" /></span></div><div class="job-card-footer"><span><fmt:formatNumber value="${jobMatch.job.salaryMin}" type="number" /> – <fmt:formatNumber value="${jobMatch.job.salaryMax}" type="number" /> ₫</span><div class="d-flex gap-2"><form action="${pageContext.request.contextPath}/candidate/saved-jobs/${candidateHomeJobSaved ? 'remove' : 'save'}" method="post"><input type="hidden" name="jobId" value="<c:out value='${jobMatch.job.id}'/>"><input type="hidden" name="returnTo" value="/home"><button class="candidate-home-card-action ${candidateHomeJobSaved ? 'is-saved' : ''}" type="submit" aria-label="${candidateHomeJobSaved ? 'Bỏ lưu việc làm' : 'Lưu việc làm'}"><i class="bi ${candidateHomeJobSaved ? 'bi-bookmark-heart-fill' : 'bi-bookmark-heart'}"></i></button></form><a href="${candidateHomeJobUrl}#apply-now" aria-label="Ứng tuyển ${jobMatch.job.title}"><i class="bi bi-send"></i></a></div></div></article></div>
                 </c:forEach>
+                <c:if test="${empty candidateRecommendedJobs}"><div class="col-12"><div class="rf-card empty-state"><div class="empty-icon"><i class="bi bi-file-earmark-plus"></i></div><h5>Chưa đủ dữ liệu để đề xuất việc phù hợp</h5><p>Hãy tải lên và đặt một CV mặc định để JobCV xếp hạng các vị trí Intern Backend hoặc công việc phù hợp với kỹ năng của bạn.</p><a class="btn btn-primary" href="${pageContext.request.contextPath}/candidate/resumes">Tải CV ngay</a></div></div></c:if>
+            </div>
+            <div class="section-header candidate-home-jobs-header candidate-home-other-header">
+                <div><span class="section-kicker">KHÁM PHÁ THÊM</span><h2>Công việc khác</h2><p>Các cơ hội đang mở khác trên JobCV, không trùng với danh sách đề xuất từ CV.</p></div>
+                <a class="btn btn-outline-primary" href="${pageContext.request.contextPath}/candidate/jobs">Xem tất cả việc làm<i class="bi bi-arrow-right ms-1"></i></a>
+            </div>
+            <div class="row g-4">
+                <c:forEach var="job" items="${candidateOtherJobs}">
+                    <c:url var="candidateOtherJobUrl" value="/jobs/detail"><c:param name="id" value="${job.id}" /></c:url>
+                    <c:set var="candidateOtherJobSaved" value="${candidateSavedJobIds.contains(job.id)}" />
+                    <div class="col-md-6 col-xl-4"><article class="job-card job-card-v2 candidate-home-job-card"><div class="job-card-brand"><span><c:out value="${fn:toUpperCase(fn:substring(job.title, 0, 1))}" /></span><div><small><c:out value="${job.companyName}" /></small><strong><c:out value="${job.departmentName}" /></strong></div><span class="job-fresh"><i class="bi bi-lightning-fill"></i>Mới</span></div><a class="job-card-title d-block" href="${candidateOtherJobUrl}"><c:out value="${job.title}" /></a><div class="job-meta-grid"><span><i class="bi bi-geo-alt"></i><c:out value="${job.location}" /></span><span><i class="bi bi-briefcase"></i><span data-enum-label="${job.employmentType}"><c:out value="${job.employmentType}" /></span></span><span><i class="bi bi-people"></i>Còn <c:out value="${job.remainingPositions}" /> vị trí</span><span><i class="bi bi-calendar3"></i>Hạn <fmt:formatDate value="${job.deadline}" pattern="dd/MM/yyyy" /></span></div><div class="job-card-footer"><span><fmt:formatNumber value="${job.salaryMin}" type="number" /> – <fmt:formatNumber value="${job.salaryMax}" type="number" /> ₫</span><div class="d-flex gap-2"><form action="${pageContext.request.contextPath}/candidate/saved-jobs/${candidateOtherJobSaved ? 'remove' : 'save'}" method="post"><input type="hidden" name="jobId" value="<c:out value='${job.id}'/>"><input type="hidden" name="returnTo" value="/home"><button class="candidate-home-card-action ${candidateOtherJobSaved ? 'is-saved' : ''}" type="submit" aria-label="${candidateOtherJobSaved ? 'Bỏ lưu việc làm' : 'Lưu việc làm'}"><i class="bi ${candidateOtherJobSaved ? 'bi-bookmark-heart-fill' : 'bi-bookmark-heart'}"></i></button></form><a href="${candidateOtherJobUrl}#apply-now" aria-label="Ứng tuyển ${job.title}"><i class="bi bi-send"></i></a></div></div></article></div>
+                </c:forEach>
+                <c:if test="${empty candidateOtherJobs}"><div class="col-12"><div class="rf-card empty-state"><p class="mb-0">Hiện chưa có công việc khác đang mở.</p></div></div></c:if>
             </div>
             <div class="candidate-home-alert-cta"><span><i class="bi bi-bell-fill"></i></span><div><strong>Không muốn bỏ lỡ công việc mới?</strong><p>Tạo thông báo theo vị trí, phòng ban, địa điểm và loại hình bạn quan tâm.</p></div><a class="btn btn-primary" href="${pageContext.request.contextPath}/candidate/job-alerts">Tạo thông báo việc làm</a></div>
         </div>
@@ -101,10 +137,7 @@
     </section>
     </c:if>
 
-    <c:url var="featuredEmployerAllUrl" value="${homeSearchTarget}" />
-    <c:url var="featuredInternshipUrl" value="${homeSearchTarget}"><c:param name="employmentType" value="INTERNSHIP" /></c:url>
-    <c:url var="featuredRemoteUrl" value="${homeSearchTarget}"><c:param name="employmentType" value="REMOTE" /></c:url>
-    <c:url var="featuredContractUrl" value="${homeSearchTarget}"><c:param name="employmentType" value="CONTRACT" /></c:url>
+    <c:url var="featuredEmployerAllUrl" value="/companies" />
     <section class="public-section featured-employers-section" aria-labelledby="featuredEmployersTitle" data-employer-showcase>
         <div class="container">
             <div class="featured-employers-shell">
@@ -117,19 +150,6 @@
                 <div class="featured-employers-toolbar">
                     <div class="featured-employer-filters" role="group" aria-label="Lọc thương hiệu theo lĩnh vực">
                         <button class="active" type="button" data-employer-filter="all" aria-pressed="true">Tất cả</button>
-                        <c:forEach var="employerDepartment" items="${departments}">
-                            <c:set var="employerFilterLabel" value="${employerDepartment.name}" />
-                            <c:choose>
-                                <c:when test="${employerDepartment.name eq 'Information Technology'}"><c:set var="employerFilterLabel" value="IT - Phần mềm" /></c:when>
-                                <c:when test="${employerDepartment.name eq 'Finance'}"><c:set var="employerFilterLabel" value="Tài chính" /></c:when>
-                                <c:when test="${employerDepartment.name eq 'Human Resources'}"><c:set var="employerFilterLabel" value="Nhân sự" /></c:when>
-                                <c:when test="${employerDepartment.name eq 'Sales'}"><c:set var="employerFilterLabel" value="Kinh doanh" /></c:when>
-                            </c:choose>
-                            <button type="button" data-employer-filter="department-${employerDepartment.id}" aria-pressed="false"><c:out value="${employerFilterLabel}" /></button>
-                        </c:forEach>
-                        <button type="button" data-employer-filter="internship" aria-pressed="false">Thực tập</button>
-                        <button type="button" data-employer-filter="remote" aria-pressed="false">Làm từ xa</button>
-                        <button type="button" data-employer-filter="contract" aria-pressed="false">Hợp đồng</button>
                     </div>
                     <div class="featured-employer-controls" aria-label="Điều khiển danh sách doanh nghiệp">
                         <button class="featured-employer-autoplay is-playing" type="button" data-employer-autoplay aria-label="Tạm dừng tự động trượt" aria-pressed="true"><i class="bi bi-pause-fill"></i></button>
@@ -139,44 +159,25 @@
                 </div>
 
                 <div class="featured-employers-layout">
-                    <a class="featured-employer-spotlight" href="${featuredEmployerAllUrl}">
+                    <c:choose><c:when test="${not empty employers}"><c:set var="spotlightEmployer" value="${employers[0]}" /><c:url var="spotlightEmployerUrl" value="/companies/detail"><c:param name="id" value="${spotlightEmployer.id}" /></c:url>
+                    <a class="featured-employer-spotlight" href="${spotlightEmployerUrl}">
                         <span class="featured-employer-spotlight-label"><i class="bi bi-lightning-charge-fill"></i>Đang tuyển nổi bật</span>
-                        <span class="featured-employer-spotlight-logo"><img src="${pageContext.request.contextPath}/assets/images/employers/recruitflow-tech.svg" alt="Logo RecruitFlow Technology"></span>
-                        <div><h3>RecruitFlow Technology</h3><p>Công nghệ tuyển dụng &amp; phần mềm</p><span><i class="bi bi-briefcase"></i><c:out value="${publishedJobCount}" /> vị trí đang mở</span></div>
-                        <strong>Top Employer <i class="bi bi-patch-check-fill"></i></strong>
-                    </a>
+                        <span class="featured-employer-spotlight-logo"><img src="${pageContext.request.contextPath}/assets/images/employers/${spotlightEmployer.logoFile}" alt="Logo ${spotlightEmployer.name}"></span>
+                        <div><h3><c:out value="${spotlightEmployer.name}" /></h3><p><c:out value="${spotlightEmployer.industry}" /></p><span><i class="bi bi-briefcase"></i><c:out value="${spotlightEmployer.openJobs}" /> vị trí đang mở</span></div>
+                        <strong>Đã xác thực <i class="bi bi-patch-check-fill"></i></strong>
+                    </a></c:when><c:otherwise><div class="featured-employer-spotlight"><div><h3>Chưa có doanh nghiệp đang tuyển</h3><p>Thông tin sẽ xuất hiện khi nhà tuyển dụng được duyệt và có tin còn hạn.</p></div></div></c:otherwise></c:choose>
 
                     <div class="featured-employer-grid" data-employer-grid>
-                        <c:forEach var="employerDepartment" items="${departments}" varStatus="employerStatus">
-                            <c:set var="employerName" value="${employerDepartment.name} Careers" />
-                            <c:set var="employerMark" value="${fn:toUpperCase(fn:substring(employerDepartment.name, 0, 1))}" />
+                        <c:forEach var="employer" items="${employers}" varStatus="employerStatus">
                             <c:set var="employerTheme" value="theme-${(employerStatus.index mod 5) + 1}" />
-                            <c:set var="employerIndustryLabel" value="${employerDepartment.name}" />
-                            <c:set var="employerLogoFile" value="generic-careers.svg" />
-                            <c:choose>
-                                <c:when test="${employerDepartment.name eq 'Information Technology'}"><c:set var="employerName" value="NovaTech Solutions" /><c:set var="employerMark" value="NT" /><c:set var="employerIndustryLabel" value="IT - Phần mềm" /><c:set var="employerLogoFile" value="novatech.svg" /></c:when>
-                                <c:when test="${employerDepartment.name eq 'Finance'}"><c:set var="employerName" value="Horizon Finance" /><c:set var="employerMark" value="HF" /><c:set var="employerIndustryLabel" value="Tài chính" /><c:set var="employerLogoFile" value="horizon-finance.svg" /></c:when>
-                                <c:when test="${employerDepartment.name eq 'Human Resources'}"><c:set var="employerName" value="PeopleFirst Group" /><c:set var="employerMark" value="PF" /><c:set var="employerIndustryLabel" value="Nhân sự" /><c:set var="employerLogoFile" value="peoplefirst.svg" /></c:when>
-                                <c:when test="${employerDepartment.name eq 'Marketing'}"><c:set var="employerName" value="Aurora Media" /><c:set var="employerMark" value="AM" /><c:set var="employerLogoFile" value="aurora-media.svg" /></c:when>
-                                <c:when test="${employerDepartment.name eq 'Sales'}"><c:set var="employerName" value="NextCommerce" /><c:set var="employerMark" value="NC" /><c:set var="employerIndustryLabel" value="Kinh doanh" /><c:set var="employerLogoFile" value="nextcommerce.svg" /></c:when>
-                            </c:choose>
-                            <c:url var="employerDepartmentUrl" value="/companies/detail"><c:param name="id" value="${employerDepartment.id}" /></c:url>
-                            <a class="featured-employer-card" href="${employerDepartmentUrl}" data-employer-industry="department-${employerDepartment.id}">
-                                <span class="featured-employer-logo ${employerTheme}"><img src="${pageContext.request.contextPath}/assets/images/employers/${employerLogoFile}" alt="Logo ${employerName}" loading="lazy"></span>
-                                <div><h3><c:out value="${employerName}" /></h3><p><c:out value="${employerIndustryLabel}" /></p><span><i class="bi bi-briefcase"></i>Xem việc đang tuyển</span></div>
+                            <c:url var="employerUrl" value="/companies/detail"><c:param name="id" value="${employer.id}" /></c:url>
+                            <a class="featured-employer-card" href="${employerUrl}" data-employer-industry="all">
+                                <span class="featured-employer-logo ${employerTheme}"><img src="${pageContext.request.contextPath}${employer.uploadedLogo ? '/company-logo?id=' : '/assets/images/employers/'}${employer.uploadedLogo ? employer.id : employer.logoFile}" alt="Logo ${employer.name}" loading="lazy"></span>
+                                <div><h3><c:out value="${employer.name}" /></h3><p><c:out value="${employer.industry}" /></p><span><i class="bi bi-briefcase"></i><c:out value="${employer.openJobs}" /> việc đang tuyển</span></div>
                                 <i class="bi bi-arrow-up-right featured-employer-card-arrow"></i>
                             </a>
                         </c:forEach>
-
-                        <a class="featured-employer-card" href="${featuredInternshipUrl}" data-employer-industry="internship">
-                            <span class="featured-employer-logo theme-6"><img src="${pageContext.request.contextPath}/assets/images/employers/futureskills.svg" alt="Logo FutureSkills Academy" loading="lazy"></span><div><h3>FutureSkills Academy</h3><p>Đào tạo &amp; phát triển tài năng</p><span><i class="bi bi-mortarboard"></i>Cơ hội thực tập</span></div><i class="bi bi-arrow-up-right featured-employer-card-arrow"></i>
-                        </a>
-                        <a class="featured-employer-card" href="${featuredRemoteUrl}" data-employer-industry="remote">
-                            <span class="featured-employer-logo theme-7"><img src="${pageContext.request.contextPath}/assets/images/employers/remoteworks.svg" alt="Logo RemoteWorks Asia" loading="lazy"></span><div><h3>RemoteWorks Asia</h3><p>Công nghệ &amp; làm việc linh hoạt</p><span><i class="bi bi-house-laptop"></i>Việc làm từ xa</span></div><i class="bi bi-arrow-up-right featured-employer-card-arrow"></i>
-                        </a>
-                        <a class="featured-employer-card" href="${featuredContractUrl}" data-employer-industry="contract">
-                            <span class="featured-employer-logo theme-8"><img src="${pageContext.request.contextPath}/assets/images/employers/projectlink.svg" alt="Logo ProjectLink Partners" loading="lazy"></span><div><h3>ProjectLink Partners</h3><p>Tư vấn &amp; triển khai dự án</p><span><i class="bi bi-file-earmark-text"></i>Việc làm hợp đồng</span></div><i class="bi bi-arrow-up-right featured-employer-card-arrow"></i>
-                        </a>
+                        <c:if test="${empty employers}"><div class="empty-state"><p class="mb-0">Chưa có nhà tuyển dụng đã xác thực đang tuyển dụng.</p></div></c:if>
                     </div>
                 </div>
             </div>
@@ -185,7 +186,7 @@
 
     <section class="public-section public-how">
         <div class="container">
-            <div class="text-center mx-auto public-section-intro"><span class="section-kicker">QUY TRÌNH ĐƠN GIẢN</span><h2>Ba bước đến gần công việc mới</h2><p>RecruitFlow giúp bạn chủ động ở mọi giai đoạn của hành trình ứng tuyển.</p></div>
+            <div class="text-center mx-auto public-section-intro"><span class="section-kicker">QUY TRÌNH ĐƠN GIẢN</span><h2>Ba bước đến gần công việc mới</h2><p>JobCV giúp bạn chủ động ở mọi giai đoạn của hành trình ứng tuyển.</p></div>
             <div class="row g-4 mt-2">
                 <div class="col-md-4"><article class="how-card"><span>01</span><div class="how-icon"><i class="bi bi-person-vcard"></i></div><h3>Hoàn thiện hồ sơ</h3><p>Cập nhật kỹ năng, kinh nghiệm và tải CV để hệ thống hiểu rõ năng lực của bạn.</p></article></div>
                 <div class="col-md-4"><article class="how-card"><span>02</span><div class="how-icon"><i class="bi bi-stars"></i></div><h3>Chọn việc phù hợp</h3><p>Nhận điểm phù hợp theo CV, xem thông tin minh bạch và ứng tuyển chỉ trong vài bước.</p></article></div>
@@ -202,7 +203,7 @@
     </section>
 
     <section class="public-section">
-        <div class="container"><div class="public-cta"><div><span class="section-kicker text-white-50">BẮT ĐẦU NGAY HÔM NAY</span><h2>Sẵn sàng cho cơ hội tiếp theo?</h2><p>Tạo hồ sơ, tải CV và để RecruitFlow đồng hành cùng bước tiến sự nghiệp của bạn.</p></div><c:choose><c:when test="${sessionScope.role eq 'CANDIDATE'}"><a class="btn btn-light" href="${pageContext.request.contextPath}/candidate/jobs">Khám phá việc làm<i class="bi bi-arrow-right ms-1"></i></a></c:when><c:otherwise><a class="btn btn-light" href="${pageContext.request.contextPath}/register">Tạo tài khoản miễn phí<i class="bi bi-arrow-right ms-1"></i></a></c:otherwise></c:choose></div></div>
+        <div class="container"><div class="public-cta"><div><span class="section-kicker text-white-50">BẮT ĐẦU NGAY HÔM NAY</span><h2>Sẵn sàng cho cơ hội tiếp theo?</h2><p>Tạo hồ sơ, tải CV và để JobCV đồng hành cùng bước tiến sự nghiệp của bạn.</p></div><c:choose><c:when test="${sessionScope.role eq 'CANDIDATE'}"><a class="btn btn-light" href="${pageContext.request.contextPath}/candidate/jobs">Khám phá việc làm<i class="bi bi-arrow-right ms-1"></i></a></c:when><c:otherwise><a class="btn btn-light" href="${pageContext.request.contextPath}/register">Tạo tài khoản miễn phí<i class="bi bi-arrow-right ms-1"></i></a></c:otherwise></c:choose></div></div>
     </section>
 </main>
 

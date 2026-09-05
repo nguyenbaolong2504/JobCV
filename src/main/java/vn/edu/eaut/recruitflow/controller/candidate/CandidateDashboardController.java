@@ -57,7 +57,7 @@ public class CandidateDashboardController extends CandidateBaseController {
             request.setAttribute("error", ex.getMessage());
         }
 
-        view(request, response, "/WEB-INF/views/candidate/dashboard.jsp", "Bảng điều khiển ứng viên | RecruitFlow");
+        view(request, response, "/WEB-INF/views/candidate/dashboard.jsp", "Bảng điều khiển ứng viên | JobCV");
     }
 
     private void applyEmptyDashboard(HttpServletRequest request) {

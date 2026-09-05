@@ -50,7 +50,7 @@ public class HRApplicationController extends BaseController {
         } catch (BusinessException | IllegalArgumentException ex) {
             request.setAttribute("error", ex.getMessage());
         }
-        view(request, response, "/WEB-INF/views/hr/applications.jsp", "Đơn ứng tuyển | RecruitFlow");
+        view(request, response, "/WEB-INF/views/hr/applications.jsp", "Đơn ứng tuyển | JobCV");
     }
 
     private Integer optionalPositiveInt(HttpServletRequest request, String field, String label) throws BusinessException {

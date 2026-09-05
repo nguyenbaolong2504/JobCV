@@ -1,7 +1,7 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
-<c:set var="pageTitle" value="Thông báo việc làm | RecruitFlow" scope="request" />
+<c:set var="pageTitle" value="Thông báo việc làm | JobCV" scope="request" />
 <jsp:include page="/WEB-INF/views/common/header.jsp" />
 
 <div class="container-fluid candidate-shell"><div class="row g-0">
@@ -38,7 +38,7 @@
                                 <div class="job-alert-card-actions"><a class="job-alert-match" href="${alertJobsUrl}"><strong><c:out value="${alert.matchingJobs}" /></strong><span>việc phù hợp</span></a><div class="d-flex gap-2"><form action="${pageContext.request.contextPath}/candidate/job-alerts/toggle" method="post"><input type="hidden" name="alertId" value="<c:out value='${alert.id}'/>"><input type="hidden" name="active" value="${!alert.active}"><button class="btn btn-sm btn-outline-primary" type="submit" title="${alert.active ? 'Tạm dừng' : 'Bật thông báo'}" aria-label="${alert.active ? 'Tạm dừng thông báo' : 'Bật thông báo'}"><i class="bi ${alert.active ? 'bi-pause-fill' : 'bi-play-fill'}"></i></button></form><form action="${pageContext.request.contextPath}/candidate/job-alerts/delete" method="post" data-confirm="Bạn chắc chắn muốn xóa thông báo việc làm này?"><input type="hidden" name="alertId" value="<c:out value='${alert.id}'/>"><button class="btn btn-sm btn-outline-danger" type="submit" title="Xóa thông báo" aria-label="Xóa thông báo"><i class="bi bi-trash"></i></button></form></div></div>
                             </article>
                         </c:forEach>
-                        <c:if test="${empty alerts}"><div class="candidate-mini-empty job-alert-empty"><i class="bi bi-bell-plus"></i><strong>Chưa có thông báo việc làm</strong><small>Tạo bộ lọc đầu tiên để RecruitFlow ghi nhớ công việc bạn đang tìm.</small></div></c:if>
+                        <c:if test="${empty alerts}"><div class="candidate-mini-empty job-alert-empty"><i class="bi bi-bell-plus"></i><strong>Chưa có thông báo việc làm</strong><small>Tạo bộ lọc đầu tiên để JobCV ghi nhớ công việc bạn đang tìm.</small></div></c:if>
                     </div>
                 </section>
             </div>

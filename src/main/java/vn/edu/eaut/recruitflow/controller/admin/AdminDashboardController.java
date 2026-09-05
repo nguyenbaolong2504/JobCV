@@ -31,6 +31,6 @@ public class AdminDashboardController extends BaseController {
         } catch (BusinessException exception) {
             request.setAttribute("recentAuditLogs", java.util.List.of());
         }
-        view(request, response, "/WEB-INF/views/admin/dashboard.jsp", "Bảng điều khiển quản trị | RecruitFlow");
+        view(request, response, "/WEB-INF/views/admin/dashboard.jsp", "Bảng điều khiển quản trị | JobCV");
     }
 }

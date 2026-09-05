@@ -31,6 +31,6 @@ public class HRDashboardController extends BaseController {
         request.setAttribute("hrStats", stats);
         request.setAttribute("funnel", stats.getRecruitmentFunnel());
         request.setAttribute("interviews", interviewService.findUpcomingForHr(5, actorId));
-        view(request, response, "/WEB-INF/views/hr/dashboard.jsp", "Bảng điều khiển nhân sự | RecruitFlow");
+        view(request, response, "/WEB-INF/views/hr/dashboard.jsp", "Bảng điều khiển nhân sự | JobCV");
     }
 }

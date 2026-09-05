@@ -38,7 +38,7 @@ public class CandidateOfferController extends CandidateBaseController {
         } catch (BusinessException ex) {
             request.setAttribute("error", ex.getMessage());
         }
-        view(request, response, "/WEB-INF/views/candidate/offers.jsp", "Thư mời của tôi | RecruitFlow");
+        view(request, response, "/WEB-INF/views/candidate/offers.jsp", "Thư mời của tôi | JobCV");
     }
 
     @Override

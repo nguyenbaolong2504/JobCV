@@ -51,7 +51,7 @@ public class HRJobController extends BaseController {
         } catch (BusinessException | IllegalArgumentException ex) {
             request.setAttribute("error", ex.getMessage());
         }
-        view(request, response, "/WEB-INF/views/hr/jobs.jsp", "Quản lý tin tuyển dụng | RecruitFlow");
+        view(request, response, "/WEB-INF/views/hr/jobs.jsp", "Quản lý tin tuyển dụng | JobCV");
     }
 
     private Integer optionalPositiveInt(HttpServletRequest request, String field, String label) throws BusinessException {

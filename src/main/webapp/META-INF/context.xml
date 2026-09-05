@@ -2,4 +2,6 @@
 <!-- Tomcat 9 context configuration. Keep Secure dynamic so localhost HTTP still works. -->
 <Context>
     <CookieProcessor sameSiteCookies="lax" />
+    <!-- Development restarts must not deserialize stale HttpSession objects from disk. -->
+    <Manager pathname="" />
 </Context>

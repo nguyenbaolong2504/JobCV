@@ -45,7 +45,7 @@ public class CandidateSavedJobController extends CandidateBaseController {
         } catch (BusinessException ex) {
             request.setAttribute("error", ex.getMessage());
         }
-        view(request, response, "/WEB-INF/views/candidate/saved-jobs.jsp", "Việc làm đã lưu | RecruitFlow");
+        view(request, response, "/WEB-INF/views/candidate/saved-jobs.jsp", "Việc làm đã lưu | JobCV");
     }
 
     @Override

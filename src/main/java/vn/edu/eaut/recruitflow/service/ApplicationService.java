@@ -7,6 +7,7 @@ import vn.edu.eaut.recruitflow.dao.JobDAO;
 import vn.edu.eaut.recruitflow.dao.OfferDAO;
 import vn.edu.eaut.recruitflow.dao.ResumeDAO;
 import vn.edu.eaut.recruitflow.dao.UserDAO;
+import vn.edu.eaut.recruitflow.dao.CompanyDAO;
 import vn.edu.eaut.recruitflow.enums.ApplicationStatus;
 import vn.edu.eaut.recruitflow.enums.JobStatus;
 import vn.edu.eaut.recruitflow.model.Application;
@@ -39,6 +40,8 @@ public class ApplicationService {
     private final OfferDAO offerDAO;
     private final MatchingService matchingService;
     private final NotificationService notificationService;
+    private final CompanyDAO companyDAO = new CompanyDAO();
+    private final JobCapacityPolicy capacityPolicy = new JobCapacityPolicy();
 
     public ApplicationService() {
         this(new ApplicationDAO(), new ApplicationStatusHistoryDAO(), new JobDAO(), new ResumeDAO(), new UserDAO(),
@@ -71,18 +74,24 @@ public class ApplicationService {
             boolean originalAutoCommit = connection.getAutoCommit();
             connection.setAutoCommit(false);
             try {
+                if (!jobDAO.lockById(connection, jobId)) {
+                    throw new BusinessException("Không tìm thấy tin tuyển dụng.");
+                }
                 Job job = jobDAO.findById(connection, jobId);
                 if (job == null) {
                     throw new BusinessException("Không tìm thấy tin tuyển dụng.");
                 }
                 if (!JobStatus.PUBLISHED.name().equals(job.getStatus())) {
-                    throw new BusinessException("Chỉ có thể ứng tuyển tin đang được đăng tuyển.");
+                    throw new BusinessException(job.isAutoClosed() ? "Vị trí này đã tuyển đủ số lượng." : "Chỉ có thể ứng tuyển tin đang được đăng tuyển.");
                 }
                 if (job.getDeadline() == null || job.getDeadline().toLocalDate().isBefore(LocalDate.now())) {
                     throw new BusinessException("Tin tuyển dụng đã hết hạn nộp hồ sơ.");
                 }
                 if (applicationDAO.existsByCandidateAndJob(connection, candidateId, jobId)) {
                     throw new BusinessException("Bạn đã ứng tuyển công việc này rồi.");
+                }
+                if (applicationDAO.countActiveByJobId(connection, jobId) >= job.getNumberOfPositions()) {
+                    throw new BusinessException("Vị trí này đã tuyển đủ số lượng.");
                 }
 
                 Resume resume = requestedResumeId == null || requestedResumeId <= 0
@@ -100,12 +109,15 @@ public class ApplicationService {
                 application.setMatchScore(match.getMatchScore());
                 application.setCoverLetter(normalizedCoverLetter);
                 applicationDAO.create(connection, application);
+                synchronizeJobCapacity(connection, job);
                 insertHistory(connection, application.getId(), null, ApplicationStatus.SUBMITTED, candidateId,
                         "Ứng viên nộp hồ sơ.");
                 notificationService.create(connection, candidateId, "Đã gửi đơn ứng tuyển",
                         "Đơn ứng tuyển cho vị trí " + job.getTitle() + " đã được ghi nhận.");
-                notificationService.create(connection, job.getCreatedBy(), "Có đơn ứng tuyển mới",
-                        "Có ứng viên mới ứng tuyển vị trí " + job.getTitle() + ".");
+                for (int hrUserId : companyDAO.findActiveHrUserIds(job.getCompanyId())) {
+                    notificationService.create(connection, hrUserId, "Có đơn ứng tuyển mới",
+                            "Có ứng viên mới ứng tuyển vị trí " + job.getTitle() + " của " + job.getCompanyName() + ".");
+                }
                 connection.commit();
                 return application;
             } catch (BusinessException exception) {
@@ -219,7 +231,7 @@ public class ApplicationService {
     public PageResult<Application> searchForHr(String keyword, Integer jobId, String status, BigDecimal minMatchScore,
                                                 int page, int pageSize, int actorId) throws BusinessException {
         User actor = requireHrActor(actorId);
-        Integer ownerId = "ADMIN".equals(actor.getRoleName()) ? null : actorId;
+        Integer ownerId = "ADMIN".equals(actor.getRoleName()) ? null : companyIdFor(actorId);
         try {
             List<Application> applications = applicationDAO.search(
                     keyword, jobId, status, minMatchScore, ownerId, page, pageSize);
@@ -334,6 +346,8 @@ public class ApplicationService {
         if (!applicationDAO.updateStatus(connection, application.getId(), target.name())) {
             throw new BusinessException("Không thể cập nhật trạng thái đơn ứng tuyển.");
         }
+        Job job = jobDAO.findById(connection, application.getJobId());
+        if (job != null) synchronizeJobCapacity(connection, job);
         insertHistory(connection, application.getId(), current.name(), target, actorId, remarks);
         notificationService.create(connection, application.getCandidateId(), "Cập nhật đơn ứng tuyển",
                 "Đơn ứng tuyển vị trí " + application.getJobTitle() + " đã chuyển sang " + target.name() + ".");
@@ -394,8 +408,8 @@ public class ApplicationService {
         }
         try {
             Job job = jobDAO.findById(application.getJobId());
-            if (job == null || job.getCreatedBy() != actor.getId()) {
-                throw new BusinessException("Bạn chỉ được xử lý ứng viên của tin tuyển dụng do mình tạo.");
+            if (job == null || job.getCompanyId() != companyIdFor(actor.getId())) {
+                throw new BusinessException("Bạn chỉ được xử lý ứng viên thuộc công ty của mình.");
             }
         } catch (SQLException exception) {
             throw new BusinessException("Không thể xác thực quyền xử lý đơn ứng tuyển.", exception);
@@ -430,5 +444,23 @@ public class ApplicationService {
             throw new BusinessException("Lời giới thiệu không được vượt quá 2.000 ký tự.");
         }
         return cleaned;
+    }
+
+    private int companyIdFor(int userId) throws BusinessException {
+        try {
+            Integer companyId = companyDAO.findCompanyIdByUserId(userId);
+            if (companyId == null) throw new BusinessException("Tài khoản HR chưa được liên kết với công ty.");
+            return companyId;
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể xác thực công ty của HR.", exception);
+        }
+    }
+
+    private void synchronizeJobCapacity(Connection connection, Job job) throws SQLException {
+        long activeApplications = applicationDAO.countActiveByJobId(connection, job.getId());
+        JobCapacityPolicy.Decision decision = capacityPolicy.evaluate(job, activeApplications, LocalDate.now());
+        if (decision != null) {
+            jobDAO.updateCapacityStatus(connection, job.getId(), decision.status(), decision.autoClosed());
+        }
     }
 }

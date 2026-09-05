@@ -10,10 +10,10 @@ class PasswordUtilTest {
 
     @Test
     void hashesAndVerifiesPasswords() {
-        String hash = PasswordUtil.hash("RecruitFlow@2026");
+        String hash = PasswordUtil.hash("JobCV@2026");
 
-        assertNotEquals("RecruitFlow@2026", hash);
-        assertTrue(PasswordUtil.matches("RecruitFlow@2026", hash));
+        assertNotEquals("JobCV@2026", hash);
+        assertTrue(PasswordUtil.matches("JobCV@2026", hash));
         assertFalse(PasswordUtil.matches("wrong-password", hash));
     }
 

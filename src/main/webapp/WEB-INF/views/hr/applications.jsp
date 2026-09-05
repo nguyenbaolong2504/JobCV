@@ -2,7 +2,7 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
-<c:set var="pageTitle" value="Đơn ứng tuyển | RecruitFlow" />
+<c:set var="pageTitle" value="Đơn ứng tuyển | JobCV" />
 <jsp:include page="/WEB-INF/views/common/header.jsp" />
 
 <c:url var="boardUrl" value="/hr/applications">

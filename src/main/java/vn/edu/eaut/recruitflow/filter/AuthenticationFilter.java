@@ -34,11 +34,12 @@ public class AuthenticationFilter implements Filter {
             return;
         }
         boolean protectedPath = requiresAuthentication(path);
-        boolean loggedIn = session != null && session.getAttribute("userId") instanceof Integer
-                && session.getAttribute("role") instanceof String
-                && session.getAttribute(AuthSession.SESSION_VERSION_ATTRIBUTE) instanceof Integer;
+        boolean loggedIn = AuthSession.isAuthenticated(session);
+        boolean stalePrincipal = !loggedIn && AuthSession.hasPrincipalAttributes(session);
 
-        SessionValidation sessionValidation = loggedIn ? validateAuthenticatedAccount(session) : SessionValidation.CURRENT;
+        SessionValidation sessionValidation = loggedIn
+                ? validateAuthenticatedAccount(session)
+                : (stalePrincipal ? SessionValidation.INVALID : SessionValidation.CURRENT);
         boolean accountChanged = sessionValidation == SessionValidation.INVALID;
         if (accountChanged && session != null) {
             // A lock, deactivation, deleted record, or role change must take effect at the

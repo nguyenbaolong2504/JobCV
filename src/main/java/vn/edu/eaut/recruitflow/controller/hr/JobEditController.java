@@ -49,7 +49,7 @@ public class JobEditController extends BaseController {
         } catch (BusinessException ignored) {
             request.setAttribute("jobCategories", java.util.List.of());
         }
-        view(request, response, "/WEB-INF/views/hr/job-form.jsp", "Chỉnh sửa tin tuyển dụng | RecruitFlow");
+        view(request, response, "/WEB-INF/views/hr/job-form.jsp", "Chỉnh sửa tin tuyển dụng | JobCV");
     }
 
     private String toSkillInput(JobSkill skill) {

@@ -2,9 +2,11 @@ package vn.edu.eaut.recruitflow.service;
 
 import vn.edu.eaut.recruitflow.dao.JobDAO;
 import vn.edu.eaut.recruitflow.dao.UserDAO;
+import vn.edu.eaut.recruitflow.dao.CompanyDAO;
 import vn.edu.eaut.recruitflow.enums.EmploymentType;
 import vn.edu.eaut.recruitflow.enums.JobStatus;
 import vn.edu.eaut.recruitflow.model.Job;
+import vn.edu.eaut.recruitflow.model.JobSearchCriteria;
 import vn.edu.eaut.recruitflow.model.JobSkill;
 import vn.edu.eaut.recruitflow.model.PageResult;
 import vn.edu.eaut.recruitflow.model.User;
@@ -26,14 +28,20 @@ import java.util.Set;
 public class JobService {
     private final JobDAO jobDAO;
     private final UserDAO userDAO;
+    private final CompanyDAO companyDAO;
 
     public JobService() {
-        this(new JobDAO(), new UserDAO());
+        this(new JobDAO(), new UserDAO(), new CompanyDAO());
     }
 
     JobService(JobDAO jobDAO, UserDAO userDAO) {
+        this(jobDAO, userDAO, new CompanyDAO());
+    }
+
+    JobService(JobDAO jobDAO, UserDAO userDAO, CompanyDAO companyDAO) {
         this.jobDAO = jobDAO;
         this.userDAO = userDAO;
+        this.companyDAO = companyDAO;
     }
 
     public List<Job> getAllJobs() throws BusinessException {
@@ -57,11 +65,15 @@ public class JobService {
     }
 
     public Job getPublishedJobById(int id) throws BusinessException {
-        Job job = getJobById(id);
-        if (!JobStatus.PUBLISHED.name().equals(job.getStatus())) {
-            throw new BusinessException("Tin tuyển dụng này không còn hiển thị.");
+        try {
+            Job job = jobDAO.findOpenPublishedById(id);
+            if (job == null) {
+                throw new BusinessException("Tin tuyển dụng đã đóng hoặc hết hạn.");
+            }
+            return job;
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể tải tin tuyển dụng.", exception);
         }
-        return job;
     }
 
     public List<JobSkill> getSkills(int jobId) throws BusinessException {
@@ -96,12 +108,32 @@ public class JobService {
                                                 String employmentType, int page, int pageSize, String sort)
             throws BusinessException {
         try {
-            List<Job> jobs = jobDAO.search(keyword, departmentId, location, employmentType,
-                    JobStatus.PUBLISHED.name(), publicSort(sort), page, pageSize);
-            long total = jobDAO.count(keyword, departmentId, location, employmentType, JobStatus.PUBLISHED.name());
+            JobSearchCriteria criteria = new JobSearchCriteria();
+            criteria.setKeyword(keyword);
+            criteria.setDepartmentId(departmentId);
+            criteria.setLocation(location);
+            criteria.setEmploymentType(employmentType);
+            List<Job> jobs = jobDAO.searchPublished(criteria, publicSort(sort), page, pageSize);
+            long total = jobDAO.countPublished(criteria);
             return new PageResult<>(jobs, page, pageSize, total);
         } catch (SQLException exception) {
             throw new BusinessException("Không thể tìm kiếm tin tuyển dụng.", exception);
+        }
+    }
+
+    /** Returns only non-expired public jobs belonging to one company tenant. */
+    public PageResult<Job> searchPublishedJobsByCompany(int companyId, int page, int pageSize, String sort)
+            throws BusinessException {
+        if (companyId <= 0) {
+            throw new BusinessException("Công ty không hợp lệ.");
+        }
+        try {
+            JobSearchCriteria criteria = new JobSearchCriteria();
+            List<Job> jobs = jobDAO.searchPublished(criteria, publicSort(sort), page, pageSize, companyId);
+            long total = jobDAO.countPublished(criteria, companyId);
+            return new PageResult<>(jobs, page, pageSize, total);
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể tải việc làm của công ty.", exception);
         }
     }
 
@@ -127,14 +159,14 @@ public class JobService {
                                        JobStatus status, String sort, int page, int pageSize, int actorId)
             throws BusinessException {
         User actor = requireHrActor(actorId);
-        Integer ownerId = "ADMIN".equals(actor.getRoleName()) ? null : actorId;
+        Integer companyId = "ADMIN".equals(actor.getRoleName()) ? null : companyIdFor(actorId);
         try {
             List<Job> jobs = jobDAO.search(keyword, departmentId, location,
                     employmentType == null ? null : employmentType.name(),
-                    status == null ? null : status.name(), ownerId, sort, page, pageSize);
+                    status == null ? null : status.name(), companyId, sort, page, pageSize);
             long total = jobDAO.count(keyword, departmentId, location,
                     employmentType == null ? null : employmentType.name(),
-                    status == null ? null : status.name(), ownerId);
+                    status == null ? null : status.name(), companyId);
             return new PageResult<>(jobs, page, pageSize, total);
         } catch (SQLException exception) {
             throw new BusinessException("Không thể tải danh sách tin tuyển dụng.", exception);
@@ -145,6 +177,7 @@ public class JobService {
         requireHrActor(actorId);
         validateJob(job);
         job.setCreatedBy(actorId);
+        job.setCompanyId(companyIdFor(actorId));
         job.setStatus(JobStatus.DRAFT.name());
         List<JobSkill> skills = parseSkills(skillsText);
         try (Connection connection = DBUtil.getConnection()) {
@@ -173,6 +206,7 @@ public class JobService {
         Job existing = getJobById(submitted.getId());
         requireOwnership(existing, actor);
         submitted.setCreatedBy(existing.getCreatedBy());
+        submitted.setCompanyId(existing.getCompanyId());
         submitted.setStatus(existing.getStatus());
         validateJob(submitted);
         List<JobSkill> skills = parseSkills(skillsText);
@@ -210,6 +244,9 @@ public class JobService {
             throw new BusinessException("Trạng thái tin tuyển dụng không hợp lệ.");
         }
         JobStatus current = job.getJobStatus();
+        if (target == JobStatus.PUBLISHED && job.getActiveApplications() >= job.getNumberOfPositions()) {
+            throw new BusinessException("Tin đang tuyển đủ số lượng; chỉ mở lại khi có hồ sơ bị loại hoặc rút đơn.");
+        }
         if (!canChangeStatus(current, target)) {
             throw new BusinessException("Không thể chuyển từ " + current + " sang " + target + ".");
         }
@@ -281,8 +318,8 @@ public class JobService {
     }
 
     private void requireOwnership(Job job, User actor) throws BusinessException {
-        if (!"ADMIN".equals(actor.getRoleName()) && job.getCreatedBy() != actor.getId()) {
-            throw new BusinessException("Bạn chỉ được quản lý tin tuyển dụng do mình tạo.");
+        if (!"ADMIN".equals(actor.getRoleName()) && job.getCompanyId() != companyIdFor(actor.getId())) {
+            throw new BusinessException("Bạn chỉ được quản lý tin tuyển dụng thuộc công ty của mình.");
         }
     }
 
@@ -320,6 +357,9 @@ public class JobService {
         if (blank(job.getRequirements())) {
             throw new BusinessException("Yêu cầu công việc là bắt buộc.");
         }
+        if (blank(job.getBenefits())) {
+            throw new BusinessException("Quyền lợi công việc là bắt buộc.");
+        }
         if (job.getDeadline() == null || job.getDeadline().toLocalDate().isBefore(LocalDate.now())) {
             throw new BusinessException("Hạn nộp phải từ hôm nay trở đi.");
         }
@@ -350,5 +390,17 @@ public class JobService {
 
     private boolean blank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private int companyIdFor(int userId) throws BusinessException {
+        try {
+            var company = companyDAO.findByUserId(userId);
+            if (company == null) {
+                throw new BusinessException("Tài khoản HR chưa được liên kết với công ty đang hoạt động.");
+            }
+            return company.getId();
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể xác thực công ty của HR.", exception);
+        }
     }
 }

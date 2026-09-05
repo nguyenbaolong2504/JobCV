@@ -2,6 +2,7 @@ package vn.edu.eaut.recruitflow.controller.auth;
 
 import vn.edu.eaut.recruitflow.controller.BaseController;
 import vn.edu.eaut.recruitflow.service.UserService;
+import vn.edu.eaut.recruitflow.util.AuthSession;
 import vn.edu.eaut.recruitflow.util.BusinessException;
 import vn.edu.eaut.recruitflow.util.RequestUtil;
 
@@ -30,13 +31,12 @@ public class RegisterController extends BaseController {
         setUtf8(request, response);
 
         HttpSession session = request.getSession(false);
-        if (session != null && session.getAttribute("userId") instanceof Integer
-                && session.getAttribute("role") instanceof String) {
+        if (AuthSession.isAuthenticated(session)) {
             redirectAuthenticatedUser(request, response, (String) session.getAttribute("role"));
             return;
         }
 
-        view(request, response, "/WEB-INF/views/auth/register.jsp", "Đăng ký | RecruitFlow");
+        view(request, response, "/WEB-INF/views/auth/register.jsp", "Đăng ký | JobCV");
     }
 
     @Override
@@ -55,8 +55,12 @@ public class RegisterController extends BaseController {
                 throw new BusinessException("Xác nhận mật khẩu không khớp.");
             }
 
-            userService.registerAccount(email, password, fullName, accountType);
-            redirectWithSuccess(request, response, "/login", "Đăng ký thành công. Vui lòng đăng nhập để tiếp tục.");
+            userService.registerAccount(email, password, fullName, accountType,
+                    RequestUtil.text(request, "organizationName"), RequestUtil.text(request, "jobTitle"),
+                    RequestUtil.text(request, "workPhone"));
+            redirectWithSuccess(request, response, "/login", "HR".equals(accountType)
+                    ? "Đã gửi đăng ký Nhà tuyển dụng. Admin sẽ xác minh công ty trước khi kích hoạt tài khoản."
+                    : "Đăng ký thành công. Bạn có thể đăng nhập và bắt đầu tìm việc.");
         } catch (BusinessException ex) {
             redirectWithError(request, response, "/register", ex.getMessage());
         }

@@ -85,7 +85,7 @@ flowchart LR
 | --- | --- |
 | UC-01 Public & Auth | Home, job list/detail, search/filter, register, login, logout |
 | UC-02 Candidate profile & CV | Cập nhật profile, upload/download/delete CV, đặt CV mặc định, AI review |
-| UC-03 Apply & application | Matching, apply, rút đơn, danh sách/chi tiết/timeline application |
+| UC-03 Apply & application | Matching, apply, giữ/nhả chỉ tiêu tuyển, tự đóng/mở job, rút đơn, danh sách/chi tiết/timeline application |
 | UC-04 Job management | Tạo, sửa, publish, close, archive và skill của job |
 | UC-05 Pipeline | Tìm/lọc đơn, chuyển trạng thái, xem profile/CV ứng viên |
 | UC-06 Interview | Tạo/đổi/hủy lịch, check conflict, candidate/interviewer xem lịch |
@@ -136,12 +136,12 @@ flowchart LR
 - **Tiền điều kiện:** Candidate đăng nhập, job `PUBLISHED` và chưa quá deadline, có CV của chính mình.
 - **Luồng chính:**
   1. Candidate chọn job và CV (hoặc CV default), nhấn Apply.
-  2. Hệ thống kiểm tra BR01–BR04: job tồn tại/published/chưa quá hạn, chưa apply trùng, CV thuộc owner.
+  2. Hệ thống khóa job và kiểm tra BR01–BR05: job tồn tại/published/chưa quá hạn/còn chỉ tiêu, chưa apply trùng, CV thuộc owner.
   3. Tính weighted skill matching.
-  4. Trong một transaction: tạo application `SUBMITTED`, thêm history, tạo notification cho Candidate và người tạo job.
+  4. Trong một transaction: tạo application `SUBMITTED`, thêm history, tạo notification và tự đóng job khi vừa đủ chỉ tiêu.
   5. Candidate xem danh sách/chi tiết, match score, status history và interview/offer liên quan.
   6. Candidate chỉ có thể withdraw khi application còn `SUBMITTED`.
-- **Luồng ngoại lệ:** apply trùng, CV không thuộc user, job closed/archived/quá hạn, chuyển trạng thái không hợp lệ.
+- **Luồng ngoại lệ:** apply trùng, CV không thuộc user, job closed/archived/quá hạn/tuyển đủ, chuyển trạng thái không hợp lệ. Khi đơn bị `REJECTED`/`WITHDRAWN`, tin tự mở lại nếu trước đó tự đóng và còn hạn.
 - **Kết quả:** một candidate chỉ có một application cho một job do unique constraint `(job_id, candidate_id)`.
 
 ### UC-04 – HR quản lý job

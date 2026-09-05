@@ -1,7 +1,7 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <c:set var="isEdit" value="${not empty job}" />
-<c:set var="pageTitle" value="${isEdit ? 'Chỉnh sửa tin tuyển dụng' : 'Tạo tin tuyển dụng'} | RecruitFlow" />
+<c:set var="pageTitle" value="${isEdit ? 'Chỉnh sửa tin tuyển dụng' : 'Tạo tin tuyển dụng'} | JobCV" />
 <jsp:include page="/WEB-INF/views/common/header.jsp" />
 
 <div class="container-fluid p-0">
@@ -31,6 +31,7 @@
                             <div class="col-md-6"><label class="form-label fw-semibold" for="skills">Kỹ năng và trọng số</label><input class="form-control" id="skills" name="skills" value="<c:out value='${skillsText}'/>" placeholder="Java:5, JDBC:4, MySQL:4, Git:2"><div class="form-text">Nhập theo dạng Kỹ năng:trọng số, phân tách bằng dấu phẩy.</div></div>
                             <div class="col-12"><label class="form-label fw-semibold" for="description">Mô tả công việc <span class="text-danger">*</span></label><textarea class="form-control" id="description" name="description" rows="6" required><c:out value="${job.description}" /></textarea></div>
                             <div class="col-12"><label class="form-label fw-semibold" for="requirements">Yêu cầu ứng viên <span class="text-danger">*</span></label><textarea class="form-control" id="requirements" name="requirements" rows="6" required><c:out value="${job.requirements}" /></textarea></div>
+                            <div class="col-12"><label class="form-label fw-semibold" for="benefits">Quyền lợi <span class="text-danger">*</span></label><textarea class="form-control" id="benefits" name="benefits" rows="5" required placeholder="Lương thưởng, bảo hiểm, đào tạo, ngày nghỉ và các chế độ khác..."><c:out value="${job.benefits}" /></textarea></div>
                             <div class="col-12 d-flex justify-content-end gap-2 pt-3"><a class="btn btn-light" href="${pageContext.request.contextPath}/hr/jobs">Hủy</a><button class="btn btn-primary px-4" type="submit"><i class="bi bi-save me-1"></i> ${isEdit ? 'Lưu thay đổi' : 'Lưu bản nháp'}</button></div>
                         </form>
                     </div>

@@ -13,6 +13,14 @@ import java.util.Map;
 
 /** Persists organization data used to review self-registered recruiter accounts. */
 public class RecruiterProfileDAO extends DaoSupport {
+    private static final String PUBLIC_PROFILE_SELECT =
+            "SELECT rp.id, rp.user_id, rp.organization_name, rp.job_title, rp.work_phone, rp.created_at, rp.updated_at "
+            + "FROM recruiter_profiles rp JOIN users u ON u.id = rp.user_id "
+            + "JOIN roles r ON r.id = u.role_id "
+            + "WHERE u.status = 'ACTIVE' AND r.role_name = 'HR' "
+            + "AND EXISTS (SELECT 1 FROM jobs j WHERE j.created_by = u.id "
+            + "AND j.status = 'PUBLISHED' AND j.deadline >= CURRENT_DATE) ";
+
     public RecruiterProfile findByUserId(Connection connection, int userId) throws SQLException {
         String sql = "SELECT id, user_id, organization_name, job_title, work_phone, created_at, updated_at "
                 + "FROM recruiter_profiles WHERE user_id = ?";
@@ -44,6 +52,31 @@ public class RecruiterProfileDAO extends DaoSupport {
             }
         }
         return profiles;
+    }
+
+    /** Active, administrator-verified recruiter organisations that currently have an open job. */
+    public List<RecruiterProfile> findPublicProfiles() throws SQLException {
+        List<RecruiterProfile> profiles = new java.util.ArrayList<>();
+        try (Connection connection = openConnection();
+             PreparedStatement statement = connection.prepareStatement(
+                     PUBLIC_PROFILE_SELECT + "ORDER BY rp.organization_name, rp.id");
+             ResultSet resultSet = statement.executeQuery()) {
+            while (resultSet.next()) {
+                profiles.add(map(resultSet));
+            }
+        }
+        return profiles;
+    }
+
+    public RecruiterProfile findPublicByUserId(int userId) throws SQLException {
+        try (Connection connection = openConnection();
+             PreparedStatement statement = connection.prepareStatement(
+                     PUBLIC_PROFILE_SELECT + "AND rp.user_id = ?")) {
+            statement.setInt(1, userId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next() ? map(resultSet) : null;
+            }
+        }
     }
 
     public int insert(Connection connection, RecruiterProfile profile) throws SQLException {

@@ -11,7 +11,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
-/** Assigns one of the fixed RecruitFlow roles to a user. */
+/** Assigns one of the fixed JobCV roles to a user. */
 @WebServlet("/admin/users/role")
 public class AdminUserRoleController extends BaseController {
     private AdminService adminService;

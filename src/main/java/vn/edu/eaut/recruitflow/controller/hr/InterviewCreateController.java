@@ -39,8 +39,8 @@ public class InterviewCreateController extends BaseController {
                         RequestUtil.requiredPositiveInt(request, "applicationId", "Đơn ứng tuyển"), actorId));
             }
             request.setAttribute("applications", applicationService.findShortlisted(actorId));
-            request.setAttribute("interviewers", interviewService.getInterviewers());
-            view(request, response, "/WEB-INF/views/hr/interview-form.jsp", "Lên lịch phỏng vấn | RecruitFlow");
+            request.setAttribute("interviewers", interviewService.getInterviewers(RequestUtil.currentUserId(request)));
+            view(request, response, "/WEB-INF/views/hr/interview-form.jsp", "Lên lịch phỏng vấn | JobCV");
         } catch (BusinessException | IllegalArgumentException ex) {
             redirectWithError(request, response, "/hr/interviews", ex.getMessage());
         }

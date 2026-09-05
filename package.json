@@ -2,7 +2,7 @@
   "name": "recruitflow",
   "version": "1.0.0",
   "private": true,
-  "description": "Local developer runner for the RecruitFlow Servlet/Tomcat application",
+  "description": "Local developer runner for the JobCV Servlet/Tomcat application",
   "engines": {
     "node": ">=18.18.0"
   },

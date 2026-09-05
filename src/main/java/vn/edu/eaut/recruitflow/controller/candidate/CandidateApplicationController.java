@@ -77,7 +77,7 @@ public class CandidateApplicationController extends CandidateBaseController {
             request.setAttribute("error", ex.getMessage());
         }
 
-        view(request, response, "/WEB-INF/views/candidate/applications.jsp", "Đơn ứng tuyển | RecruitFlow");
+        view(request, response, "/WEB-INF/views/candidate/applications.jsp", "Đơn ứng tuyển | JobCV");
     }
 
     private void showDetail(HttpServletRequest request, HttpServletResponse response)
@@ -91,7 +91,7 @@ public class CandidateApplicationController extends CandidateBaseController {
             request.setAttribute("history", applicationService.getHistoryForCandidate(candidateId, applicationId));
             request.setAttribute("interviews", applicationService.getInterviewsForCandidate(candidateId, applicationId));
             request.setAttribute("offer", applicationService.getOfferForCandidate(candidateId, applicationId));
-            view(request, response, "/WEB-INF/views/candidate/application-detail.jsp", "Chi tiết đơn ứng tuyển | RecruitFlow");
+            view(request, response, "/WEB-INF/views/candidate/application-detail.jsp", "Chi tiết đơn ứng tuyển | JobCV");
         } catch (BusinessException | IllegalArgumentException ex) {
             redirectWithError(request, response, "/candidate/applications", ex.getMessage());
         }

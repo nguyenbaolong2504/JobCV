@@ -3,6 +3,7 @@ package vn.edu.eaut.recruitflow.service;
 import org.junit.jupiter.api.Test;
 import vn.edu.eaut.recruitflow.dao.JobDAO;
 import vn.edu.eaut.recruitflow.dao.UserDAO;
+import vn.edu.eaut.recruitflow.dao.CompanyDAO;
 import vn.edu.eaut.recruitflow.model.Job;
 import vn.edu.eaut.recruitflow.model.User;
 import vn.edu.eaut.recruitflow.util.BusinessException;
@@ -15,34 +16,43 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class JobOwnershipServiceTest {
     @Test
     void hrCannotManageAnotherRecruitersJob() {
-        JobService service = serviceFor(job(7, 22), user(11, "HR"));
+        JobService service = serviceFor(job(7, 2), user(11, "HR"), 1);
 
         assertThrows(BusinessException.class, () -> service.getJobForManagement(7, 11));
     }
 
     @Test
     void ownerCanManageOwnJob() throws BusinessException {
-        JobService service = serviceFor(job(7, 11), user(11, "HR"));
+        JobService service = serviceFor(job(7, 1), user(11, "HR"), 1);
 
         assertEquals(7, service.getJobForManagement(7, 11).getId());
     }
 
     @Test
     void adminCanManageAnyJob() throws BusinessException {
-        JobService service = serviceFor(job(7, 22), user(1, "ADMIN"));
+        JobService service = serviceFor(job(7, 2), user(1, "ADMIN"), null);
 
         assertEquals(7, service.getJobForManagement(7, 1).getId());
     }
 
-    private JobService serviceFor(Job job, User actor) {
-        return new JobService(new StubJobDAO(job), new StubUserDAO(actor));
+    private JobService serviceFor(Job job, User actor, Integer actorCompanyId) {
+        return new JobService(new StubJobDAO(job), new StubUserDAO(actor), new StubCompanyDAO(actorCompanyId));
     }
 
-    private Job job(int id, int createdBy) {
+    private Job job(int id, int companyId) {
         Job job = new Job();
         job.setId(id);
-        job.setCreatedBy(createdBy);
+        job.setCompanyId(companyId);
         return job;
+    }
+
+    private static final class StubCompanyDAO extends CompanyDAO {
+        private final Integer companyId;
+        private StubCompanyDAO(Integer companyId) { this.companyId = companyId; }
+        @Override public vn.edu.eaut.recruitflow.model.CompanyProfile findByUserId(int userId) {
+            if (companyId == null) return null;
+            var company = new vn.edu.eaut.recruitflow.model.CompanyProfile(); company.setId(companyId); return company;
+        }
     }
 
     private User user(int id, String roleName) {

@@ -1,6 +1,6 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<c:set var="pageTitle" value="Báo cáo tuyển dụng | RecruitFlow" />
+<c:set var="pageTitle" value="Báo cáo tuyển dụng | JobCV" />
 <c:url var="exportUrl" value="/hr/reports/export">
     <c:param name="fromDate" value="${param.fromDate}" />
     <c:param name="toDate" value="${param.toDate}" />

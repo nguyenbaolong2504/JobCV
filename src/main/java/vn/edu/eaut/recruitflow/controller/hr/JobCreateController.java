@@ -46,7 +46,7 @@ public class JobCreateController extends BaseController {
             // Category selection is optional; HR can still create an uncategorised job during a staged migration.
             request.setAttribute("jobCategories", java.util.List.of());
         }
-        view(request, response, "/WEB-INF/views/hr/job-form.jsp", "Tạo tin tuyển dụng | RecruitFlow");
+        view(request, response, "/WEB-INF/views/hr/job-form.jsp", "Tạo tin tuyển dụng | JobCV");
     }
 
     @Override
@@ -90,6 +90,7 @@ public class JobCreateController extends BaseController {
         job.setSalaryMax(salaryMax);
         job.setDescription(RequestUtil.text(request, "description"));
         job.setRequirements(RequestUtil.text(request, "requirements"));
+        job.setBenefits(RequestUtil.text(request, "benefits"));
         job.setExperienceRequired(RequestUtil.nonNegativeInt(request, "experienceRequired", "Kinh nghiệm yêu cầu"));
         job.setDeadline(Date.valueOf(RequestUtil.date(request, "deadline", "Hạn nộp hồ sơ")));
         return job;

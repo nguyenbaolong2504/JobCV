@@ -43,7 +43,7 @@ public class InterviewerInterviewDetailController extends BaseController {
             } catch (BusinessException ignored) {
                 request.setAttribute("profile", new CandidateProfile());
             }
-            view(request, response, "/WEB-INF/views/interviewer/interview-detail.jsp", "Chi tiết phỏng vấn | RecruitFlow");
+            view(request, response, "/WEB-INF/views/interviewer/interview-detail.jsp", "Chi tiết phỏng vấn | JobCV");
         } catch (BusinessException | IllegalArgumentException ex) {
             redirectWithError(request, response, "/interviewer/interviews", ex.getMessage());
         }

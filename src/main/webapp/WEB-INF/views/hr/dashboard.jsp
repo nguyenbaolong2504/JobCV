@@ -2,7 +2,7 @@
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
-<c:set var="pageTitle" value="Bảng điều khiển tuyển dụng | RecruitFlow" />
+<c:set var="pageTitle" value="Bảng điều khiển tuyển dụng | JobCV" />
 <jsp:useBean id="now" class="java.util.Date" />
 <jsp:include page="/WEB-INF/views/common/header.jsp" />
 

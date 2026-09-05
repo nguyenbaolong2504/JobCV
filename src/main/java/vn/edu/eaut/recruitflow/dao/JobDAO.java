@@ -16,14 +16,14 @@ import java.util.List;
 
 public class JobDAO extends DaoSupport {
     private static final String SELECT_JOB_LEGACY = "SELECT j.id, j.job_code, j.title, j.department_id, d.name AS department_name, "
-            + "j.location, j.employment_type, j.number_of_positions, j.salary_min, j.salary_max, j.description, j.requirements, "
-            + "j.experience_required, j.deadline, j.status, j.created_by, j.created_at, j.updated_at "
-            + "FROM jobs j JOIN departments d ON d.id = j.department_id ";
+            + "j.location, j.employment_type, j.number_of_positions, j.salary_min, j.salary_max, j.description, j.requirements, j.benefits, "
+            + "j.experience_required, j.deadline, j.status, j.auto_closed, (SELECT COUNT(*) FROM applications a WHERE a.job_id=j.id AND a.status NOT IN ('REJECTED','WITHDRAWN')) AS active_applications, j.created_by, j.company_id, co.name AS company_name, co.logo_path AS company_logo_path, j.created_at, j.updated_at "
+            + "FROM jobs j JOIN departments d ON d.id = j.department_id JOIN companies co ON co.id = j.company_id ";
     private static final String SELECT_JOB_WITH_CATEGORY = "SELECT j.id, j.job_code, j.title, j.department_id, d.name AS department_name, "
             + "j.category_id, c.name AS category_name, j.location, "
-            + "j.employment_type, j.number_of_positions, j.salary_min, j.salary_max, j.description, j.requirements, "
-            + "j.experience_required, j.deadline, j.status, j.created_by, j.created_at, j.updated_at "
-            + "FROM jobs j JOIN departments d ON d.id = j.department_id "
+            + "j.employment_type, j.number_of_positions, j.salary_min, j.salary_max, j.description, j.requirements, j.benefits, "
+            + "j.experience_required, j.deadline, j.status, j.auto_closed, (SELECT COUNT(*) FROM applications a WHERE a.job_id=j.id AND a.status NOT IN ('REJECTED','WITHDRAWN')) AS active_applications, j.created_by, j.company_id, co.name AS company_name, co.logo_path AS company_logo_path, j.created_at, j.updated_at "
+            + "FROM jobs j JOIN departments d ON d.id = j.department_id JOIN companies co ON co.id = j.company_id "
             + "LEFT JOIN job_categories c ON c.id = j.category_id ";
     private static volatile Boolean categorySchemaAvailable;
     private final JobSkillDAO jobSkillDAO = new JobSkillDAO();
@@ -102,26 +102,31 @@ public class JobDAO extends DaoSupport {
     }
 
     public List<Job> search(String keyword, Integer departmentId, String location, String employmentType, String status,
-                            Integer createdBy, String sort, int page, int pageSize) throws SQLException {
+                            Integer companyId, String sort, int page, int pageSize) throws SQLException {
         JobSearchCriteria criteria = new JobSearchCriteria();
         criteria.setKeyword(keyword);
         criteria.setDepartmentId(departmentId);
         criteria.setLocation(location);
         criteria.setEmploymentType(employmentType);
-        return search(criteria, status, sort, page, pageSize, false, createdBy);
+        return search(criteria, status, sort, page, pageSize, false, companyId);
     }
 
     public List<Job> searchPublished(JobSearchCriteria criteria, String sort, int page, int pageSize) throws SQLException {
         return search(criteria, "PUBLISHED", sort, page, pageSize, true, null);
     }
 
+    public List<Job> searchPublished(JobSearchCriteria criteria, String sort, int page, int pageSize,
+                                     Integer companyId) throws SQLException {
+        return search(criteria, "PUBLISHED", sort, page, pageSize, true, companyId);
+    }
+
     private List<Job> search(JobSearchCriteria criteria, String status, String sort, int page, int pageSize,
-                             boolean openOnly, Integer createdBy) throws SQLException {
+                             boolean openOnly, Integer companyId) throws SQLException {
         try (Connection connection = openConnection()) {
             boolean supportsCategories = supportsCategories(connection);
             StringBuilder sql = new StringBuilder(selectJob(supportsCategories) + "WHERE 1 = 1");
             List<Object> parameters = new ArrayList<>();
-            appendFilters(sql, parameters, criteria, status, openOnly, supportsCategories, createdBy);
+            appendFilters(sql, parameters, criteria, status, openOnly, supportsCategories, companyId);
             sql.append(orderBy(sort)).append(" LIMIT ? OFFSET ?");
             try (PreparedStatement statement = connection.prepareStatement(sql.toString())) {
                 bind(statement, parameters);
@@ -140,25 +145,29 @@ public class JobDAO extends DaoSupport {
     }
 
     public long count(String keyword, Integer departmentId, String location, String employmentType, String status,
-                      Integer createdBy) throws SQLException {
+                      Integer companyId) throws SQLException {
         JobSearchCriteria criteria = new JobSearchCriteria();
         criteria.setKeyword(keyword);
         criteria.setDepartmentId(departmentId);
         criteria.setLocation(location);
         criteria.setEmploymentType(employmentType);
-        return count(criteria, status, false, createdBy);
+        return count(criteria, status, false, companyId);
     }
 
     public long countPublished(JobSearchCriteria criteria) throws SQLException {
         return count(criteria, "PUBLISHED", true, null);
     }
 
-    private long count(JobSearchCriteria criteria, String status, boolean openOnly, Integer createdBy) throws SQLException {
+    public long countPublished(JobSearchCriteria criteria, Integer companyId) throws SQLException {
+        return count(criteria, "PUBLISHED", true, companyId);
+    }
+
+    private long count(JobSearchCriteria criteria, String status, boolean openOnly, Integer companyId) throws SQLException {
         try (Connection connection = openConnection()) {
             boolean supportsCategories = supportsCategories(connection);
             StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM jobs j WHERE 1 = 1");
             List<Object> parameters = new ArrayList<>();
-            appendFilters(sql, parameters, criteria, status, openOnly, supportsCategories, createdBy);
+            appendFilters(sql, parameters, criteria, status, openOnly, supportsCategories, companyId);
             try (PreparedStatement statement = connection.prepareStatement(sql.toString())) {
                 bind(statement, parameters);
                 try (ResultSet resultSet = statement.executeQuery()) {
@@ -194,11 +203,11 @@ public class JobDAO extends DaoSupport {
         }
         String sql = supportsCategories
                 ? "INSERT INTO jobs (job_code, title, department_id, category_id, location, employment_type, number_of_positions, salary_min, "
-                + "salary_max, description, requirements, experience_required, deadline, status, created_by) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                + "salary_max, description, requirements, benefits, experience_required, deadline, status, created_by, company_id) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                 : "INSERT INTO jobs (job_code, title, department_id, location, employment_type, number_of_positions, salary_min, "
-                + "salary_max, description, requirements, experience_required, deadline, status, created_by) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                + "salary_max, description, requirements, benefits, experience_required, deadline, status, created_by, company_id) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             bindJob(statement, job, false, supportsCategories);
             statement.executeUpdate();
@@ -225,10 +234,10 @@ public class JobDAO extends DaoSupport {
         }
         String sql = supportsCategories
                 ? "UPDATE jobs SET job_code = ?, title = ?, department_id = ?, category_id = ?, location = ?, employment_type = ?, "
-                + "number_of_positions = ?, salary_min = ?, salary_max = ?, description = ?, requirements = ?, "
+                + "number_of_positions = ?, salary_min = ?, salary_max = ?, description = ?, requirements = ?, benefits = ?, "
                 + "experience_required = ?, deadline = ? WHERE id = ?"
                 : "UPDATE jobs SET job_code = ?, title = ?, department_id = ?, location = ?, employment_type = ?, "
-                + "number_of_positions = ?, salary_min = ?, salary_max = ?, description = ?, requirements = ?, "
+                + "number_of_positions = ?, salary_min = ?, salary_max = ?, description = ?, requirements = ?, benefits = ?, "
                 + "experience_required = ?, deadline = ? WHERE id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             bindJob(statement, job, true, supportsCategories);
@@ -243,11 +252,18 @@ public class JobDAO extends DaoSupport {
     }
 
     public boolean updateStatus(Connection connection, int jobId, String status) throws SQLException {
-        String sql = "UPDATE jobs SET status = ? WHERE id = ?";
+        String sql = "UPDATE jobs SET status = ?, auto_closed = FALSE WHERE id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, status);
             statement.setInt(2, jobId);
             return statement.executeUpdate() == 1;
+        }
+    }
+
+    public boolean updateCapacityStatus(Connection connection, int jobId, String status, boolean autoClosed) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("UPDATE jobs SET status=?,auto_closed=? WHERE id=?")) {
+            statement.setString(1,status); statement.setBoolean(2,autoClosed); statement.setInt(3,jobId);
+            return statement.executeUpdate()==1;
         }
     }
 
@@ -271,7 +287,7 @@ public class JobDAO extends DaoSupport {
 
     private void appendFilters(StringBuilder sql, List<Object> parameters, JobSearchCriteria criteria,
                                String status, boolean openOnly, boolean supportsCategories,
-                               Integer createdBy) throws SQLException {
+                               Integer companyId) throws SQLException {
         JobSearchCriteria safeCriteria = criteria == null ? new JobSearchCriteria() : criteria;
         String keyword = safeCriteria.getKeyword();
         if (keyword != null && !keyword.isBlank()) {
@@ -346,9 +362,9 @@ public class JobDAO extends DaoSupport {
         if (openOnly) {
             sql.append(" AND j.deadline >= CURRENT_DATE");
         }
-        if (createdBy != null && createdBy > 0) {
-            sql.append(" AND j.created_by = ?");
-            parameters.add(createdBy);
+        if (companyId != null && companyId > 0) {
+            sql.append(" AND j.company_id = ?");
+            parameters.add(companyId);
         }
     }
 
@@ -401,13 +417,15 @@ public class JobDAO extends DaoSupport {
         statement.setBigDecimal(index++, job.getSalaryMax());
         statement.setString(index++, job.getDescription());
         statement.setString(index++, job.getRequirements());
+        statement.setString(index++, job.getBenefits());
         statement.setInt(index++, job.getExperienceRequired());
         statement.setDate(index++, job.getDeadline());
         if (update) {
             statement.setInt(index, job.getId());
         } else {
             statement.setString(index++, job.getStatus());
-            statement.setInt(index, job.getCreatedBy());
+            statement.setInt(index++, job.getCreatedBy());
+            statement.setInt(index, job.getCompanyId());
         }
     }
 
@@ -437,10 +455,16 @@ public class JobDAO extends DaoSupport {
         job.setSalaryMax(resultSet.getBigDecimal("salary_max"));
         job.setDescription(resultSet.getString("description"));
         job.setRequirements(resultSet.getString("requirements"));
+        job.setBenefits(resultSet.getString("benefits"));
         job.setExperienceRequired(resultSet.getInt("experience_required"));
         job.setDeadline(resultSet.getDate("deadline"));
         job.setStatus(resultSet.getString("status"));
+        job.setAutoClosed(resultSet.getBoolean("auto_closed"));
+        job.setActiveApplications(resultSet.getInt("active_applications"));
         job.setCreatedBy(resultSet.getInt("created_by"));
+        job.setCompanyId(resultSet.getInt("company_id"));
+        job.setCompanyName(resultSet.getString("company_name"));
+        job.setCompanyLogoPath(resultSet.getString("company_logo_path"));
         job.setCreatedAt(resultSet.getTimestamp("created_at"));
         job.setUpdatedAt(resultSet.getTimestamp("updated_at"));
         return job;

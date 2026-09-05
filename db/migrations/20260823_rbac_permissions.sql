@@ -1,5 +1,5 @@
 -- RECRUITFLOW_APPROVED_DEV_MIGRATION
--- Granular RBAC migration for the selected RecruitFlow schema.
+-- Granular RBAC migration for the selected JobCV schema.
 -- This migration creates permission metadata and default role grants without changing users,
 -- password hashes, role assignments or existing permission choices.
 

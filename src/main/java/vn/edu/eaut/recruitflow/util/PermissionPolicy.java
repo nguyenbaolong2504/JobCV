@@ -17,7 +17,7 @@ public final class PermissionPolicy {
         if (path.startsWith("/admin/users")) return PermissionCode.ADMIN_USERS_MANAGE;
         if (path.startsWith("/admin/roles") || path.startsWith("/admin/permissions")) return PermissionCode.ADMIN_PERMISSIONS_MANAGE;
         if (path.startsWith("/admin/departments")) return PermissionCode.ADMIN_DEPARTMENTS_MANAGE;
-        if (path.startsWith("/admin/categories") || path.startsWith("/admin/job-categories")) {
+        if (path.startsWith("/admin/categories") || path.startsWith("/admin/job-categories") || path.startsWith("/admin/home-banners")) {
             return PermissionCode.ADMIN_CATEGORIES_MANAGE;
         }
         if (path.startsWith("/admin/audit-logs")) return PermissionCode.ADMIN_AUDIT_VIEW;

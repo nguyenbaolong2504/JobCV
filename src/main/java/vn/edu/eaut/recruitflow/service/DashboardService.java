@@ -5,6 +5,7 @@ import vn.edu.eaut.recruitflow.dao.InterviewDAO;
 import vn.edu.eaut.recruitflow.dao.JobDAO;
 import vn.edu.eaut.recruitflow.dao.OfferDAO;
 import vn.edu.eaut.recruitflow.dao.UserDAO;
+import vn.edu.eaut.recruitflow.dao.CompanyDAO;
 import vn.edu.eaut.recruitflow.enums.ApplicationStatus;
 import vn.edu.eaut.recruitflow.enums.OfferStatus;
 import vn.edu.eaut.recruitflow.model.CandidateDashboardStats;
@@ -26,6 +27,7 @@ public class DashboardService {
     private final JobDAO jobDAO;
     private final CandidateProfileService profileService;
     private final UserDAO userDAO;
+    private final CompanyDAO companyDAO = new CompanyDAO();
 
     public DashboardService() {
         this(new ApplicationDAO(), new InterviewDAO(), new OfferDAO(), new JobDAO(),
@@ -69,7 +71,9 @@ public class DashboardService {
             if (actor == null || !("HR".equals(actor.getRoleName()) || "ADMIN".equals(actor.getRoleName()))) {
                 throw new BusinessException("Bạn không có quyền xem báo cáo tuyển dụng.");
             }
-            return getHrDashboardStats("ADMIN".equals(actor.getRoleName()) ? null : actorId);
+            Integer companyId = "ADMIN".equals(actor.getRoleName()) ? null : companyDAO.findCompanyIdByUserId(actorId);
+            if (!"ADMIN".equals(actor.getRoleName()) && companyId == null) throw new BusinessException("HR chưa được liên kết với công ty.");
+            return getHrDashboardStats(companyId);
         } catch (SQLException exception) {
             throw new BusinessException("Không thể xác thực quyền xem dashboard.", exception);
         }

@@ -4,7 +4,7 @@
 <c:set var="requestPath" value="${pageContext.request.requestURI}" />
 
 <aside class="app-sidebar" aria-label="Điều hướng phỏng vấn">
-    <a class="sidebar-brand" href="${pageContext.request.contextPath}/interviewer/dashboard"><span class="sidebar-brand-mark">R</span>RecruitFlow</a>
+    <a class="sidebar-brand" href="${pageContext.request.contextPath}/interviewer/dashboard"><img class="jobcv-brand-logo jobcv-brand-logo-sidebar" src="${pageContext.request.contextPath}/assets/images/jobcv-logo.png" alt="JobCV"></a>
     <p class="sidebar-label">Hội đồng phỏng vấn</p>
     <nav class="sidebar-nav">
         <a class="${fn:contains(requestPath, '/interviewer/dashboard') ? 'active' : ''}" href="${pageContext.request.contextPath}/interviewer/dashboard"><i class="bi bi-grid-1x2"></i>Tổng quan</a>

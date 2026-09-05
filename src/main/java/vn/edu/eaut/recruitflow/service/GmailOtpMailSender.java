@@ -36,14 +36,14 @@ public class GmailOtpMailSender {
     public void sendPasswordResetOtp(String recipient, String fullName, String otp, int expiryMinutes)
             throws BusinessException {
         sendOtp(recipient, fullName, otp, expiryMinutes,
-                "Mã OTP đặt lại mật khẩu RecruitFlow",
+                "Mã OTP đặt lại mật khẩu JobCV",
                 "đặt lại mật khẩu");
     }
 
     public void sendLoginOtp(String recipient, String fullName, String otp, int expiryMinutes)
             throws BusinessException {
         sendOtp(recipient, fullName, otp, expiryMinutes,
-                "Mã OTP đăng nhập RecruitFlow",
+                "Mã OTP đăng nhập JobCV",
                 "hoàn tất đăng nhập");
     }
 
@@ -72,15 +72,15 @@ public class GmailOtpMailSender {
 
         try {
             MimeMessage message = new MimeMessage(session);
-            message.setFrom(new InternetAddress(configuration.getFromAddress(), "RecruitFlow"));
+            message.setFrom(new InternetAddress(configuration.getFromAddress(), "JobCV"));
             message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(recipient, false));
             message.setSubject(subject, StandardCharsets.UTF_8.name());
             String greeting = fullName == null || fullName.isBlank() ? "bạn" : fullName;
             message.setText("Chào " + greeting + ",\n\n"
-                    + "Mã OTP RecruitFlow để " + purpose + " là: " + otp + "\n"
+                    + "Mã OTP JobCV để " + purpose + " là: " + otp + "\n"
                     + "Mã có hiệu lực trong " + expiryMinutes + " phút và chỉ dùng một lần.\n\n"
                     + "Nếu bạn không yêu cầu thao tác này, hãy bỏ qua email. Không chia sẻ mã OTP cho bất kỳ ai.\n\n"
-                    + "RecruitFlow", StandardCharsets.UTF_8.name());
+                    + "JobCV", StandardCharsets.UTF_8.name());
             Transport.send(message);
         } catch (MessagingException | java.io.UnsupportedEncodingException exception) {
             // Do not include SMTP credentials, recipient details, or low-level transport output in the UI.

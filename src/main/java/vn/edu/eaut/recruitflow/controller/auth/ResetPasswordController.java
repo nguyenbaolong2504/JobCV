@@ -31,7 +31,7 @@ public class ResetPasswordController extends BaseController {
             redirectWithError(request, response, "/forgot-password", "Vui lòng xác minh OTP trước khi đặt lại mật khẩu.");
             return;
         }
-        view(request, response, "/WEB-INF/views/auth/reset-password.jsp", "Tạo mật khẩu mới | RecruitFlow");
+        view(request, response, "/WEB-INF/views/auth/reset-password.jsp", "Tạo mật khẩu mới | JobCV");
     }
 
     @Override

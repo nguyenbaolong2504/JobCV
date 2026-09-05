@@ -19,7 +19,7 @@ const APPROVED_DEV_MIGRATION_MARKER = 'RECRUITFLOW_APPROVED_DEV_MIGRATION';
 const argumentsSet = new Set(process.argv.slice(2));
 
 function fail(message) {
-    console.error(`\n[RecruitFlow dev] ${message}`);
+    console.error(`\n[JobCV dev] ${message}`);
     process.exitCode = 1;
     throw new Error(message);
 }
@@ -275,7 +275,7 @@ function ensureLocalMysqlService(config, database) {
     if (/\bRUNNING\b/i.test(query.stdout ?? '')) {
         return;
     }
-    console.log(`[RecruitFlow dev] Khởi động MySQL service ${serviceName}…`);
+    console.log(`[JobCV dev] Khởi động MySQL service ${serviceName}…`);
     const started = commandResult('sc.exe', ['start', serviceName], { stdio: 'inherit' });
     if (started.error || started.status !== 0) {
         fail(`Không thể khởi động MySQL service ${serviceName}. Chạy service bằng quyền phù hợp hoặc đặt RECRUITFLOW_MYSQL_AUTOSTART=false.`);
@@ -359,7 +359,7 @@ function applySafeMigrations(mysqlBinary, database, user, password) {
             skipped.push(path.basename(file));
             continue;
         }
-        console.log(`[RecruitFlow dev] Áp dụng migration bổ sung: ${path.basename(file)}`);
+        console.log(`[JobCV dev] Áp dụng migration bổ sung: ${path.basename(file)}`);
         const result = commandResult(mysqlBinary, mysqlArguments(database, user), {
             env: mysqlEnvironment(password),
             input: content
@@ -370,7 +370,7 @@ function applySafeMigrations(mysqlBinary, database, user, password) {
         }
     }
     if (skipped.length > 0) {
-        console.log(`[RecruitFlow dev] Không tự chạy migration không được đánh dấu an toàn: ${skipped.join(', ')}`);
+        console.log(`[JobCV dev] Không tự chạy migration không được đánh dấu an toàn: ${skipped.join(', ')}`);
     }
 }
 
@@ -575,7 +575,7 @@ async function applicationReachable(applicationUrl) {
     const timeout = setTimeout(() => controller.abort(), 1_500);
     try {
         const response = await fetch(applicationUrl, { redirect: 'manual', signal: controller.signal });
-        return response.status >= 200 && response.status < 500;
+        return response.ok;
     } catch {
         return false;
     } finally {
@@ -608,7 +608,9 @@ async function waitForPortToClose(port, timeoutMilliseconds) {
 function buildWar(skipBuild) {
     // Keep the live development build outside target/. On Windows a previous Tomcat process can
     // retain a handle to an exploded dependency there and make Maven's normal clean/build fail.
-    const buildDirectory = path.join(PROJECT_ROOT, '.recruitflow', 'build');
+    // Use a per-run staging directory. Some Windows/Tomcat combinations keep dependency JAR
+    // handles alive briefly after shutdown; reusing one target then makes `mvn clean` fail.
+    const buildDirectory = path.join(PROJECT_ROOT, '.recruitflow', `build-${process.pid}`);
     const war = path.join(buildDirectory, 'recruitflow-1.0-SNAPSHOT.war');
     if (skipBuild) {
         if (!fs.existsSync(war)) {
@@ -617,7 +619,7 @@ function buildWar(skipBuild) {
         return war;
     }
     const maven = locateMaven();
-    console.log('[RecruitFlow dev] Build Maven WAR…');
+    console.log('[JobCV dev] Build Maven WAR…');
     // Some Windows launch contexts expose Java's user.home as the drive root even though the
     // interactive user profile is available. Pin Maven's cache to the real profile unless the
     // developer has already selected a repository (for example a corporate cache).
@@ -628,6 +630,7 @@ function buildWar(skipBuild) {
     const result = commandResult(maven, [
         `-Drecruitflow.build.directory=${buildDirectory}`,
         '-Dmaven.test.skip=true',
+        'clean',
         'package'
     ], {
         env: {
@@ -646,7 +649,7 @@ function buildWar(skipBuild) {
 function deployWar(war, tomcatBase, contextPath) {
     const contextName = contextPath.substring(1);
     const destination = path.join(tomcatBase, 'webapps', `${contextName}.war`);
-    console.log(`[RecruitFlow dev] Deploy ${path.basename(war)} → ${destination}`);
+    console.log(`[JobCV dev] Deploy ${path.basename(war)} → ${destination}`);
     fs.copyFileSync(war, destination);
 }
 
@@ -693,10 +696,10 @@ async function run() {
 
     if (hasFlag('--check')) {
         locateMaven();
-        console.log(`[RecruitFlow dev] OK: Tomcat 9 = ${tomcatHome}`);
-        console.log(`[RecruitFlow dev] OK: CATALINA_BASE = ${tomcatBase}`);
-        console.log(`[RecruitFlow dev] OK: URL = ${applicationUrl}`);
-        console.log('[RecruitFlow dev] Check không động vào MySQL, migration hoặc Tomcat.');
+        console.log(`[JobCV dev] OK: Tomcat 9 = ${tomcatHome}`);
+        console.log(`[JobCV dev] OK: CATALINA_BASE = ${tomcatBase}`);
+        console.log(`[JobCV dev] OK: URL = ${applicationUrl}`);
+        console.log('[JobCV dev] Check không động vào MySQL, migration hoặc Tomcat.');
         return;
     }
 
@@ -708,20 +711,20 @@ async function run() {
     const mysqlBinary = locateMysqlBinary(config);
 
     ensureLocalMysqlService(config, database);
-    console.log(`[RecruitFlow dev] Kiểm tra MySQL ${database.host}:${database.port}/${database.database}…`);
+    console.log(`[JobCV dev] Kiểm tra MySQL ${database.host}:${database.port}/${database.database}…`);
     await verifyMysql(mysqlBinary, database, databaseUser, password);
     if (!hasFlag('--no-migrate')) {
         applySafeMigrations(mysqlBinary, database, databaseUser, password);
     }
     if (hasFlag('--migrate-only')) {
-        console.log('[RecruitFlow dev] Hoàn tất migration.');
+        console.log('[JobCV dev] Hoàn tất migration.');
         return;
     }
 
     const tomcatEnv = tomcatEnvironment(tomcatHome, tomcatBase, jdbcUrl, databaseUser, password);
     const alreadyRunning = await applicationReachable(applicationUrl);
     if (alreadyRunning) {
-        console.log('[RecruitFlow dev] Dừng Tomcat RecruitFlow hiện có để áp dụng cấu hình và WAR mới…');
+        console.log('[JobCV dev] Dừng Tomcat JobCV hiện có để áp dụng cấu hình và WAR mới…');
         const stopResult = runTomcatScript(tomcatHome,
             process.platform === 'win32' ? 'shutdown.bat' : 'shutdown.sh', tomcatEnv);
         if (stopResult.error || stopResult.status !== 0 || !(await waitForPortToClose(httpPort, 20_000))) {
@@ -733,15 +736,15 @@ async function run() {
 
     const war = buildWar(hasFlag('--skip-build'));
     deployWar(war, tomcatBase, contextPath);
-    console.log(`[RecruitFlow dev] Khởi động Tomcat tại ${applicationUrl}…`);
+    console.log(`[JobCV dev] Khởi động Tomcat tại ${applicationUrl}…`);
     const child = startTomcat(tomcatHome, tomcatEnv);
     const isReady = await waitForApplication(applicationUrl, startupTimeoutMilliseconds(config));
     if (!isReady) {
         runTomcatScript(tomcatHome, process.platform === 'win32' ? 'shutdown.bat' : 'shutdown.sh', tomcatEnv);
         fail('Tomcat không sẵn sàng trong thời gian chờ đã cấu hình. Xem log catalina để biết chi tiết.');
     }
-    console.log(`\n[RecruitFlow dev] Đang chạy: ${applicationUrl}`);
-    console.log('[RecruitFlow dev] Nhấn Ctrl+C để dừng Tomcat do runner này khởi động.');
+    console.log(`\n[JobCV dev] Đang chạy: ${applicationUrl}`);
+    console.log('[JobCV dev] Nhấn Ctrl+C để dừng Tomcat do runner này khởi động.');
 
     let stopping = false;
     const stopChild = () => {
@@ -749,7 +752,7 @@ async function run() {
             return;
         }
         stopping = true;
-        console.log('\n[RecruitFlow dev] Đang dừng Tomcat…');
+        console.log('\n[JobCV dev] Đang dừng Tomcat…');
         runTomcatScript(tomcatHome, process.platform === 'win32' ? 'shutdown.bat' : 'shutdown.sh', tomcatEnv);
     };
     process.once('SIGINT', stopChild);
@@ -759,7 +762,7 @@ async function run() {
 
 run().catch(error => {
     if (process.exitCode !== 1) {
-        console.error(`\n[RecruitFlow dev] ${error.message}`);
+        console.error(`\n[JobCV dev] ${error.message}`);
         process.exitCode = 1;
     }
 });

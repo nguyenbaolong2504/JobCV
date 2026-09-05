@@ -1,6 +1,6 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<c:set var="pageTitle" value="Tạo CV theo mẫu | RecruitFlow" scope="request" />
+<c:set var="pageTitle" value="Tạo CV theo mẫu | JobCV" scope="request" />
 <jsp:include page="/WEB-INF/views/common/header.jsp" />
 
 <div class="container-fluid candidate-shell">
@@ -127,7 +127,7 @@
                         <div class="mb-3">
                             <label class="form-label" for="cvProjects">Dự án nổi bật</label>
                             <textarea class="form-control" id="cvProjects" name="projects" rows="4" maxlength="5000" data-cv-preview="projects"
-                                      placeholder="RecruitFlow | Java Servlet, JSP, MySQL&#10;Xây dựng quy trình tuyển dụng, phân quyền và quản lý onboarding."></textarea>
+                                      placeholder="JobCV | Java Servlet, JSP, MySQL&#10;Xây dựng quy trình tuyển dụng, phân quyền và quản lý onboarding."></textarea>
                         </div>
                         <div>
                             <label class="form-label" for="cvCertifications">Chứng chỉ / hoạt động</label>

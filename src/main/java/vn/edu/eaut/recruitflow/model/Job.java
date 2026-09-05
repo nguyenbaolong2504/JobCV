@@ -23,10 +23,16 @@ public class Job {
     private BigDecimal salaryMax;
     private String description;
     private String requirements;
+    private String benefits;
     private int experienceRequired;
     private Date deadline;
     private String status;
+    private boolean autoClosed;
+    private int activeApplications;
     private int createdBy;
+    private int companyId;
+    private String companyName;
+    private String companyLogoPath;
     private Timestamp createdAt;
     private Timestamp updatedAt;
     private List<JobSkill> skills = new ArrayList<>();
@@ -64,6 +70,8 @@ public class Job {
     public void setDescription(String description) { this.description = description; }
     public String getRequirements() { return requirements; }
     public void setRequirements(String requirements) { this.requirements = requirements; }
+    public String getBenefits() { return benefits; }
+    public void setBenefits(String benefits) { this.benefits = benefits; }
     public int getExperienceRequired() { return experienceRequired; }
     public void setExperienceRequired(int experienceRequired) { this.experienceRequired = experienceRequired; }
     public Date getDeadline() { return deadline; }
@@ -72,8 +80,19 @@ public class Job {
     public void setStatus(String status) { this.status = status; }
     public JobStatus getJobStatus() { return JobStatus.fromValue(status); }
     public void setStatus(JobStatus status) { this.status = status == null ? null : status.name(); }
+    public boolean isAutoClosed() { return autoClosed; }
+    public void setAutoClosed(boolean autoClosed) { this.autoClosed = autoClosed; }
+    public int getActiveApplications() { return activeApplications; }
+    public void setActiveApplications(int activeApplications) { this.activeApplications = activeApplications; }
+    public int getRemainingPositions() { return Math.max(0, numberOfPositions - activeApplications); }
     public int getCreatedBy() { return createdBy; }
     public void setCreatedBy(int createdBy) { this.createdBy = createdBy; }
+    public int getCompanyId() { return companyId; }
+    public void setCompanyId(int companyId) { this.companyId = companyId; }
+    public String getCompanyName() { return companyName; }
+    public void setCompanyName(String companyName) { this.companyName = companyName; }
+    public String getCompanyLogoPath() { return companyLogoPath; }
+    public void setCompanyLogoPath(String companyLogoPath) { this.companyLogoPath = companyLogoPath; }
     public Timestamp getCreatedAt() { return createdAt; }
     public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
     public Timestamp getUpdatedAt() { return updatedAt; }

@@ -13,6 +13,7 @@ import vn.edu.eaut.recruitflow.service.ApplicationService;
 import vn.edu.eaut.recruitflow.service.CompanyProfileService;
 import vn.edu.eaut.recruitflow.util.BusinessException;
 import vn.edu.eaut.recruitflow.util.RequestUtil;
+import vn.edu.eaut.recruitflow.util.ResumeStorageUtil;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -82,14 +83,14 @@ public class PublicJobController extends BaseController {
 
             request.setAttribute("page", pageResult);
             request.setAttribute("departments", departmentService.getAllDepartments());
-            request.setAttribute("companyByDepartment", companyService.getCompanies("").stream()
-                    .collect(Collectors.toMap(company -> company.getId(), Function.identity())));
+            request.setAttribute("companyById", companyService.getCompanies("").stream()
+                    .collect(Collectors.toMap(company -> company.getId(), Function.identity(), (left, right) -> left)));
             request.setAttribute("keyword", keyword);
             request.setAttribute("departmentId", departmentId);
             request.setAttribute("location", location);
             request.setAttribute("employmentType", employmentType);
             request.setAttribute("sort", sort);
-            view(request, response, "/WEB-INF/views/public/jobs.jsp", "Việc làm đang tuyển | RecruitFlow");
+            view(request, response, "/WEB-INF/views/public/jobs.jsp", "Việc làm đang tuyển | JobCV");
         } catch (BusinessException ex) {
             // Invalid query input must never reach DAO SQL construction.
             redirectWithError(request, response, "/jobs", ex.getMessage());
@@ -116,12 +117,12 @@ public class PublicJobController extends BaseController {
 
             request.setAttribute("job", job);
             request.setAttribute("skills", jobService.getSkills(jobId));
-            request.setAttribute("company", companyService.getCompany(job.getDepartmentId()));
+            request.setAttribute("company", companyService.getCompany(job.getCompanyId()));
             List<Job> relatedJobs = jobService.searchPublishedJobs(null, job.getDepartmentId(), null, null, 1, 5, "newest").getItems();
             request.setAttribute("relatedJobs", relatedJobs.stream().filter(item -> item.getId() != jobId).limit(4).toList());
             request.setAttribute("jobSaved", false);
             attachCandidateMatchWhenAvailable(request, jobId);
-            view(request, response, "/WEB-INF/views/public/job-detail.jsp", "Chi tiết việc làm | RecruitFlow");
+            view(request, response, "/WEB-INF/views/public/job-detail.jsp", "Chi tiết việc làm | JobCV");
         } catch (BusinessException ex) {
             response.sendError(HttpServletResponse.SC_NOT_FOUND);
         }
@@ -137,7 +138,8 @@ public class PublicJobController extends BaseController {
             int candidateId = RequestUtil.currentUserId(request);
             request.setAttribute("matchResult", matchingService.calculateForCandidate(candidateId, jobId));
             request.setAttribute("jobSaved", savedJobService.isSaved(candidateId, jobId));
-            request.setAttribute("candidateResumes", resumeService.getResumes(candidateId));
+            request.setAttribute("candidateResumes",
+                    ResumeStorageUtil.availableResumes(getServletContext(), resumeService.getResumes(candidateId)));
             request.setAttribute("alreadyApplied", applicationService.hasApplied(candidateId, jobId));
         } catch (BusinessException ignored) {
             // A public job page remains usable even when a session expires between filter and controller.

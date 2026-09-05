@@ -31,8 +31,8 @@ public class InterviewEditController extends BaseController {
             int actorId = RequestUtil.currentUserId(request);
             request.setAttribute("interview", interviewService.getForHr(interviewId, actorId));
             request.setAttribute("applications", applicationService.findShortlisted(actorId));
-            request.setAttribute("interviewers", interviewService.getInterviewers());
-            view(request, response, "/WEB-INF/views/hr/interview-form.jsp", "Đổi lịch phỏng vấn | RecruitFlow");
+            request.setAttribute("interviewers", interviewService.getInterviewers(RequestUtil.currentUserId(request)));
+            view(request, response, "/WEB-INF/views/hr/interview-form.jsp", "Đổi lịch phỏng vấn | JobCV");
         } catch (BusinessException | IllegalArgumentException ex) {
             redirectWithError(request, response, "/hr/interviews", ex.getMessage());
         }

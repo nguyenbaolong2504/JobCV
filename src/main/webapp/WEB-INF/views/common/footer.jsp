@@ -4,17 +4,17 @@
 <c:set var="currentUri" value="${pageContext.request.requestURI}" />
 <c:if test="${not fn:contains(currentUri, '/candidate/') and not fn:contains(currentUri, '/hr/') and not fn:contains(currentUri, '/admin/') and not fn:contains(currentUri, '/interviewer/') and not fn:endsWith(currentUri, '/login') and not fn:endsWith(currentUri, '/register')}">
 <footer class="rf-site-footer"><div class="container">
-    <div class="rf-footer-main"><div class="rf-footer-brand"><a href="${pageContext.request.contextPath}/"><span>R</span><strong>RecruitFlow</strong></a><p>Kết nối đúng người với đúng cơ hội bằng trải nghiệm tuyển dụng minh bạch, có cấu trúc và thân thiện.</p><div><span><i class="bi bi-shield-check"></i>Tin tuyển dụng rõ ràng</span><span><i class="bi bi-patch-check"></i>Nhà tuyển dụng xác thực</span></div></div>
-        <div class="rf-footer-links"><section><h2>Dành cho ứng viên</h2><a href="${pageContext.request.contextPath}/jobs">Tìm việc làm</a><a href="${pageContext.request.contextPath}/companies">Khám phá công ty</a><a href="${pageContext.request.contextPath}/register">Tạo tài khoản</a></section><section><h2>Dành cho nhà tuyển dụng</h2><a href="${pageContext.request.contextPath}/register">Đăng tin tuyển dụng</a><a href="${pageContext.request.contextPath}/login">Quản lý ứng viên</a><a href="${pageContext.request.contextPath}/login">Báo cáo tuyển dụng</a></section><section><h2>RecruitFlow</h2><a href="${pageContext.request.contextPath}/">Về chúng tôi</a><a href="${pageContext.request.contextPath}/companies">Đối tác tuyển dụng</a><a href="${pageContext.request.contextPath}/jobs">Cơ hội nổi bật</a></section></div>
-    </div><div class="rf-footer-bottom"><span>© 2026 RecruitFlow · Nền tảng tuyển dụng EAUT</span><div><span>Quyền riêng tư</span><span>Điều khoản sử dụng</span><span>Hỗ trợ</span></div></div>
+    <div class="rf-footer-main"><div class="rf-footer-brand"><a href="${pageContext.request.contextPath}/"><img class="jobcv-brand-logo jobcv-brand-logo-footer" src="${pageContext.request.contextPath}/assets/images/jobcv-logo.png" alt="JobCV"></a><p>Kết nối đúng người với đúng cơ hội bằng trải nghiệm tuyển dụng minh bạch, có cấu trúc và thân thiện.</p><div><span><i class="bi bi-shield-check"></i>Tin tuyển dụng rõ ràng</span><span><i class="bi bi-patch-check"></i>Nhà tuyển dụng xác thực</span></div></div>
+        <div class="rf-footer-links"><section><h2>Dành cho ứng viên</h2><a href="${pageContext.request.contextPath}/jobs">Tìm việc làm</a><a href="${pageContext.request.contextPath}/companies">Khám phá công ty</a><a href="${pageContext.request.contextPath}/register">Tạo tài khoản</a></section><section><h2>Dành cho nhà tuyển dụng</h2><a href="${pageContext.request.contextPath}/register">Đăng tin tuyển dụng</a><a href="${pageContext.request.contextPath}/login">Quản lý ứng viên</a><a href="${pageContext.request.contextPath}/login">Báo cáo tuyển dụng</a></section><section><h2>JobCV</h2><a href="${pageContext.request.contextPath}/">Về chúng tôi</a><a href="${pageContext.request.contextPath}/companies">Đối tác tuyển dụng</a><a href="${pageContext.request.contextPath}/jobs">Cơ hội nổi bật</a></section></div>
+    </div><div class="rf-footer-bottom"><span>© 2026 JobCV · Nền tảng tuyển dụng EAUT</span><div><span>Quyền riêng tư</span><span>Điều khoản sử dụng</span><span>Hỗ trợ</span></div></div>
 </div></footer>
 </c:if>
 <script src="${pageContext.request.contextPath}/webjars/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
 <div class="rf-chatbot" id="rfChatbot">
-    <section class="rf-chatbot-panel" id="rfChatbotPanel" aria-label="Tr&#7907; l&#253; RecruitFlow" hidden>
+    <section class="rf-chatbot-panel" id="rfChatbotPanel" aria-label="Tr&#7907; l&#253; JobCV" hidden>
         <header class="rf-chatbot-header">
             <div class="rf-chatbot-avatar"><i class="bi bi-robot"></i></div>
-            <div><strong>Tr&#7907; l&#253; RecruitFlow</strong><small><span></span> &#272;ang tr&#7921;c tuy&#7871;n</small></div>
+            <div><strong>Tr&#7907; l&#253; JobCV</strong><small><span></span> &#272;ang tr&#7921;c tuy&#7871;n</small></div>
             <button type="button" id="rfChatbotClose" aria-label="&#272;&#243;ng tr&#242; chuy&#7879;n"><i class="bi bi-x-lg"></i></button>
         </header>
         <div class="rf-chatbot-messages" id="rfChatbotMessages" aria-live="polite">
@@ -36,7 +36,7 @@
     <i class="bi bi-list" aria-hidden="true"></i>
 </button>
 <button class="portal-nav-backdrop" id="portalNavBackdrop" type="button" aria-label="Đóng menu chức năng" tabindex="-1"></button>
-<script src="${pageContext.request.contextPath}/assets/js/app.js?v=20260824-release-v1"></script>
+<script src="${pageContext.request.contextPath}/assets/js/app.js?v=20260827-jobcv-v2"></script>
 </body>
 
 </html>

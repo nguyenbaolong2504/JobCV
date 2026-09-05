@@ -38,6 +38,42 @@ CREATE TABLE IF NOT EXISTS users (
     CONSTRAINT fk_users_role FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS companies (
+    id INT NOT NULL AUTO_INCREMENT, name VARCHAR(150) NOT NULL, logo_path VARCHAR(500) NULL,
+    industry VARCHAR(150) NULL, company_size VARCHAR(100) NULL, address VARCHAR(255) NULL,
+    website VARCHAR(255) NULL, description TEXT NULL,
+    status ENUM('ACTIVE','INACTIVE') NOT NULL DEFAULT 'ACTIVE',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id), UNIQUE KEY uk_companies_name (name), KEY idx_companies_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS home_banners (
+    id INT NOT NULL AUTO_INCREMENT,
+    image_path VARCHAR(255) NOT NULL,
+    title VARCHAR(120) NULL,
+    subtitle VARCHAR(300) NULL,
+    target_url VARCHAR(500) NULL,
+    display_order INT NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_home_banners_active_order (is_active, display_order, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS company_members (
+    company_id INT NOT NULL, user_id INT NOT NULL,
+    member_role ENUM('HR','INTERVIEWER') NOT NULL, job_title VARCHAR(150) NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (company_id,user_id), UNIQUE KEY uk_company_members_user (user_id),
+    KEY idx_company_members_company_role (company_id,member_role,is_active),
+    CONSTRAINT fk_company_members_company FOREIGN KEY (company_id) REFERENCES companies(id),
+    CONSTRAINT fk_company_members_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS candidate_profiles (
     id INT NOT NULL AUTO_INCREMENT,
     user_id INT NOT NULL,
@@ -96,10 +132,13 @@ CREATE TABLE IF NOT EXISTS jobs (
     salary_max DECIMAL(15,2) NOT NULL DEFAULT 0.00,
     description TEXT NOT NULL,
     requirements TEXT NOT NULL,
+    benefits TEXT NOT NULL,
     experience_required INT NOT NULL DEFAULT 0,
     deadline DATE NOT NULL,
     status ENUM('DRAFT', 'PUBLISHED', 'CLOSED', 'ARCHIVED') NOT NULL DEFAULT 'DRAFT',
+    auto_closed BOOLEAN NOT NULL DEFAULT FALSE,
     created_by INT NOT NULL,
+    company_id INT NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
@@ -108,12 +147,14 @@ CREATE TABLE IF NOT EXISTS jobs (
     KEY idx_jobs_department_status (department_id, status),
     KEY idx_jobs_location_type_status (location, employment_type, status),
     KEY idx_jobs_created_by (created_by),
+    KEY idx_jobs_company_status (company_id, status, deadline),
     CONSTRAINT chk_jobs_positions CHECK (number_of_positions > 0),
     CONSTRAINT chk_jobs_salary_min CHECK (salary_min >= 0),
     CONSTRAINT chk_jobs_salary_range CHECK (salary_max >= salary_min),
     CONSTRAINT chk_jobs_experience_required CHECK (experience_required >= 0),
     CONSTRAINT fk_jobs_department FOREIGN KEY (department_id) REFERENCES departments (id) ON DELETE RESTRICT,
-    CONSTRAINT fk_jobs_created_by FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE RESTRICT
+    CONSTRAINT fk_jobs_created_by FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE RESTRICT,
+    CONSTRAINT fk_jobs_company FOREIGN KEY (company_id) REFERENCES companies (id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS job_skills (
@@ -361,17 +402,27 @@ SELECT id, 0, 'Java, JDBC, MySQL, Git', 'Seed candidate account for RecruitFlow 
 FROM users WHERE email = 'candidate@recruitflow.com'
 ON DUPLICATE KEY UPDATE skills = VALUES(skills), summary = VALUES(summary);
 
-INSERT INTO jobs (job_code, title, department_id, location, employment_type, number_of_positions, salary_min, salary_max, description, requirements, experience_required, deadline, status, created_by) VALUES
-    ('JOB-001', 'Java Backend Intern', (SELECT id FROM departments WHERE name = 'Information Technology'), 'Hanoi', 'INTERNSHIP', 3, 3000000, 5000000, 'Support the backend team in building reliable Java services.', 'Basic Java, OOP, JDBC, MySQL and Git.', 0, '2027-12-31', 'PUBLISHED', (SELECT id FROM users WHERE email = 'hr@recruitflow.com')),
-    ('JOB-002', 'Java Developer', (SELECT id FROM departments WHERE name = 'Information Technology'), 'Hanoi', 'FULL_TIME', 2, 15000000, 30000000, 'Develop and maintain Java backend services.', 'Java, JDBC, MySQL, REST API and Git.', 2, '2027-12-31', 'PUBLISHED', (SELECT id FROM users WHERE email = 'hr@recruitflow.com')),
-    ('JOB-003', 'Frontend Developer', (SELECT id FROM departments WHERE name = 'Information Technology'), 'Ho Chi Minh City', 'FULL_TIME', 1, 15000000, 25000000, 'Build responsive web interfaces.', 'HTML, CSS, JavaScript and Git.', 1, '2027-12-31', 'PUBLISHED', (SELECT id FROM users WHERE email = 'hr@recruitflow.com')),
-    ('JOB-004', 'Software Tester', (SELECT id FROM departments WHERE name = 'Information Technology'), 'Da Nang', 'FULL_TIME', 2, 10000000, 20000000, 'Execute manual and automation test plans.', 'Manual testing, SQL, API testing and Git.', 1, '2027-12-31', 'PUBLISHED', (SELECT id FROM users WHERE email = 'hr@recruitflow.com')),
-    ('JOB-005', 'Business Analyst Intern', (SELECT id FROM departments WHERE name = 'Information Technology'), 'Hanoi', 'INTERNSHIP', 2, 3000000, 5000000, 'Assist with requirement analysis and documentation.', 'Communication, UML, SQL and documentation.', 0, '2027-12-31', 'PUBLISHED', (SELECT id FROM users WHERE email = 'hr@recruitflow.com'))
+INSERT INTO companies (name,industry,company_size,address,website,description)
+VALUES ('JobCV Technologies','Công nghệ thông tin','50 - 200 nhân sự','Hà Nội','https://jobcv.vn','Nền tảng kết nối ứng viên và nhà tuyển dụng.')
+ON DUPLICATE KEY UPDATE name=VALUES(name);
+INSERT INTO company_members(company_id,user_id,member_role,job_title)
+SELECT c.id,u.id,'HR','HR Manager' FROM companies c JOIN users u ON u.email='hr@recruitflow.com' WHERE c.name='JobCV Technologies'
+ON DUPLICATE KEY UPDATE company_id=VALUES(company_id),member_role=VALUES(member_role);
+INSERT INTO company_members(company_id,user_id,member_role,job_title)
+SELECT c.id,u.id,'INTERVIEWER','Lead Interviewer' FROM companies c JOIN users u ON u.email='interviewer@recruitflow.com' WHERE c.name='JobCV Technologies'
+ON DUPLICATE KEY UPDATE company_id=VALUES(company_id),member_role=VALUES(member_role);
+
+INSERT INTO jobs (job_code, title, department_id, location, employment_type, number_of_positions, salary_min, salary_max, description, requirements, benefits, experience_required, deadline, status, created_by, company_id) VALUES
+    ('JOB-001', 'Java Backend Intern', (SELECT id FROM departments WHERE name = 'Information Technology'), 'Hanoi', 'INTERNSHIP', 3, 3000000, 5000000, 'Support the backend team in building reliable Java services.', 'Basic Java, OOP, JDBC, MySQL and Git.', 'Đào tạo, phụ cấp và cơ hội trở thành nhân viên chính thức.', 0, '2027-12-31', 'PUBLISHED', (SELECT id FROM users WHERE email = 'hr@recruitflow.com'), (SELECT id FROM companies WHERE name='JobCV Technologies')),
+    ('JOB-002', 'Java Developer', (SELECT id FROM departments WHERE name = 'Information Technology'), 'Hanoi', 'FULL_TIME', 2, 15000000, 30000000, 'Develop and maintain Java backend services.', 'Java, JDBC, MySQL, REST API and Git.', 'Bảo hiểm đầy đủ, thưởng hiệu suất và đào tạo chuyên môn.', 2, '2027-12-31', 'PUBLISHED', (SELECT id FROM users WHERE email = 'hr@recruitflow.com'), (SELECT id FROM companies WHERE name='JobCV Technologies')),
+    ('JOB-003', 'Frontend Developer', (SELECT id FROM departments WHERE name = 'Information Technology'), 'Ho Chi Minh City', 'FULL_TIME', 1, 15000000, 25000000, 'Build responsive web interfaces.', 'HTML, CSS, JavaScript and Git.', 'Bảo hiểm đầy đủ, thưởng hiệu suất và đào tạo chuyên môn.', 1, '2027-12-31', 'PUBLISHED', (SELECT id FROM users WHERE email = 'hr@recruitflow.com'), (SELECT id FROM companies WHERE name='JobCV Technologies')),
+    ('JOB-004', 'Software Tester', (SELECT id FROM departments WHERE name = 'Information Technology'), 'Da Nang', 'FULL_TIME', 2, 10000000, 20000000, 'Execute manual and automation test plans.', 'Manual testing, SQL, API testing and Git.', 'Bảo hiểm đầy đủ, thưởng hiệu suất và đào tạo chuyên môn.', 1, '2027-12-31', 'PUBLISHED', (SELECT id FROM users WHERE email = 'hr@recruitflow.com'), (SELECT id FROM companies WHERE name='JobCV Technologies')),
+    ('JOB-005', 'Business Analyst Intern', (SELECT id FROM departments WHERE name = 'Information Technology'), 'Hanoi', 'INTERNSHIP', 2, 3000000, 5000000, 'Assist with requirement analysis and documentation.', 'Communication, UML, SQL and documentation.', 'Đào tạo, phụ cấp và cơ hội trở thành nhân viên chính thức.', 0, '2027-12-31', 'PUBLISHED', (SELECT id FROM users WHERE email = 'hr@recruitflow.com'), (SELECT id FROM companies WHERE name='JobCV Technologies'))
 ON DUPLICATE KEY UPDATE
     title = VALUES(title), department_id = VALUES(department_id), location = VALUES(location), employment_type = VALUES(employment_type),
     number_of_positions = VALUES(number_of_positions), salary_min = VALUES(salary_min), salary_max = VALUES(salary_max),
-    description = VALUES(description), requirements = VALUES(requirements), experience_required = VALUES(experience_required), deadline = VALUES(deadline),
-    status = VALUES(status), created_by = VALUES(created_by);
+    description = VALUES(description), requirements = VALUES(requirements), benefits = VALUES(benefits), experience_required = VALUES(experience_required), deadline = VALUES(deadline),
+    status = VALUES(status), created_by = VALUES(created_by), company_id = VALUES(company_id);
 
 INSERT INTO job_skills (job_id, skill_name, weight, is_required) VALUES
     ((SELECT id FROM jobs WHERE job_code = 'JOB-001'), 'Java', 5, TRUE),

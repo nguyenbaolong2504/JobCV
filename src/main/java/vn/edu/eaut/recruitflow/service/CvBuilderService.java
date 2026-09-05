@@ -10,6 +10,7 @@ import vn.edu.eaut.recruitflow.model.Resume;
 import vn.edu.eaut.recruitflow.util.BusinessException;
 import vn.edu.eaut.recruitflow.util.DBUtil;
 import vn.edu.eaut.recruitflow.util.ResumeParser;
+import vn.edu.eaut.recruitflow.util.ResumeStorageUtil;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -99,7 +100,7 @@ public class CvBuilderService {
                 Resume resume = new Resume();
                 resume.setCandidateId(candidateId);
                 resume.setFileName("CV_" + safeFilenamePart(data.getFullName()) + ".docx");
-                resume.setFilePath(storedFile.toAbsolutePath().toString());
+                resume.setFilePath(ResumeStorageUtil.portableStoredPath(storedFile));
                 resume.setFileType("docx");
                 resume.setFileSize(Files.size(storedFile));
                 resume.setExtractedText(extractedText);
