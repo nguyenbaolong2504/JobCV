@@ -28,6 +28,10 @@ public class HRReportsController extends BaseController {
         try {
             LocalDate fromDate = optionalDate(request, "fromDate", "Từ ngày");
             LocalDate toDate = optionalDate(request, "toDate", "Đến ngày");
+            if (fromDate == null && toDate == null) {
+                toDate = LocalDate.now();
+                fromDate = toDate.minusYears(5).withDayOfMonth(1);
+            }
             Map<String, Object> report = reportService.getRecruitmentReport(
                     fromDate, toDate, RequestUtil.currentUserId(request));
             request.setAttribute("report", report);

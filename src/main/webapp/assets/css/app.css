@@ -2874,6 +2874,120 @@ body {
     border-radius: 1rem;
 }
 
+/* Company identity and popular job discovery */
+.job-card-brand .job-company-logo {
+    background: #fff;
+    border: 1px solid #dfe7e3;
+    border-radius: 0.72rem;
+    box-shadow: 0 0.25rem 0.7rem rgba(15, 23, 42, 0.06);
+    overflow: hidden;
+    padding: 0.24rem;
+}
+.job-company-logo img { display: block; height: 100%; object-fit: contain; width: 100%; }
+.saved-job-company { align-items: center; display: flex; gap: .6rem; min-width: 0; }
+.saved-job-company .job-company-logo { flex: 0 0 2.6rem; height: 2.6rem; }
+.saved-job-company strong, .saved-job-company small { display: block; }
+.saved-job-company strong { color: #263238; font-size: .7rem; max-width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.saved-job-company small { color: #94a3b8; font-size: .58rem; }
+.hot-jobs-section { background: linear-gradient(180deg, #fff8ed 0%, #f7faf8 100%); }
+.hot-job-card { border-color: #f6d7aa; overflow: hidden; position: relative; }
+.hot-job-card:hover { border-color: #f59e0b; box-shadow: 0 0.9rem 2rem rgba(245, 158, 11, 0.13); }
+.hot-job-rank { background: linear-gradient(135deg, #f97316, #f59e0b); border-radius: 0 0 0 1rem; color: #fff; font-size: 0.72rem; font-weight: 850; padding: 0.38rem 0.68rem; position: absolute; right: 0; top: 0; }
+.hot-job-heat { align-items: center; background: #fff3dc; border-radius: 999px; color: #c2410c; display: inline-flex; font-size: 0.65rem; font-weight: 750; gap: 0.25rem; margin-left: auto; padding: 0.35rem 0.52rem; }
+.job-popular-badge { background: #fff1e2 !important; color: #c2410c !important; gap: 0.25rem; }
+
+/* Recruitment analytics */
+.recruitment-report-page { background: radial-gradient(circle at 92% 4%, rgba(0, 177, 79, 0.08), transparent 27rem), #f5f7f6 !important; }
+.report-topbar { align-items: center; background: rgba(255,255,255,.94); display: flex; justify-content: space-between; padding-bottom: 1.15rem; padding-top: 1.15rem; }
+.report-topbar h4 { color: #172033; font-size: 1.55rem; font-weight: 780; letter-spacing: -.03em; }
+.report-topbar > div > span { color: #64748b; font-size: .8rem; }
+.report-eyebrow { color: #00a849; font-size: .64rem; font-weight: 850; letter-spacing: .09em; }
+.report-filter-card, .report-panel, .report-kpi { background: #fff; border: 1px solid #e2e8e5; border-radius: 1rem; box-shadow: 0 .35rem 1.25rem rgba(15, 45, 35, .045); }
+.report-filter-card { margin-bottom: 1.4rem; padding: 1.2rem 1.35rem .95rem; }
+.report-filter-card .form-label { color: #34433e; font-size: .72rem; font-weight: 750; }
+.report-date-input { position: relative; }
+.report-date-input > i { color: #00a849; left: .9rem; position: absolute; top: 50%; transform: translateY(-50%); z-index: 2; }
+.report-date-input .form-control { padding-left: 2.45rem; }
+.report-refresh-button { min-height: 2.65rem; }
+.report-filter-note { border-top: 1px dashed #dfe7e3; color: #718078; display: flex; font-size: .68rem; gap: .4rem; margin-top: .9rem; padding-top: .75rem; }
+.report-filter-note i { color: #00a849; }
+.report-kpi-grid { display: grid; gap: 1rem; grid-template-columns: repeat(6, minmax(0,1fr)); margin-bottom: 1.5rem; }
+.report-kpi { align-items: center; display: flex; gap: .75rem; min-height: 7rem; padding: 1rem; }
+.report-kpi-icon { align-items: center; border-radius: .8rem; display: inline-flex; flex: 0 0 2.85rem; font-size: 1.1rem; height: 2.85rem; justify-content: center; }
+.tone-blue { background: #e8f1ff; color: #2563eb; }.tone-violet { background: #f1ebff; color: #7c3aed; }.tone-cyan { background: #e4f8fb; color: #0891b2; }.tone-amber { background: #fff5db; color: #d97706; }.tone-green { background: #e6f8ee; color: #00a849; }.tone-red { background: #ffebeb; color: #dc2626; }
+.report-kpi > div { min-width: 0; }
+.report-kpi small, .report-kpi strong, .report-kpi em { display: block; }
+.report-kpi small { color: #64748b; font-size: .64rem; font-weight: 700; }
+.report-kpi strong { color: #172033; font-size: 1.5rem; letter-spacing: -.04em; line-height: 1.2; margin: .12rem 0; }
+.report-kpi em { color: #94a3b8; font-size: .57rem; font-style: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.report-panel { overflow: hidden; }
+.report-panel-header { align-items: flex-start; display: flex; gap: 1rem; justify-content: space-between; padding: 1.25rem 1.35rem .6rem; }
+.report-panel-header h5 { color: #172033; font-size: 1.02rem; font-weight: 780; margin: .15rem 0; }
+.report-panel-header p { color: #7b8983; font-size: .68rem; margin: 0; }
+.report-highlight { align-items: center; background: #edf9f2; border-radius: 999px; color: #38604f; display: inline-flex; font-size: .62rem; gap: .3rem; padding: .45rem .7rem; white-space: nowrap; }
+.report-highlight i { color: #00a849; }
+.report-chart-wrap { height: 18.5rem; padding: .6rem 1.2rem 1.2rem; }
+.report-doughnut-wrap { height: 20.2rem; padding: .6rem 1rem 1rem; position: relative; }
+.report-doughnut-total { left: 50%; pointer-events: none; position: absolute; text-align: center; top: 43%; transform: translate(-50%,-50%); }
+.report-doughnut-total strong, .report-doughnut-total span { display: block; }
+.report-doughnut-total strong { color: #172033; font-size: 1.35rem; }
+.report-doughnut-total span { color: #94a3b8; font-size: .55rem; }
+.report-funnel { display: grid; gap: .95rem; padding: .9rem 1.35rem 1.35rem; }
+.report-funnel-row { align-items: center; display: grid; gap: .8rem; grid-template-columns: 8.6rem 1fr 2.8rem; }
+.report-funnel-row > div:first-child { display: flex; justify-content: space-between; }
+.report-funnel-row span { color: #53635d; font-size: .7rem; }
+.report-funnel-row strong { color: #172033; font-size: .75rem; }
+.report-funnel-row > small { color: #7b8983; font-size: .62rem; text-align: right; }
+.report-funnel-track { background: #edf1ef; border-radius: 999px; height: .7rem; overflow: hidden; }
+.report-funnel-track > span { border-radius: inherit; display: block; height: 100%; min-width: 0; }
+.stage-applied { background: #64748b; }.stage-screening { background: #f59e0b; }.stage-shortlist { background: #8b5cf6; }.stage-interview { background: #0ea5e9; }.stage-offer { background: #2563eb; }.stage-hired { background: #16a34a; }
+.report-insight-grid { display: grid; gap: .75rem; grid-template-columns: repeat(2,minmax(0,1fr)); padding: .9rem 1.35rem 1.35rem; }
+.report-insight-grid article { background: #f7faf8; border: 1px solid #e5ece8; border-radius: .8rem; min-height: 7rem; padding: .85rem; }
+.report-insight-grid article > i { color: #00a849; font-size: 1rem; }
+.report-insight-grid span, .report-insight-grid strong, .report-insight-grid small { display: block; }
+.report-insight-grid span { color: #64748b; font-size: .62rem; margin-top: .45rem; }
+.report-insight-grid strong { color: #172033; font-size: 1.25rem; }
+.report-insight-grid small { color: #94a3b8; font-size: .56rem; }
+.report-panel-header-row { align-items: center; }
+.report-ranking-table thead th { background: #f7faf8; border-color: #edf1ef; color: #718078; font-size: .62rem; font-weight: 750; padding-bottom: .75rem; padding-top: .75rem; text-transform: uppercase; }
+.report-ranking-table tbody td { border-color: #edf1ef; color: #53635d; font-size: .7rem; padding-bottom: .75rem; padding-top: .75rem; }
+.report-rank { align-items: center; background: #f0f3f2; border-radius: .55rem; color: #64748b; display: inline-flex; font-weight: 800; height: 1.8rem; justify-content: center; width: 1.8rem; }
+.report-rank.is-top { background: #fff2d8; color: #c56b00; }
+.report-job-cell { align-items: center; display: flex; gap: .7rem; min-width: 16rem; }
+.report-job-cell img { background: #fff; border: 1px solid #e2e8e5; border-radius: .62rem; height: 2.55rem; object-fit: contain; padding: .18rem; width: 2.55rem; }
+.report-job-cell a, .report-job-cell span { display: block; }
+.report-job-cell a { color: #172033; font-size: .74rem; font-weight: 750; text-decoration: none; }
+.report-job-cell a:hover { color: #00a849; }
+.report-job-cell span { color: #94a3b8; font-size: .58rem; }
+.report-application-count { color: #00a849; font-size: .85rem; }
+.report-rate-pill { background: #e8f8ef; border-radius: 999px; color: #008f40; font-size: .6rem; font-weight: 750; padding: .3rem .5rem; }
+.report-dimension-list { display: grid; gap: .9rem; padding: .8rem 1.35rem 1.35rem; }
+.report-dimension-list > div > div:first-child { display: flex; justify-content: space-between; }
+.report-dimension-list span, .report-dimension-list strong { color: #53635d; font-size: .68rem; }
+.report-dimension-list > div > div:last-child { background: #edf1ef; border-radius: 999px; height: .58rem; margin-top: .32rem; overflow: hidden; }
+.report-dimension-list > div > div:last-child span { background: linear-gradient(90deg,#00a849,#52d98e); border-radius: inherit; display: block; height: 100%; }
+.report-location-list { display: grid; padding: .7rem 1.35rem 1.35rem; }
+.report-location-list > div { align-items: center; border-bottom: 1px solid #edf1ef; display: flex; justify-content: space-between; padding: .72rem 0; }
+.report-location-list > div:last-child { border-bottom: 0; }
+.report-location-list span { color: #53635d; font-size: .7rem; }.report-location-list span i { color: #00a849; margin-right: .35rem; }.report-location-list strong { color: #172033; font-size: .68rem; }
+.report-empty { align-items: center; color: #94a3b8; display: flex; flex-direction: column; gap: .25rem; justify-content: center; min-height: 8rem; text-align: center; }
+.report-empty > i { color: #b8c7c0; font-size: 1.6rem; }.report-empty strong { color: #53635d; font-size: .75rem; }.report-empty span { font-size: .62rem; }
+
+@media (max-width: 1399.98px) { .report-kpi-grid { grid-template-columns: repeat(3,minmax(0,1fr)); } }
+@media (max-width: 767.98px) {
+    .report-topbar { align-items: flex-start; gap: .8rem; }
+    .report-topbar > div > span { display: none; }
+    .report-kpi-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .report-highlight { display: none; }
+    .report-funnel-row { grid-template-columns: 7.3rem 1fr 2.5rem; }
+    .report-chart-wrap { height: 15rem; }
+}
+@media (max-width: 480px) {
+    .report-kpi-grid, .report-insight-grid { grid-template-columns: 1fr; }
+    .report-kpi { min-height: 6rem; }
+    .report-panel-header-row { align-items: flex-start; }
+}
+
 .candidate-sidebar,
 .app-sidebar,
 aside.sidebar {

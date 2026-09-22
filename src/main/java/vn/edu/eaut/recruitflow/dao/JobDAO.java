@@ -17,12 +17,12 @@ import java.util.List;
 public class JobDAO extends DaoSupport {
     private static final String SELECT_JOB_LEGACY = "SELECT j.id, j.job_code, j.title, j.department_id, d.name AS department_name, "
             + "j.location, j.employment_type, j.number_of_positions, j.salary_min, j.salary_max, j.description, j.requirements, j.benefits, "
-            + "j.experience_required, j.deadline, j.status, j.auto_closed, (SELECT COUNT(*) FROM applications a WHERE a.job_id=j.id AND a.status NOT IN ('REJECTED','WITHDRAWN')) AS active_applications, j.created_by, j.company_id, co.name AS company_name, co.logo_path AS company_logo_path, j.created_at, j.updated_at "
+            + "j.experience_required, j.deadline, j.status, j.auto_closed, (SELECT COUNT(*) FROM applications a WHERE a.job_id=j.id AND a.status NOT IN ('REJECTED','WITHDRAWN')) AS active_applications, (SELECT COUNT(*) FROM applications app_total WHERE app_total.job_id=j.id) AS application_count, j.created_by, j.company_id, co.name AS company_name, co.logo_path AS company_logo_path, j.created_at, j.updated_at "
             + "FROM jobs j JOIN departments d ON d.id = j.department_id JOIN companies co ON co.id = j.company_id ";
     private static final String SELECT_JOB_WITH_CATEGORY = "SELECT j.id, j.job_code, j.title, j.department_id, d.name AS department_name, "
             + "j.category_id, c.name AS category_name, j.location, "
             + "j.employment_type, j.number_of_positions, j.salary_min, j.salary_max, j.description, j.requirements, j.benefits, "
-            + "j.experience_required, j.deadline, j.status, j.auto_closed, (SELECT COUNT(*) FROM applications a WHERE a.job_id=j.id AND a.status NOT IN ('REJECTED','WITHDRAWN')) AS active_applications, j.created_by, j.company_id, co.name AS company_name, co.logo_path AS company_logo_path, j.created_at, j.updated_at "
+            + "j.experience_required, j.deadline, j.status, j.auto_closed, (SELECT COUNT(*) FROM applications a WHERE a.job_id=j.id AND a.status NOT IN ('REJECTED','WITHDRAWN')) AS active_applications, (SELECT COUNT(*) FROM applications app_total WHERE app_total.job_id=j.id) AS application_count, j.created_by, j.company_id, co.name AS company_name, co.logo_path AS company_logo_path, j.created_at, j.updated_at "
             + "FROM jobs j JOIN departments d ON d.id = j.department_id JOIN companies co ON co.id = j.company_id "
             + "LEFT JOIN job_categories c ON c.id = j.category_id ";
     private static volatile Boolean categorySchemaAvailable;
@@ -379,6 +379,7 @@ public class JobDAO extends DaoSupport {
             case "experience_asc" -> " ORDER BY j.experience_required ASC, j.id DESC";
             case "experience_desc" -> " ORDER BY j.experience_required DESC, j.id DESC";
             case "title_asc" -> " ORDER BY j.title ASC, j.id DESC";
+            case "popular" -> " ORDER BY application_count DESC, active_applications DESC, j.created_at DESC, j.id DESC";
             default -> " ORDER BY j.created_at DESC, j.id DESC";
         };
     }
@@ -461,6 +462,7 @@ public class JobDAO extends DaoSupport {
         job.setStatus(resultSet.getString("status"));
         job.setAutoClosed(resultSet.getBoolean("auto_closed"));
         job.setActiveApplications(resultSet.getInt("active_applications"));
+        job.setApplicationCount(resultSet.getInt("application_count"));
         job.setCreatedBy(resultSet.getInt("created_by"));
         job.setCompanyId(resultSet.getInt("company_id"));
         job.setCompanyName(resultSet.getString("company_name"));

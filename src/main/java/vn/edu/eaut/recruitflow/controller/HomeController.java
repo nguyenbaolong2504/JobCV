@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 @WebServlet(name = "HomeController", urlPatterns = "/home")
 public class HomeController extends BaseController {
     private static final int FEATURED_JOB_LIMIT = 12;
+    private static final int POPULAR_JOB_LIMIT = 6;
     private static final int RECOMMENDED_JOB_LIMIT = 4;
     private static final int OTHER_JOB_LIMIT = 6;
 
@@ -72,9 +73,11 @@ public class HomeController extends BaseController {
         request.setAttribute("publishedJobCount", 0L);
         request.setAttribute("employers", List.of());
         request.setAttribute("homeBanners", List.of());
+        request.setAttribute("popularJobs", List.of());
 
         try {
             request.setAttribute("featuredJobs", jobService.getFeaturedPublishedJobs(FEATURED_JOB_LIMIT));
+            request.setAttribute("popularJobs", jobService.getPopularPublishedJobs(POPULAR_JOB_LIMIT));
             request.setAttribute("publishedJobCount", jobService.countPublishedJobs());
             request.setAttribute("departments", departmentService.getAllDepartments());
             request.setAttribute("employers", companyService.getCompanies(""));

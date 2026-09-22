@@ -11,7 +11,7 @@
         <div class="company-directory-grid mt-4">
             <c:forEach var="company" items="${companies}"><c:url var="companyUrl" value="/companies/detail"><c:param name="id" value="${company.id}" /></c:url>
                 <article class="company-directory-card">
-                    <div class="company-card-cover"><span class="company-logo-large"><img src="${pageContext.request.contextPath}${company.uploadedLogo ? '/company-logo?id=' : '/assets/images/employers/'}${company.uploadedLogo ? company.id : company.logoFile}" alt="Logo ${company.name}" loading="lazy"></span><c:if test="${company.verified}"><span class="company-verified"><i class="bi bi-patch-check-fill"></i>Đã xác thực</span></c:if></div>
+                    <div class="company-card-cover"><span class="company-logo-large"><img src="${pageContext.request.contextPath}/company-logo?id=${company.id}" alt="Logo ${company.name}" loading="lazy"></span><c:if test="${company.verified}"><span class="company-verified"><i class="bi bi-patch-check-fill"></i>Đã xác thực</span></c:if></div>
                     <div class="company-card-body"><h3><a href="${companyUrl}"><c:out value="${company.name}" /></a></h3><p class="company-industry"><c:out value="${company.industry}" /></p><p class="company-description"><c:out value="${company.description}" /></p><div class="company-card-meta"><span><i class="bi bi-geo-alt"></i><c:out value="${company.location}" /></span><span><i class="bi bi-people"></i><c:out value="${company.size}" /></span></div><a class="company-card-jobs" href="${companyUrl}"><span><i class="bi bi-briefcase"></i><strong><c:out value="${company.openJobs}" /></strong> vị trí đang tuyển</span><i class="bi bi-arrow-right"></i></a></div>
                 </article>
             </c:forEach>

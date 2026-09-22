@@ -30,7 +30,7 @@ import java.util.function.Function;
 /** Serves only publicly visible, published job advertisements. */
 @WebServlet(name = "PublicJobController", urlPatterns = {"/jobs", "/jobs/detail"})
 public class PublicJobController extends BaseController {
-    private static final Set<String> ALLOWED_SORTS = Set.of("newest", "deadline", "salary");
+    private static final Set<String> ALLOWED_SORTS = Set.of("newest", "deadline", "salary", "popular");
     private static final int MAX_KEYWORD_LENGTH = 150;
     private static final int MAX_LOCATION_LENGTH = 100;
 

@@ -4,7 +4,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-25.0.3.9-hotspot"
+$env:JAVA_HOME = "C:\Program Files\Java\jdk-17"
 $env:CATALINA_HOME = "C:\apache-tomcat-9.0.120"
 $env:CATALINA_BASE = $env:CATALINA_HOME
 $env:RECRUITFLOW_DB_URL = "jdbc:mysql://localhost:3306/recruitflow?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh&useUnicode=true&characterEncoding=UTF-8"

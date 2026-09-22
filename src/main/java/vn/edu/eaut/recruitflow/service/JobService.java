@@ -88,6 +88,16 @@ public class JobService {
         }
     }
 
+    /** Public jobs ranked by real application volume, then by recency. */
+    public List<Job> getPopularPublishedJobs(int limit) throws BusinessException {
+        try {
+            return jobDAO.searchPublished(new JobSearchCriteria(), "popular", 1,
+                    Math.max(1, Math.min(limit, 20)));
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể tải việc làm được quan tâm nhiều nhất.", exception);
+        }
+    }
+
     /** Returns a job only when the current staff member owns it or is an administrator. */
     public Job getJobForManagement(int id, int actorId) throws BusinessException {
         User actor = requireHrActor(actorId);

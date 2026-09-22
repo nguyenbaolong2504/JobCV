@@ -1,6 +1,7 @@
 package vn.edu.eaut.recruitflow.dao;
 
 import vn.edu.eaut.recruitflow.model.Application;
+import vn.edu.eaut.recruitflow.model.JobPerformance;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
@@ -317,6 +318,115 @@ public class ApplicationDAO extends DaoSupport {
                 return result;
             }
         }
+    }
+
+    public long countDistinctCandidates(LocalDate fromDate, LocalDate toDate, Integer companyId) throws SQLException {
+        return countDistinct("a.candidate_id", fromDate, toDate, companyId);
+    }
+
+    public long countDistinctJobs(LocalDate fromDate, LocalDate toDate, Integer companyId) throws SQLException {
+        return countDistinct("a.job_id", fromDate, toDate, companyId);
+    }
+
+    private long countDistinct(String column, LocalDate fromDate, LocalDate toDate, Integer companyId)
+            throws SQLException {
+        StringBuilder sql = new StringBuilder("SELECT COUNT(DISTINCT " + column + ") FROM applications a");
+        if (companyId != null) sql.append(" JOIN jobs j ON j.id = a.job_id");
+        sql.append(" WHERE 1 = 1");
+        appendAppliedDateRange(sql, fromDate, toDate);
+        if (companyId != null) sql.append(" AND j.company_id = ?");
+        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql.toString())) {
+            int index = bindAppliedDateRange(statement, fromDate, toDate);
+            if (companyId != null) statement.setInt(index, companyId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                resultSet.next();
+                return resultSet.getLong(1);
+            }
+        }
+    }
+
+    public BigDecimal averageMatchScore(LocalDate fromDate, LocalDate toDate, Integer companyId) throws SQLException {
+        StringBuilder sql = new StringBuilder("SELECT COALESCE(AVG(a.match_score),0) FROM applications a");
+        if (companyId != null) sql.append(" JOIN jobs j ON j.id = a.job_id");
+        sql.append(" WHERE 1 = 1");
+        appendAppliedDateRange(sql, fromDate, toDate);
+        if (companyId != null) sql.append(" AND j.company_id = ?");
+        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql.toString())) {
+            int index = bindAppliedDateRange(statement, fromDate, toDate);
+            if (companyId != null) statement.setInt(index, companyId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                resultSet.next();
+                BigDecimal value = resultSet.getBigDecimal(1);
+                return value == null ? BigDecimal.ZERO : value.setScale(1, java.math.RoundingMode.HALF_UP);
+            }
+        }
+    }
+
+    public List<JobPerformance> findTopJobs(LocalDate fromDate, LocalDate toDate, Integer companyId, int limit)
+            throws SQLException {
+        StringBuilder sql = new StringBuilder("SELECT j.id AS job_id,j.job_code,j.title,j.company_id,c.name AS company_name,"
+                + "COUNT(a.id) AS applications,"
+                + "SUM(a.status='SHORTLISTED') AS shortlisted,"
+                + "SUM(a.status IN ('INTERVIEW_SCHEDULED','INTERVIEWED','OFFERED','HIRED')) AS interviews,"
+                + "SUM(a.status IN ('OFFERED','HIRED')) AS offers,SUM(a.status='HIRED') AS hires,"
+                + "COALESCE(AVG(a.match_score),0) AS average_match_score "
+                + "FROM applications a JOIN jobs j ON j.id=a.job_id JOIN companies c ON c.id=j.company_id WHERE 1=1");
+        appendAppliedDateRange(sql, fromDate, toDate);
+        if (companyId != null) sql.append(" AND j.company_id = ?");
+        sql.append(" GROUP BY j.id,j.job_code,j.title,j.company_id,c.name "
+                + "ORDER BY applications DESC,hires DESC,average_match_score DESC LIMIT ?");
+        List<JobPerformance> result = new ArrayList<>();
+        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql.toString())) {
+            int index = bindAppliedDateRange(statement, fromDate, toDate);
+            if (companyId != null) statement.setInt(index++, companyId);
+            statement.setInt(index, Math.max(1, Math.min(limit, 20)));
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    JobPerformance item = new JobPerformance();
+                    item.setJobId(resultSet.getInt("job_id"));
+                    item.setJobCode(resultSet.getString("job_code"));
+                    item.setTitle(resultSet.getString("title"));
+                    item.setCompanyId(resultSet.getInt("company_id"));
+                    item.setCompanyName(resultSet.getString("company_name"));
+                    item.setApplications(resultSet.getLong("applications"));
+                    item.setShortlisted(resultSet.getLong("shortlisted"));
+                    item.setInterviews(resultSet.getLong("interviews"));
+                    item.setOffers(resultSet.getLong("offers"));
+                    item.setHires(resultSet.getLong("hires"));
+                    item.setAverageMatchScore(resultSet.getBigDecimal("average_match_score"));
+                    result.add(item);
+                }
+            }
+        }
+        return result;
+    }
+
+    public Map<String, Long> countByDepartment(LocalDate fromDate, LocalDate toDate, Integer companyId)
+            throws SQLException {
+        return countByDimension("d.name", "JOIN departments d ON d.id=j.department_id", fromDate, toDate, companyId);
+    }
+
+    public Map<String, Long> countByLocation(LocalDate fromDate, LocalDate toDate, Integer companyId)
+            throws SQLException {
+        return countByDimension("j.location", "", fromDate, toDate, companyId);
+    }
+
+    private Map<String, Long> countByDimension(String dimension, String extraJoin, LocalDate fromDate,
+                                                LocalDate toDate, Integer companyId) throws SQLException {
+        StringBuilder sql = new StringBuilder("SELECT " + dimension + " AS label,COUNT(*) AS total "
+                + "FROM applications a JOIN jobs j ON j.id=a.job_id " + extraJoin + " WHERE 1=1");
+        appendAppliedDateRange(sql, fromDate, toDate);
+        if (companyId != null) sql.append(" AND j.company_id=?");
+        sql.append(" GROUP BY ").append(dimension).append(" ORDER BY total DESC,label LIMIT 8");
+        Map<String, Long> result = new LinkedHashMap<>();
+        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql.toString())) {
+            int index = bindAppliedDateRange(statement, fromDate, toDate);
+            if (companyId != null) statement.setInt(index, companyId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) result.put(resultSet.getString("label"), resultSet.getLong("total"));
+            }
+        }
+        return result;
     }
 
     public int create(Application application) throws SQLException {

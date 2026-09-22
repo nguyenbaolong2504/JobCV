@@ -29,6 +29,7 @@ public class Job {
     private String status;
     private boolean autoClosed;
     private int activeApplications;
+    private int applicationCount;
     private int createdBy;
     private int companyId;
     private String companyName;
@@ -84,6 +85,8 @@ public class Job {
     public void setAutoClosed(boolean autoClosed) { this.autoClosed = autoClosed; }
     public int getActiveApplications() { return activeApplications; }
     public void setActiveApplications(int activeApplications) { this.activeApplications = activeApplications; }
+    public int getApplicationCount() { return applicationCount; }
+    public void setApplicationCount(int applicationCount) { this.applicationCount = applicationCount; }
     public int getRemainingPositions() { return Math.max(0, numberOfPositions - activeApplications); }
     public int getCreatedBy() { return createdBy; }
     public void setCreatedBy(int createdBy) { this.createdBy = createdBy; }

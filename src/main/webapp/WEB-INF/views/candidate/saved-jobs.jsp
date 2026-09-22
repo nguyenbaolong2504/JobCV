@@ -28,7 +28,7 @@
                 <div class="col-md-6 col-xxl-4">
                     <article class="job-card saved-job-card h-100">
                         <div class="d-flex justify-content-between align-items-start gap-2">
-                            <span class="badge text-bg-primary-subtle text-primary"><c:out value="${job.departmentName}" /></span>
+                            <div class="saved-job-company"><span class="job-company-logo"><img src="${pageContext.request.contextPath}/company-logo?id=${job.companyId}" alt="Logo ${job.companyName}" loading="lazy"></span><div><strong><c:out value="${job.companyName}" /></strong><small><c:out value="${job.departmentName}" /></small></div></div>
                             <form action="${pageContext.request.contextPath}/candidate/saved-jobs/remove" method="post">
                                 <input type="hidden" name="jobId" value="<c:out value='${job.id}'/>">
                                 <input type="hidden" name="returnTo" value="/candidate/saved-jobs">

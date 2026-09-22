@@ -15,7 +15,7 @@
                     <div class="col-lg-8">
                         <section class="content-card job-detail-hero mb-4">
                             <div class="d-flex gap-3 align-items-start">
-                                <a class="company-mark" href="${pageContext.request.contextPath}/companies/detail?id=${company.id}"><img src="${pageContext.request.contextPath}${company.uploadedLogo ? '/company-logo?id=' : '/assets/images/employers/'}${company.uploadedLogo ? company.id : company.logoFile}" alt="Logo ${company.name}"></a>
+                                <a class="company-mark" href="${pageContext.request.contextPath}/companies/detail?id=${company.id}"><img src="${pageContext.request.contextPath}/company-logo?id=${company.id}" alt="Logo ${company.name}"></a>
                                 <div class="flex-grow-1">
                             <span class="badge text-bg-primary-subtle text-primary mb-2">Đang tuyển · <c:out value="${job.departmentName}" /></span>
                             <h1 class="page-title mb-2"><c:out value="${job.title}" /></h1>
