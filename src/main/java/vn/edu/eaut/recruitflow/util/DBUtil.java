@@ -14,7 +14,7 @@ public final class DBUtil {
     private static final String URL = normalizeLocalDevelopmentUrl(
             configuration("recruitflow.db.url", "RECRUITFLOW_DB_URL", DEFAULT_URL));
     private static final String USER = configuration("recruitflow.db.user", "RECRUITFLOW_DB_USER", "root");
-    private static final String PASSWORD = configuration("recruitflow.db.password", "RECRUITFLOW_DB_PASSWORD", "");
+    private static final String PASSWORD = configuration("recruitflow.db.password", "RECRUITFLOW_DB_PASSWORD", "123456aB@");
 
     static {    
         try {
