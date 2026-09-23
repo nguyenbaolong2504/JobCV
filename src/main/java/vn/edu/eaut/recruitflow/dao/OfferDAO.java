@@ -33,6 +33,16 @@ public class OfferDAO extends DaoSupport {
         }
     }
 
+    /** Locks the offer row until the caller completes its transaction. */
+    public Offer findByIdForUpdate(Connection connection, int id) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(SELECT_OFFER + "WHERE o.id = ? FOR UPDATE")) {
+            statement.setInt(1, id);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next() ? map(resultSet) : null;
+            }
+        }
+    }
+
     public Offer findByApplicationId(int applicationId) throws SQLException {
         try (Connection connection = openConnection()) {
             return findByApplicationId(connection, applicationId);
@@ -70,6 +80,11 @@ public class OfferDAO extends DaoSupport {
     }
 
     public List<Offer> search(String keyword, String status, java.sql.Date expiryDate) throws SQLException {
+        return search(keyword, status, expiryDate, null);
+    }
+
+    public List<Offer> search(String keyword, String status, java.sql.Date expiryDate,
+                              Integer jobOwnerId) throws SQLException {
         StringBuilder sql = new StringBuilder(SELECT_OFFER + "WHERE 1 = 1");
         List<String> values = new ArrayList<>();
         if (keyword != null && !keyword.isBlank()) {
@@ -85,6 +100,9 @@ public class OfferDAO extends DaoSupport {
         if (expiryDate != null) {
             sql.append(" AND o.expiry_date <= ?");
         }
+        if (jobOwnerId != null && jobOwnerId > 0) {
+            sql.append(" AND j.company_id = ?");
+        }
         sql.append(" ORDER BY o.expiry_date ASC, o.created_at DESC");
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql.toString())) {
             int index = 1;
@@ -92,7 +110,10 @@ public class OfferDAO extends DaoSupport {
                 statement.setString(index++, value);
             }
             if (expiryDate != null) {
-                statement.setDate(index, expiryDate);
+                statement.setDate(index++, expiryDate);
+            }
+            if (jobOwnerId != null && jobOwnerId > 0) {
+                statement.setInt(index, jobOwnerId);
             }
             try (ResultSet resultSet = statement.executeQuery()) {
                 return mapList(resultSet);
@@ -196,9 +217,18 @@ public class OfferDAO extends DaoSupport {
     }
 
     public long countByStatus(String status) throws SQLException {
-        String sql = "SELECT COUNT(*) FROM offers WHERE status = ?";
+        return countByStatus(status, null);
+    }
+
+    public long countByStatus(String status, Integer jobOwnerId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM offers o"
+                + (jobOwnerId == null ? "" : " JOIN applications a ON a.id = o.application_id JOIN jobs j ON j.id = a.job_id")
+                + " WHERE o.status = ?" + (jobOwnerId == null ? "" : " AND j.company_id = ?");
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setString(1, status);
+            if (jobOwnerId != null) {
+                statement.setInt(2, jobOwnerId);
+            }
             try (ResultSet resultSet = statement.executeQuery()) {
                 resultSet.next();
                 return resultSet.getLong(1);

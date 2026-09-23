@@ -1,8 +1,6 @@
 package vn.edu.eaut.recruitflow.controller.hr;
 
 import vn.edu.eaut.recruitflow.controller.BaseController;
-import vn.edu.eaut.recruitflow.enums.OfferStatus;
-import vn.edu.eaut.recruitflow.model.Offer;
 import vn.edu.eaut.recruitflow.service.ApplicationService;
 import vn.edu.eaut.recruitflow.service.OfferService;
 import vn.edu.eaut.recruitflow.util.BusinessException;
@@ -29,14 +27,11 @@ public class OfferEditController extends BaseController {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         try {
-            int offerId = RequestUtil.requiredPositiveInt(request, "id", "Offer");
-            Offer offer = offerService.getForHr(offerId);
-            if (!OfferStatus.DRAFT.name().equals(offer.getStatus())) {
-                throw new BusinessException("Chỉ có thể chỉnh sửa offer ở trạng thái DRAFT.");
-            }
-            request.setAttribute("offer", offer);
-            request.setAttribute("applications", applicationService.findInterviewed());
-            view(request, response, "/WEB-INF/views/hr/offer-form.jsp", "Chỉnh sửa offer | RecruitFlow");
+            int offerId = RequestUtil.requiredPositiveInt(request, "id", "Thư mời");
+            int actorId = RequestUtil.currentUserId(request);
+            request.setAttribute("offer", offerService.getForHr(offerId, actorId));
+            request.setAttribute("applications", applicationService.findInterviewed(actorId));
+            view(request, response, "/WEB-INF/views/hr/offer-form.jsp", "Chỉnh sửa thư mời | JobCV");
         } catch (BusinessException | IllegalArgumentException ex) {
             redirectWithError(request, response, "/hr/offers", ex.getMessage());
         }

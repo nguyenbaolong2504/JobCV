@@ -4,12 +4,10 @@ import vn.edu.eaut.recruitflow.model.Resume;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletResponse;
-import java.io.File;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Map;
@@ -31,8 +29,8 @@ public final class ResumeDownloadUtil {
             throw new BusinessException("Không tìm thấy CV.");
         }
         String extension = safeExtension(resume.getFileType());
-        Path root = resolveUploadDirectory(context);
-        Path file = safelyResolveStoredResume(root, resume.getFilePath());
+        Path root = ResumeStorageUtil.resolveUploadDirectory(context);
+        Path file = ResumeStorageUtil.resolveStoredFile(root, resume.getFilePath());
 
         response.reset();
         response.setContentType(CONTENT_TYPES.get(extension));
@@ -40,48 +38,6 @@ public final class ResumeDownloadUtil {
         response.setHeader("X-Content-Type-Options", "nosniff");
         response.setHeader("Content-Disposition", contentDisposition(resume.getFileName(), extension));
         Files.copy(file, response.getOutputStream());
-    }
-
-    private static Path resolveUploadDirectory(ServletContext context) throws BusinessException {
-        try {
-            String catalinaBase = System.getProperty("catalina.base");
-            Path directory;
-            if (catalinaBase != null && !catalinaBase.isBlank()) {
-                directory = Path.of(catalinaBase, "recruitflow-uploads", "resumes");
-            } else {
-                String webInf = context.getRealPath("/WEB-INF");
-                if (webInf != null) {
-                    directory = Path.of(webInf, "uploads", "resumes");
-                } else {
-                    Object tempDirectory = context.getAttribute(ServletContext.TEMPDIR);
-                    if (!(tempDirectory instanceof File)) {
-                        throw new BusinessException("Chưa thể xác định thư mục lưu CV an toàn.");
-                    }
-                    directory = ((File) tempDirectory).toPath().resolve("recruitflow").resolve("resumes");
-                }
-            }
-            Path normalized = directory.toAbsolutePath().normalize();
-            Files.createDirectories(normalized);
-            return normalized;
-        } catch (IOException | SecurityException | IllegalArgumentException exception) {
-            throw new BusinessException("Không thể chuẩn bị thư mục lưu CV.", exception);
-        }
-    }
-
-    private static Path safelyResolveStoredResume(Path uploadDirectory, String storedPath) throws BusinessException {
-        if (storedPath == null || storedPath.isBlank()) {
-            throw new BusinessException("Không tìm thấy tệp CV.");
-        }
-        try {
-            Path normalizedRoot = uploadDirectory.toRealPath();
-            Path realFile = Path.of(storedPath).toAbsolutePath().normalize().toRealPath();
-            if (!realFile.startsWith(normalizedRoot) || !Files.isRegularFile(realFile)) {
-                throw new BusinessException("Không tìm thấy tệp CV.");
-            }
-            return realFile;
-        } catch (IOException | InvalidPathException exception) {
-            throw new BusinessException("Không tìm thấy tệp CV.", exception);
-        }
     }
 
     private static String safeExtension(String fileType) throws BusinessException {

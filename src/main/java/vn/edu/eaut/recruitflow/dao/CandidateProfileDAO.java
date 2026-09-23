@@ -1,7 +1,6 @@
 package vn.edu.eaut.recruitflow.dao;
 
 import vn.edu.eaut.recruitflow.model.CandidateProfile;
-import vn.edu.eaut.recruitflow.util.VietnameseTextUtil;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -11,7 +10,8 @@ import java.sql.Statement;
 
 public class CandidateProfileDAO extends DaoSupport {
     private static final String SELECT_PROFILE = "SELECT p.id, p.user_id, p.date_of_birth, p.gender, p.address, p.university, p.major, "
-            + "p.experience_years, p.skills, p.summary, p.created_at, p.updated_at, u.full_name, u.email "
+            + "p.experience_years, p.skills, p.summary, p.avatar_path, p.phone, p.target_position, p.target_location, "
+            + "p.expected_salary, p.career_goal, p.certificates, p.created_at, p.updated_at, u.full_name, u.email "
             + "FROM candidate_profiles p JOIN users u ON u.id = p.user_id ";
 
     public CandidateProfile findById(int id) throws SQLException {
@@ -51,8 +51,8 @@ public class CandidateProfileDAO extends DaoSupport {
     }
 
     public int insert(Connection connection, CandidateProfile profile) throws SQLException {
-        String sql = "INSERT INTO candidate_profiles (user_id, date_of_birth, gender, address, university, major, experience_years, skills, summary) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO candidate_profiles (user_id, date_of_birth, gender, address, university, major, experience_years, skills, summary, phone, target_position, target_location, expected_salary, career_goal, certificates) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             bind(statement, profile, false);
             statement.executeUpdate();
@@ -74,9 +74,20 @@ public class CandidateProfileDAO extends DaoSupport {
 
     public boolean update(Connection connection, CandidateProfile profile) throws SQLException {
         String sql = "UPDATE candidate_profiles SET date_of_birth = ?, gender = ?, address = ?, university = ?, major = ?, "
-                + "experience_years = ?, skills = ?, summary = ? WHERE user_id = ?";
+                + "experience_years = ?, skills = ?, summary = ?, phone = ?, target_position = ?, target_location = ?, "
+                + "expected_salary = ?, career_goal = ?, certificates = ? WHERE user_id = ?";
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             bind(statement, profile, true);
+            return statement.executeUpdate() == 1;
+        }
+    }
+
+    public boolean updateAvatar(int userId, String avatarPath) throws SQLException {
+        String sql = "UPDATE candidate_profiles SET avatar_path = ? WHERE user_id = ?";
+        try (Connection connection = openConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, avatarPath);
+            statement.setInt(2, userId);
             return statement.executeUpdate() == 1;
         }
     }
@@ -88,12 +99,18 @@ public class CandidateProfileDAO extends DaoSupport {
         }
         statement.setDate(index++, profile.getDateOfBirth());
         statement.setString(index++, profile.getGender());
-        statement.setString(index++, VietnameseTextUtil.repairLegacyMojibake(profile.getAddress()));
-        statement.setString(index++, VietnameseTextUtil.repairLegacyMojibake(profile.getUniversity()));
-        statement.setString(index++, VietnameseTextUtil.repairLegacyMojibake(profile.getMajor()));
+        statement.setString(index++, profile.getAddress());
+        statement.setString(index++, profile.getUniversity());
+        statement.setString(index++, profile.getMajor());
         statement.setInt(index++, profile.getExperienceYears());
-        statement.setString(index++, VietnameseTextUtil.repairLegacyMojibake(profile.getSkills()));
-        statement.setString(index++, VietnameseTextUtil.repairLegacyMojibake(profile.getSummary()));
+        statement.setString(index++, profile.getSkills());
+        statement.setString(index++, profile.getSummary());
+        statement.setString(index++, profile.getPhone());
+        statement.setString(index++, profile.getTargetPosition());
+        statement.setString(index++, profile.getTargetLocation());
+        statement.setBigDecimal(index++, profile.getExpectedSalary());
+        statement.setString(index++, profile.getCareerGoal());
+        statement.setString(index++, profile.getCertificates());
         if (update) {
             statement.setInt(index, profile.getUserId());
         }
@@ -105,12 +122,19 @@ public class CandidateProfileDAO extends DaoSupport {
         profile.setUserId(resultSet.getInt("user_id"));
         profile.setDateOfBirth(resultSet.getDate("date_of_birth"));
         profile.setGender(resultSet.getString("gender"));
-        profile.setAddress(VietnameseTextUtil.repairLegacyMojibake(resultSet.getString("address")));
-        profile.setUniversity(VietnameseTextUtil.repairLegacyMojibake(resultSet.getString("university")));
-        profile.setMajor(VietnameseTextUtil.repairLegacyMojibake(resultSet.getString("major")));
+        profile.setAddress(resultSet.getString("address"));
+        profile.setUniversity(resultSet.getString("university"));
+        profile.setMajor(resultSet.getString("major"));
         profile.setExperienceYears(resultSet.getInt("experience_years"));
-        profile.setSkills(VietnameseTextUtil.repairLegacyMojibake(resultSet.getString("skills")));
-        profile.setSummary(VietnameseTextUtil.repairLegacyMojibake(resultSet.getString("summary")));
+        profile.setSkills(resultSet.getString("skills"));
+        profile.setSummary(resultSet.getString("summary"));
+        profile.setAvatarPath(resultSet.getString("avatar_path"));
+        profile.setPhone(resultSet.getString("phone"));
+        profile.setTargetPosition(resultSet.getString("target_position"));
+        profile.setTargetLocation(resultSet.getString("target_location"));
+        profile.setExpectedSalary(resultSet.getBigDecimal("expected_salary"));
+        profile.setCareerGoal(resultSet.getString("career_goal"));
+        profile.setCertificates(resultSet.getString("certificates"));
         profile.setCreatedAt(resultSet.getTimestamp("created_at"));
         profile.setUpdatedAt(resultSet.getTimestamp("updated_at"));
         profile.setFullName(resultSet.getString("full_name"));

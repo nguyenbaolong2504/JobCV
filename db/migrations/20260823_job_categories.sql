@@ -1,5 +1,5 @@
 -- RECRUITFLOW_APPROVED_DEV_MIGRATION
--- Idempotent migration: hierarchical job/career categories for the selected RecruitFlow schema.
+-- Idempotent migration: hierarchical job/career categories for the selected JobCV schema.
 -- Target: MySQL 8.0.16+. This migration preserves all existing users, jobs and applications.
 -- The starter taxonomy uses INSERT IGNORE; only bundled demo jobs without a category are enriched.
 

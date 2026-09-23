@@ -49,7 +49,7 @@ public class StaffNotificationController extends BaseController {
             request.setAttribute("error", exception.getMessage());
         }
         request.setAttribute("notificationPortal", portal.name());
-        view(request, response, "/WEB-INF/views/common/staff-notifications.jsp", "Thông báo | RecruitFlow");
+        view(request, response, "/WEB-INF/views/common/staff-notifications.jsp", "Thông báo | JobCV");
     }
 
     @Override

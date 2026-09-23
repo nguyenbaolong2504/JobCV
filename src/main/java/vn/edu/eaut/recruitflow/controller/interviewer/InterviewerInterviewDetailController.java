@@ -36,14 +36,14 @@ public class InterviewerInterviewDetailController extends BaseController {
             int interviewerId = RequestUtil.currentUserId(request);
             Interview interview = interviewService.getForInterviewer(interviewId, interviewerId);
             request.setAttribute("interview", interview);
-            var application = applicationService.getForHr(interview.getApplicationId());
+            var application = applicationService.getForInterviewer(interview.getApplicationId(), interviewerId);
             request.setAttribute("application", application);
             try {
                 request.setAttribute("profile", candidateProfileService.getProfile(application.getCandidateId()));
             } catch (BusinessException ignored) {
                 request.setAttribute("profile", new CandidateProfile());
             }
-            view(request, response, "/WEB-INF/views/interviewer/interview-detail.jsp", "Chi tiết phỏng vấn | RecruitFlow");
+            view(request, response, "/WEB-INF/views/interviewer/interview-detail.jsp", "Chi tiết phỏng vấn | JobCV");
         } catch (BusinessException | IllegalArgumentException ex) {
             redirectWithError(request, response, "/interviewer/interviews", ex.getMessage());
         }

@@ -2,15 +2,13 @@ package vn.edu.eaut.recruitflow.controller.auth;
 
 import vn.edu.eaut.recruitflow.controller.BaseController;
 import vn.edu.eaut.recruitflow.model.User;
-import vn.edu.eaut.recruitflow.service.GoogleOAuthService;
-import vn.edu.eaut.recruitflow.service.LoginOtpService;
 import vn.edu.eaut.recruitflow.service.UserService;
-import vn.edu.eaut.recruitflow.util.AuthSession;
-import vn.edu.eaut.recruitflow.util.AuthValidation;
+import vn.edu.eaut.recruitflow.service.JobService;
+import vn.edu.eaut.recruitflow.service.DepartmentService;
 import vn.edu.eaut.recruitflow.util.BusinessException;
 import vn.edu.eaut.recruitflow.util.FlashMessage;
-import vn.edu.eaut.recruitflow.util.LoginAttemptLimiter;
-import vn.edu.eaut.recruitflow.util.LoginOtpSession;
+import vn.edu.eaut.recruitflow.util.RequestUtil;
+import vn.edu.eaut.recruitflow.util.AuthSession;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -18,21 +16,26 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
+import java.util.Locale;
+import java.util.HashMap;
+import java.util.Map;
 
-/** Password login; an email OTP second step is activated only by explicit runtime configuration. */
+/** Handles authentication only; credential verification is delegated to {@link UserService}. */
 @WebServlet(name = "LoginController", urlPatterns = "/login")
 public class LoginController extends BaseController {
+    private static final int MAX_FAILED_ATTEMPTS = 5;
+    private static final long LOCK_MILLIS = 15L * 60L * 1000L;
+    private static final Map<String, LoginAttempt> LOGIN_ATTEMPTS = new HashMap<>();
+
     private UserService userService;
-    private LoginOtpService loginOtpService;
-    private GoogleOAuthService googleOAuthService;
-    private LoginAttemptLimiter loginAttemptLimiter;
+    private JobService jobService;
+    private DepartmentService departmentService;
 
     @Override
     public void init() throws ServletException {
         userService = new UserService();
-        loginOtpService = new LoginOtpService();
-        googleOAuthService = new GoogleOAuthService();
-        loginAttemptLimiter = new LoginAttemptLimiter();
+        jobService = new JobService();
+        departmentService = new DepartmentService();
     }
 
     @Override
@@ -41,16 +44,21 @@ public class LoginController extends BaseController {
         setUtf8(request, response);
 
         HttpSession session = request.getSession(false);
-        if (session != null && session.getAttribute("userId") instanceof Integer
-                && session.getAttribute("role") instanceof String) {
+        if (AuthSession.isAuthenticated(session)) {
             redirect(request, response, AuthSession.landingPath((String) session.getAttribute("role")));
             return;
         }
 
-        request.setAttribute("googleOAuthEnabled", googleOAuthService.isEnabled());
-        request.setAttribute("loginOtpRequired", loginOtpService.isRequired());
-        request.setAttribute("loginOtpMisconfigured", loginOtpService.isMisconfigured());
-        view(request, response, "/WEB-INF/views/auth/login.jsp", "Đăng nhập | RecruitFlow");
+        request.setAttribute("openJobCount", 0L);
+        request.setAttribute("departmentCount", 0);
+        try {
+            request.setAttribute("openJobCount", jobService.countPublishedJobs());
+            request.setAttribute("departmentCount", departmentService.getAllDepartments().size());
+        } catch (BusinessException ignored) {
+            // Authentication must remain available even when supplementary counters cannot load.
+        }
+
+        view(request, response, "/WEB-INF/views/auth/login.jsp", "Đăng nhập | JobCV");
     }
 
     @Override
@@ -58,46 +66,96 @@ public class LoginController extends BaseController {
         setUtf8(request, response);
 
         try {
-            String email = AuthValidation.email(request.getParameter("email"));
-            String password = AuthValidation.loginPassword(request.getParameter("password"));
-            String remoteAddress = request.getRemoteAddr();
-            long retryAfterSeconds = loginAttemptLimiter.retryAfterSeconds(email, remoteAddress);
-            if (retryAfterSeconds > 0) {
-                redirectWithError(request, response, "/login",
-                        "Đăng nhập tạm thời bị giới hạn. Vui lòng thử lại sau " + retryAfterSeconds + " giây.");
+            String email = normalizeAndValidateEmail(RequestUtil.text(request, "email"));
+            String password = validatePassword(RequestUtil.text(request, "password"));
+            String attemptKey = clientAddress(request) + '|' + email;
+            if (isTemporarilyLocked(attemptKey)) {
+                redirectWithError(request, response, "/login", "Đăng nhập bị tạm khóa do thử sai quá nhiều lần. Vui lòng thử lại sau 15 phút.");
                 return;
             }
             User user = userService.authenticate(email, password);
 
             if (user == null) {
-                loginAttemptLimiter.recordFailure(email, remoteAddress);
+                recordFailure(attemptKey);
                 redirectWithError(request, response, "/login", "Email hoặc mật khẩu không chính xác, hoặc tài khoản không hoạt động.");
                 return;
             }
+
             if (!AuthSession.isSupportedRole(user.getRoleName())) {
+                // Do not create an authenticated session for a malformed account record.
                 redirectWithError(request, response, "/login", "Tài khoản chưa được gán quyền truy cập hợp lệ.");
-                return;
-            }
-            loginAttemptLimiter.recordSuccess(email, remoteAddress);
-            if (loginOtpService.isMisconfigured()) {
-                redirectWithError(request, response, "/login",
-                        "Xác minh OTP đăng nhập đang được yêu cầu nhưng Gmail SMTP chưa được cấu hình. Vui lòng liên hệ quản trị viên.");
-                return;
-            }
-            if (loginOtpService.isRequired()) {
-                loginOtpService.requestOtp(user);
-                HttpSession pendingSession = request.getSession(true);
-                LoginOtpSession.start(pendingSession, user);
-                FlashMessage.success(pendingSession, "Mã OTP đã được gửi đến email của bạn. Vui lòng nhập mã để hoàn tất đăng nhập.");
-                redirect(request, response, "/login/verify-otp");
                 return;
             }
 
             HttpSession authenticatedSession = AuthSession.establish(request, user);
+            clearFailures(attemptKey);
             FlashMessage.success(authenticatedSession, "Đăng nhập thành công.");
             redirect(request, response, AuthSession.landingPath(user.getRoleName()));
         } catch (BusinessException ex) {
             redirectWithError(request, response, "/login", ex.getMessage());
+        }
+    }
+
+    private String normalizeAndValidateEmail(String email) throws BusinessException {
+        String normalized = email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
+        if (normalized.isEmpty() || normalized.length() > 254
+                || !normalized.matches("(?i)^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,63}$")) {
+            throw new BusinessException("Vui lòng nhập địa chỉ email hợp lệ.");
+        }
+        return normalized;
+    }
+
+    private String validatePassword(String password) throws BusinessException {
+        if (password == null || password.isEmpty()) {
+            throw new BusinessException("Vui lòng nhập mật khẩu.");
+        }
+        // BCrypt only considers the first 72 bytes, so reject longer values explicitly.
+        if (password.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72) {
+            throw new BusinessException("Mật khẩu không được vượt quá 72 byte.");
+        }
+        return password;
+    }
+
+    private String clientAddress(HttpServletRequest request) {
+        // Do not trust X-Forwarded-For here unless a trusted reverse proxy is configured to sanitize it.
+        String address = request.getRemoteAddr();
+        return address == null ? "unknown" : address;
+    }
+
+    private static synchronized boolean isTemporarilyLocked(String key) {
+        LoginAttempt attempt = LOGIN_ATTEMPTS.get(key);
+        if (attempt == null) return false;
+        if (attempt.lockedUntil <= System.currentTimeMillis()) {
+            LOGIN_ATTEMPTS.remove(key);
+            return false;
+        }
+        return attempt.failures >= MAX_FAILED_ATTEMPTS;
+    }
+
+    private static synchronized void recordFailure(String key) {
+        long now = System.currentTimeMillis();
+        LoginAttempt current = LOGIN_ATTEMPTS.get(key);
+        int failures = current == null || current.lockedUntil <= now ? 1 : current.failures + 1;
+        LOGIN_ATTEMPTS.put(key, new LoginAttempt(failures, now + LOCK_MILLIS));
+        if (LOGIN_ATTEMPTS.size() > 10_000) {
+            LOGIN_ATTEMPTS.entrySet().removeIf(entry -> entry.getValue().lockedUntil <= now);
+            while (LOGIN_ATTEMPTS.size() > 10_000) {
+                LOGIN_ATTEMPTS.remove(LOGIN_ATTEMPTS.keySet().iterator().next());
+            }
+        }
+    }
+
+    private static synchronized void clearFailures(String key) {
+        LOGIN_ATTEMPTS.remove(key);
+    }
+
+    private static final class LoginAttempt {
+        private final int failures;
+        private final long lockedUntil;
+
+        private LoginAttempt(int failures, long lockedUntil) {
+            this.failures = failures;
+            this.lockedUntil = lockedUntil;
         }
     }
 

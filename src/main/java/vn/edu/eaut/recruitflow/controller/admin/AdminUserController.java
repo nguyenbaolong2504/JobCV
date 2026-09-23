@@ -40,9 +40,11 @@ public class AdminUserController extends BaseController {
             request.setAttribute("page", page);
             request.setAttribute("roles", adminService.getRoles(actorId));
             request.setAttribute("recruiterProfiles", adminService.getRecruiterProfiles(page.getItems(), actorId));
+            request.setAttribute("companies", adminService.getCompanies(actorId));
+            request.setAttribute("companyMemberships", adminService.getCompanyMemberships(page.getItems(), actorId));
         } catch (BusinessException | IllegalArgumentException ex) {
             request.setAttribute("error", ex.getMessage());
         }
-        view(request, response, "/WEB-INF/views/admin/users.jsp", "Quản lý người dùng | RecruitFlow");
+        view(request, response, "/WEB-INF/views/admin/users.jsp", "Quản lý người dùng | JobCV");
     }
 }

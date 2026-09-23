@@ -3,7 +3,7 @@
 
 <c:if test="${not empty page and page.totalPages gt 1}">
     <c:set var="currentPage" value="${page.currentPage}" />
-    <c:url var="firstUrl" value="${pageContext.request.requestURI}">
+    <c:url var="firstUrl" value="${requestScope.paginationPath}">
         <c:param name="keyword" value="${param.keyword}" />
         <c:param name="title" value="${param.title}" />
         <c:param name="departmentId" value="${param.departmentId}" />
@@ -26,7 +26,7 @@
         <ul class="pagination pagination-sm mb-0">
             <li class="page-item ${currentPage le 1 ? 'disabled' : ''}"><a class="page-link" href="${firstUrl}" aria-label="Trang đầu"><i class="bi bi-chevron-bar-left"></i></a></li>
             <c:forEach var="pageNumber" begin="1" end="${page.totalPages}">
-                <c:url var="pageUrl" value="${pageContext.request.requestURI}">
+                <c:url var="pageUrl" value="${requestScope.paginationPath}">
                     <c:param name="keyword" value="${param.keyword}" />
                     <c:param name="title" value="${param.title}" />
                     <c:param name="departmentId" value="${param.departmentId}" />
@@ -46,7 +46,7 @@
                 </c:url>
                 <li class="page-item ${pageNumber eq currentPage ? 'active' : ''}"><a class="page-link" href="${pageUrl}"><c:out value="${pageNumber}" /></a></li>
             </c:forEach>
-            <c:url var="lastUrl" value="${pageContext.request.requestURI}">
+            <c:url var="lastUrl" value="${requestScope.paginationPath}">
                 <c:param name="keyword" value="${param.keyword}" />
                 <c:param name="title" value="${param.title}" />
                 <c:param name="departmentId" value="${param.departmentId}" />

@@ -47,7 +47,7 @@ public class CandidateOnboardingController extends CandidateBaseController {
             request.setAttribute("error", ex.getMessage());
         }
 
-        view(request, response, "/WEB-INF/views/candidate/onboarding.jsp", "Onboarding | RecruitFlow");
+        view(request, response, "/WEB-INF/views/candidate/onboarding.jsp", "Tiếp nhận nhân sự | JobCV");
     }
 
     @Override
@@ -60,10 +60,10 @@ public class CandidateOnboardingController extends CandidateBaseController {
 
         try {
             int candidateId = currentCandidateId(request);
-            int taskId = RequestUtil.requiredPositiveInt(request, "taskId", "Công việc onboarding");
+            int taskId = RequestUtil.requiredPositiveInt(request, "taskId", "Đầu việc tiếp nhận");
             validateTaskCompletionRequest(RequestUtil.text(request, "status"));
             onboardingService.completeTask(candidateId, taskId);
-            redirectWithSuccess(request, response, "/candidate/onboarding", "Đã cập nhật tiến độ onboarding.");
+            redirectWithSuccess(request, response, "/candidate/onboarding", "Đã cập nhật tiến độ tiếp nhận.");
         } catch (BusinessException ex) {
             redirectWithError(request, response, "/candidate/onboarding", ex.getMessage());
         }
@@ -71,7 +71,7 @@ public class CandidateOnboardingController extends CandidateBaseController {
 
     private void validateTaskCompletionRequest(String status) throws BusinessException {
         if (!"DONE".equals(status)) {
-            throw new BusinessException("Trạng thái công việc onboarding không hợp lệ.");
+        throw new BusinessException("Trạng thái đầu việc tiếp nhận không hợp lệ.");
         }
     }
 }

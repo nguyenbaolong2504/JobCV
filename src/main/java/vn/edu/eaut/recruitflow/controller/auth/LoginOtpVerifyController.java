@@ -29,8 +29,7 @@ public class LoginOtpVerifyController extends BaseController {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         HttpSession session = request.getSession(false);
-        if (session != null && session.getAttribute("userId") instanceof Integer
-                && session.getAttribute("role") instanceof String) {
+        if (AuthSession.isAuthenticated(session)) {
             redirect(request, response, AuthSession.landingPath((String) session.getAttribute("role")));
             return;
         }
@@ -39,7 +38,7 @@ public class LoginOtpVerifyController extends BaseController {
             return;
         }
         request.setAttribute("maskedEmail", LoginOtpSession.maskedEmail(session));
-        view(request, response, "/WEB-INF/views/auth/login-verify-otp.jsp", "Xác minh OTP | RecruitFlow");
+        view(request, response, "/WEB-INF/views/auth/login-verify-otp.jsp", "Xác minh OTP | JobCV");
     }
 
     @Override

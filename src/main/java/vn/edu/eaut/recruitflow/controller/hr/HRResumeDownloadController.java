@@ -31,7 +31,8 @@ public class HRResumeDownloadController extends BaseController {
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
         try {
             int applicationId = RequestUtil.requiredPositiveInt(request, "applicationId", "Đơn ứng tuyển");
-            Application application = applicationService.getForHr(applicationId);
+            Application application = applicationService.getForHr(
+                    applicationId, RequestUtil.currentUserId(request));
             Resume resume = resumeService.getResumeForStaff(application.getResumeId());
             ResumeDownloadUtil.stream(getServletContext(), resume, response);
         } catch (BusinessException | IllegalArgumentException exception) {

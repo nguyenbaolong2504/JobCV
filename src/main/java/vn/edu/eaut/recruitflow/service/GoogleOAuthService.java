@@ -254,7 +254,7 @@ public class GoogleOAuthService {
             try {
                 return AuthValidation.fullName(localPart);
             } catch (BusinessException ignoredAgain) {
-                return "Ứng viên RecruitFlow";
+                return "Ứng viên JobCV";
             }
         }
     }

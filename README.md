@@ -1,6 +1,8 @@
-# RecruitFlow
+# JobCV
 
-RecruitFlow là đồ án Java Web quản lý tuyển dụng và onboarding. Luồng cốt lõi là: HR đăng tin → Candidate ứng tuyển → HR sàng lọc → phỏng vấn → feedback → offer → Candidate nhận offer → onboarding.
+JobCV là đồ án Java Web quản lý tuyển dụng và onboarding. Luồng cốt lõi là: HR đăng tin → Candidate ứng tuyển → HR sàng lọc → phỏng vấn → feedback → offer → Candidate nhận offer → onboarding.
+
+Mô hình đa doanh nghiệp dùng `companies` làm tenant độc lập. Nhiều HR và Interviewer có thể thuộc cùng một công ty qua `company_members`; mọi tin tuyển dụng, hồ sơ và phân công phỏng vấn được cách ly theo công ty.
 
 Kiến trúc bắt buộc của ứng dụng:
 
@@ -57,7 +59,7 @@ Sau khi đã có Java 17, Maven, MySQL 8, Tomcat 9 và Node.js 18.18+, chạy:
 npm run dev
 ~~~
 
-Runner sẽ hỏi mật khẩu MySQL bằng prompt không hiển thị, kiểm tra/khởi động service `MySQL80` nếu cần, áp dụng các migration idempotent đã được review vào **database đang cấu hình**, build WAR và khởi động Tomcat. Mật khẩu không được ghi vào source, `dev.config.json` hay Git. Lần đầu runner tự tạo `.recruitflow/tomcat-base` và chỉ deploy RecruitFlow vào base riêng đó, nên các WAR backup trong Tomcat cài sẵn không làm chậm lần chạy sau. Truy cập URL runner in ra; port lấy từ `conf/server.xml` của Tomcat hoặc từ cấu hình local (ví dụ `http://localhost:8080/recruitflow/home`).
+Runner sẽ hỏi mật khẩu MySQL bằng prompt không hiển thị, kiểm tra/khởi động service `MySQL80` nếu cần, áp dụng các migration idempotent đã được review vào **database đang cấu hình**, build WAR và khởi động Tomcat. Mật khẩu không được ghi vào source, `dev.config.json` hay Git. Lần đầu runner tự tạo `.recruitflow/tomcat-base` và chỉ deploy JobCV vào base riêng đó, nên các WAR backup trong Tomcat cài sẵn không làm chậm lần chạy sau. Truy cập URL runner in ra; port lấy từ `conf/server.xml` của Tomcat hoặc từ cấu hình local (ví dụ `http://localhost:8080/recruitflow/home`).
 
 Nếu Tomcat 9 không được nhận diện tự động, copy [dev.config.example.json](dev.config.example.json) thành `dev.config.json` và điền đường dẫn Tomcat/URL DB không chứa secret. Xem chi tiết tại [SETUP.md](docs/SETUP.md#0-chạy-local-bằng-npm-run-dev).
 
@@ -105,6 +107,21 @@ Mật khẩu tất cả tài khoản là 123456; schema lưu BCrypt hash, không
 Ở **Candidate → CV của tôi**, ứng viên có thể chọn CV để nhận điểm sẵn sàng, phần còn thiếu, từ khóa và mẫu viết lại phần giới thiệu. Chức năng mặc định chạy phân tích cục bộ nên không cần API key và không tự thay đổi tệp CV gốc.
 
 Khi cấu hình AI bên ngoài, ứng dụng chỉ gửi **nội dung CV đã trích xuất** sau khi ứng viên tích ô đồng ý riêng cho đúng lần đánh giá đó. Hướng dẫn cấu hình và lưu ý bảo mật ở [SETUP.md](docs/SETUP.md#3-ai-cv-coach-tùy-chọn).
+
+Chatbot dùng endpoint đọc dữ liệu `/assistant` như một **Career Agent chỉ đọc**: tìm/xếp hạng tin còn hạn và còn chỗ theo CV, giải thích kỹ năng khớp/thiếu, nghiên cứu công ty, tổng hợp việc cần xử lý cho HR và lịch được phân công cho Interviewer. Agent không tự ứng tuyển, loại, tuyển hay gửi offer; người dùng phải xác nhận tại màn hình nghiệp vụ.
+
+## Chỉ tiêu tuyển dụng
+
+- `number_of_positions` là số chỗ cần tuyển; đơn ở mọi trạng thái trừ `REJECTED` và `WITHDRAWN` giữ một chỗ.
+- Apply chạy transaction có khóa bản ghi job để hai Candidate đồng thời không thể vượt chỉ tiêu.
+- Đủ chỉ tiêu, job tự chuyển `CLOSED` với `auto_closed=TRUE`, biến mất khỏi public search và HR thấy **Đã tuyển đủ**.
+- Khi HR loại hoặc Candidate rút đơn, job chỉ tự mở lại nếu chính hệ thống đã đóng do đủ người và deadline vẫn còn. Tin HR đóng thủ công không bị tự mở.
+
+## Trang chủ Candidate và banner quản trị
+
+- Khi Candidate vào `/home`, hệ thống hiển thị **Công việc phù hợp**: tối đa 4 tin còn hạn/còn chỗ được xếp hạng theo skill trong CV mặc định, kèm điểm phù hợp, công ty, số vị trí còn lại và nút xem/ứng tuyển/lưu việc.
+- **Công việc khác** là các tin đang mở không trùng với 4 đề xuất. Các nút “Xem thêm” dẫn đến `/candidate/jobs`; nếu chưa có CV mặc định, trang chủ hướng Candidate đến màn tải CV thay vì tạo đề xuất không có cơ sở.
+- Admin quản lý ảnh slider tại `/admin/home-banners`: tải một hoặc nhiều ảnh JPG/PNG/WEBP (tối đa 2 MB mỗi ảnh), bật/tắt, đặt thứ tự, nội dung phủ ảnh và link nội bộ. Ảnh được lưu ở thư mục server-owned, không dùng đường dẫn từ trình duyệt.
 
 ## Phân quyền URL
 

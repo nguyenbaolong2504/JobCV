@@ -13,9 +13,8 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <maven.compiler.release>17</maven.compiler.release>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <recruitflow.build.directory>${project.basedir}/target</recruitflow.build.directory>
-        <junit.jupiter.version>5.10.2</junit.jupiter.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
     <dependencies>
@@ -46,7 +45,7 @@
         <dependency>
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
-            <version>8.0.33</version>
+            <version>8.2.0</version>
         </dependency>
 
         <!-- BCrypt -->
@@ -56,7 +55,7 @@
             <version>0.4</version>
         </dependency>
 
-        <!-- JavaMail 1.x keeps javax.mail compatibility with this Servlet 4 / Tomcat 9 application. -->
+        <!-- JavaMail 1.x keeps javax.mail compatibility with Servlet 4 / Tomcat 9. -->
         <dependency>
             <groupId>com.sun.mail</groupId>
             <artifactId>javax.mail</artifactId>
@@ -77,14 +76,6 @@
             <version>5.2.3</version>
         </dependency>
 
-        <!-- Unit tests for authentication/session and business-rule regressions. -->
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <version>${junit.jupiter.version}</version>
-            <scope>test</scope>
-        </dependency>
-
         <!-- Apache POI support for legacy .doc resume files -->
         <dependency>
             <groupId>org.apache.poi</groupId>
@@ -92,12 +83,34 @@
             <version>5.2.3</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.12.1</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Keep the UI available even when the development machine is offline. -->
+        <dependency>
+            <groupId>org.webjars</groupId>
+            <artifactId>bootstrap</artifactId>
+            <version>5.3.3</version>
+        </dependency>
+        <dependency>
+            <groupId>org.webjars.npm</groupId>
+            <artifactId>bootstrap-icons</artifactId>
+            <version>1.11.3</version>
+        </dependency>
+        <dependency>
+            <groupId>org.webjars.npm</groupId>
+            <artifactId>chart.js</artifactId>
+            <version>4.4.4</version>
+        </dependency>
+
     </dependencies>
 
     <build>
         <directory>${recruitflow.build.directory}</directory>
-        <outputDirectory>${recruitflow.build.directory}/classes</outputDirectory>
-        <testOutputDirectory>${recruitflow.build.directory}/test-classes</testOutputDirectory>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -110,18 +123,18 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.1</version>
+                <version>3.14.1</version>
                 <configuration>
-                    <source>17</source>
-                    <target>17</target>
+                    <release>${maven.compiler.release}</release>
                 </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.2.5</version>
+                <version>3.5.4</version>
                 <configuration>
-                    <useModulePath>false</useModulePath>
+                    <!-- Avoid a second JVM on development machines with a small Windows page file. -->
+                    <forkCount>0</forkCount>
                 </configuration>
             </plugin>
         </plugins>

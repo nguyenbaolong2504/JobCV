@@ -34,7 +34,7 @@ public class JobEditController extends BaseController {
             throws ServletException, IOException {
         try {
             int jobId = RequestUtil.requiredPositiveInt(request, "id", "Tin tuyển dụng");
-            Job job = jobService.getJobById(jobId);
+            Job job = jobService.getJobForManagement(jobId, RequestUtil.currentUserId(request));
             request.setAttribute("job", job);
             request.setAttribute("skillsText", job.getSkills().stream()
                     .map(this::toSkillInput)
@@ -49,7 +49,7 @@ public class JobEditController extends BaseController {
         } catch (BusinessException ignored) {
             request.setAttribute("jobCategories", java.util.List.of());
         }
-        view(request, response, "/WEB-INF/views/hr/job-form.jsp", "Chỉnh sửa tin tuyển dụng | RecruitFlow");
+        view(request, response, "/WEB-INF/views/hr/job-form.jsp", "Chỉnh sửa tin tuyển dụng | JobCV");
     }
 
     private String toSkillInput(JobSkill skill) {

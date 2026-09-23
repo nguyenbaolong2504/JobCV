@@ -38,7 +38,7 @@ public class CandidateOfferController extends CandidateBaseController {
         } catch (BusinessException ex) {
             request.setAttribute("error", ex.getMessage());
         }
-        view(request, response, "/WEB-INF/views/candidate/offers.jsp", "Offer của tôi | RecruitFlow");
+        view(request, response, "/WEB-INF/views/candidate/offers.jsp", "Thư mời của tôi | JobCV");
     }
 
     @Override
@@ -50,11 +50,11 @@ public class CandidateOfferController extends CandidateBaseController {
         }
         try {
             int candidateId = currentCandidateId(request);
-            int offerId = RequestUtil.requiredPositiveInt(request, "offerId", "Offer");
+            int offerId = RequestUtil.requiredPositiveInt(request, "offerId", "Thư mời");
             boolean accepted = parseResponse(RequestUtil.text(request, "response"));
             offerService.respond(candidateId, offerId, accepted);
-            String message = accepted ? "Đã chấp nhận offer. Quy trình onboarding đã được tạo."
-                    : "Đã từ chối offer.";
+            String message = accepted ? "Đã chấp nhận thư mời. Quy trình tiếp nhận đã được tạo."
+                    : "Đã từ chối thư mời.";
             redirectWithSuccess(request, response, "/candidate/offers", message);
         } catch (BusinessException | IllegalArgumentException ex) {
             redirectWithError(request, response, "/candidate/offers", ex.getMessage());
@@ -68,6 +68,6 @@ public class CandidateOfferController extends CandidateBaseController {
         if ("DECLINE".equals(response)) {
             return false;
         }
-        throw new BusinessException("Phản hồi offer không hợp lệ.");
+        throw new BusinessException("Phản hồi thư mời không hợp lệ.");
     }
 }

@@ -1,6 +1,7 @@
 package vn.edu.eaut.recruitflow.dao;
 
 import vn.edu.eaut.recruitflow.model.Application;
+import vn.edu.eaut.recruitflow.model.JobPerformance;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
@@ -16,7 +17,7 @@ import java.util.List;
 import java.util.Map;
 
 public class ApplicationDAO extends DaoSupport {
-    private static final String SELECT_APPLICATION = "SELECT a.id, a.job_id, a.candidate_id, a.resume_id, a.status, a.match_score, a.applied_at, a.updated_at, "
+    private static final String SELECT_APPLICATION = "SELECT a.id, a.job_id, a.candidate_id, a.resume_id, a.status, a.match_score, a.cover_letter, a.applied_at, a.updated_at, "
             + "j.job_code, j.title AS job_title, u.full_name AS candidate_name, u.email AS candidate_email, r.file_name AS resume_file_name "
             + "FROM applications a JOIN jobs j ON j.id = a.job_id JOIN users u ON u.id = a.candidate_id "
             + "JOIN resumes r ON r.id = a.resume_id ";
@@ -36,10 +37,17 @@ public class ApplicationDAO extends DaoSupport {
         }
     }
 
-    /**
-     * Serializes workflow operations for one application without taking locks on all of the
-     * joined display tables in {@link #findById(Connection, int)}.
-     */
+    /** Locks the application row until the caller completes its transaction. */
+    public Application findByIdForUpdate(Connection connection, int id) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(SELECT_APPLICATION + "WHERE a.id = ? FOR UPDATE")) {
+            statement.setInt(1, id);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next() ? map(resultSet) : null;
+            }
+        }
+    }
+
+    /** Locks only the application row while a workflow transaction is in progress. */
     public boolean lockById(Connection connection, int id) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement(
                 "SELECT id FROM applications WHERE id = ? FOR UPDATE")) {
@@ -99,9 +107,14 @@ public class ApplicationDAO extends DaoSupport {
 
     public List<Application> search(String keyword, Integer jobId, String status, BigDecimal minMatchScore,
                                     int page, int pageSize) throws SQLException {
+        return search(keyword, jobId, status, minMatchScore, null, page, pageSize);
+    }
+
+    public List<Application> search(String keyword, Integer jobId, String status, BigDecimal minMatchScore,
+                                    Integer jobOwnerId, int page, int pageSize) throws SQLException {
         StringBuilder sql = new StringBuilder(SELECT_APPLICATION + "WHERE 1 = 1");
         List<Object> parameters = new ArrayList<>();
-        appendFilters(sql, parameters, keyword, jobId, status, minMatchScore, null);
+        appendFilters(sql, parameters, keyword, jobId, status, minMatchScore, jobOwnerId);
         sql.append(" ORDER BY a.applied_at DESC, a.id DESC LIMIT ? OFFSET ?");
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql.toString())) {
             bind(statement, parameters);
@@ -115,9 +128,14 @@ public class ApplicationDAO extends DaoSupport {
     }
 
     public long count(String keyword, Integer jobId, String status, BigDecimal minMatchScore) throws SQLException {
+        return count(keyword, jobId, status, minMatchScore, null);
+    }
+
+    public long count(String keyword, Integer jobId, String status, BigDecimal minMatchScore,
+                      Integer jobOwnerId) throws SQLException {
         StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM applications a JOIN jobs j ON j.id = a.job_id JOIN users u ON u.id = a.candidate_id WHERE 1 = 1");
         List<Object> parameters = new ArrayList<>();
-        appendFilters(sql, parameters, keyword, jobId, status, minMatchScore, "a");
+        appendFilters(sql, parameters, keyword, jobId, status, minMatchScore, jobOwnerId);
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql.toString())) {
             bind(statement, parameters);
             try (ResultSet resultSet = statement.executeQuery()) {
@@ -149,32 +167,6 @@ public class ApplicationDAO extends DaoSupport {
         }
     }
 
-    /** Counts accepted hires for a job while its job row is locked by the caller. */
-    public long countByJobAndStatus(Connection connection, int jobId, String status) throws SQLException {
-        String sql = "SELECT COUNT(*) FROM applications WHERE job_id = ? AND status = ?";
-        try (PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setInt(1, jobId);
-            statement.setString(2, status);
-            try (ResultSet resultSet = statement.executeQuery()) {
-                resultSet.next();
-                return resultSet.getLong(1);
-            }
-        }
-    }
-
-    /** A candidate may only enter onboarding for one accepted job in this single-employer system. */
-    public boolean hasHiredApplicationForCandidate(Connection connection, int candidateId, int excludeApplicationId)
-            throws SQLException {
-        String sql = "SELECT 1 FROM applications WHERE candidate_id = ? AND status = 'HIRED' AND id <> ? LIMIT 1";
-        try (PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setInt(1, candidateId);
-            statement.setInt(2, excludeApplicationId);
-            try (ResultSet resultSet = statement.executeQuery()) {
-                return resultSet.next();
-            }
-        }
-    }
-
     public long countAll() throws SQLException {
         try (Connection connection = openConnection();
              PreparedStatement statement = connection.prepareStatement("SELECT COUNT(*) FROM applications");
@@ -186,10 +178,24 @@ public class ApplicationDAO extends DaoSupport {
 
     /** Counts applications submitted inside an inclusive date range. */
     public long countAll(LocalDate fromDate, LocalDate toDate) throws SQLException {
-        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM applications WHERE 1 = 1");
+        return countAll(fromDate, toDate, null);
+    }
+
+    public long countAll(LocalDate fromDate, LocalDate toDate, Integer jobOwnerId) throws SQLException {
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM applications a");
+        if (jobOwnerId != null) {
+            sql.append(" JOIN jobs j ON j.id = a.job_id");
+        }
+        sql.append(" WHERE 1 = 1");
         appendAppliedDateRange(sql, fromDate, toDate);
+        if (jobOwnerId != null) {
+            sql.append(" AND j.company_id = ?");
+        }
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql.toString())) {
-            bindAppliedDateRange(statement, fromDate, toDate);
+            int index = bindAppliedDateRange(statement, fromDate, toDate);
+            if (jobOwnerId != null) {
+                statement.setInt(index, jobOwnerId);
+            }
             try (ResultSet resultSet = statement.executeQuery()) {
                 resultSet.next();
                 return resultSet.getLong(1);
@@ -198,23 +204,50 @@ public class ApplicationDAO extends DaoSupport {
     }
 
     public Map<String, Long> countGroupedByStatus() throws SQLException {
-        String sql = "SELECT status, COUNT(*) AS total FROM applications GROUP BY status ORDER BY status";
-        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql); ResultSet resultSet = statement.executeQuery()) {
-            Map<String, Long> result = new LinkedHashMap<>();
-            while (resultSet.next()) {
-                result.put(resultSet.getString("status"), resultSet.getLong("total"));
+        return countGroupedByStatus(null);
+    }
+
+    public Map<String, Long> countGroupedByStatus(Integer jobOwnerId) throws SQLException {
+        String sql = "SELECT a.status, COUNT(*) AS total FROM applications a"
+                + (jobOwnerId == null ? "" : " JOIN jobs j ON j.id = a.job_id")
+                + (jobOwnerId == null ? "" : " WHERE j.company_id = ?")
+                + " GROUP BY a.status ORDER BY a.status";
+        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+            if (jobOwnerId != null) {
+                statement.setInt(1, jobOwnerId);
             }
-            return result;
+            try (ResultSet resultSet = statement.executeQuery()) {
+                Map<String, Long> result = new LinkedHashMap<>();
+                while (resultSet.next()) {
+                    result.put(resultSet.getString("status"), resultSet.getLong("total"));
+                }
+                return result;
+            }
         }
     }
 
     /** Groups applications submitted inside an inclusive date range by their current status. */
     public Map<String, Long> countGroupedByStatus(LocalDate fromDate, LocalDate toDate) throws SQLException {
-        StringBuilder sql = new StringBuilder("SELECT status, COUNT(*) AS total FROM applications WHERE 1 = 1");
+        return countGroupedByStatus(fromDate, toDate, null);
+    }
+
+    public Map<String, Long> countGroupedByStatus(LocalDate fromDate, LocalDate toDate,
+                                                   Integer jobOwnerId) throws SQLException {
+        StringBuilder sql = new StringBuilder("SELECT a.status, COUNT(*) AS total FROM applications a");
+        if (jobOwnerId != null) {
+            sql.append(" JOIN jobs j ON j.id = a.job_id");
+        }
+        sql.append(" WHERE 1 = 1");
         appendAppliedDateRange(sql, fromDate, toDate);
-        sql.append(" GROUP BY status ORDER BY status");
+        if (jobOwnerId != null) {
+            sql.append(" AND j.company_id = ?");
+        }
+        sql.append(" GROUP BY a.status ORDER BY a.status");
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql.toString())) {
-            bindAppliedDateRange(statement, fromDate, toDate);
+            int index = bindAppliedDateRange(statement, fromDate, toDate);
+            if (jobOwnerId != null) {
+                statement.setInt(index, jobOwnerId);
+            }
             try (ResultSet resultSet = statement.executeQuery()) {
                 Map<String, Long> result = new LinkedHashMap<>();
                 while (resultSet.next()) {
@@ -226,11 +259,21 @@ public class ApplicationDAO extends DaoSupport {
     }
 
     public Map<String, Long> countByMonth(int numberOfMonths) throws SQLException {
+        return countByMonth(numberOfMonths, null);
+    }
+
+    public Map<String, Long> countByMonth(int numberOfMonths, Integer jobOwnerId) throws SQLException {
         int months = Math.max(1, Math.min(36, numberOfMonths));
-        String sql = "SELECT DATE_FORMAT(applied_at, '%Y-%m') AS month_key, COUNT(*) AS total FROM applications "
-                + "WHERE applied_at >= DATE_SUB(CURRENT_DATE, INTERVAL ? MONTH) GROUP BY DATE_FORMAT(applied_at, '%Y-%m') ORDER BY month_key";
+        String sql = "SELECT DATE_FORMAT(a.applied_at, '%Y-%m') AS month_key, COUNT(*) AS total FROM applications a "
+                + (jobOwnerId == null ? "" : "JOIN jobs j ON j.id = a.job_id ")
+                + "WHERE a.applied_at >= DATE_SUB(CURRENT_DATE, INTERVAL ? MONTH) "
+                + (jobOwnerId == null ? "" : "AND j.company_id = ? ")
+                + "GROUP BY DATE_FORMAT(a.applied_at, '%Y-%m') ORDER BY month_key";
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, months - 1);
+            if (jobOwnerId != null) {
+                statement.setInt(2, jobOwnerId);
+            }
             try (ResultSet resultSet = statement.executeQuery()) {
                 Map<String, Long> result = new LinkedHashMap<>();
                 while (resultSet.next()) {
@@ -243,12 +286,30 @@ public class ApplicationDAO extends DaoSupport {
 
     /** Returns monthly application totals for the supplied inclusive range. */
     public Map<String, Long> countByMonth(LocalDate fromDate, LocalDate toDate) throws SQLException {
-        StringBuilder sql = new StringBuilder("SELECT DATE_FORMAT(applied_at, '%Y-%m') AS month_key, COUNT(*) AS total "
-                + "FROM applications WHERE 1 = 1");
+        return countByMonth(fromDate, toDate, null);
+    }
+
+    public Map<String, Long> countByMonth(LocalDate fromDate, LocalDate toDate,
+                                          Integer jobOwnerId) throws SQLException {
+        if (fromDate == null && toDate == null) {
+            return countByMonth(12, jobOwnerId);
+        }
+        StringBuilder sql = new StringBuilder("SELECT DATE_FORMAT(a.applied_at, '%Y-%m') AS month_key, COUNT(*) AS total "
+                + "FROM applications a");
+        if (jobOwnerId != null) {
+            sql.append(" JOIN jobs j ON j.id = a.job_id");
+        }
+        sql.append(" WHERE 1 = 1");
         appendAppliedDateRange(sql, fromDate, toDate);
-        sql.append(" GROUP BY DATE_FORMAT(applied_at, '%Y-%m') ORDER BY month_key");
+        if (jobOwnerId != null) {
+            sql.append(" AND j.company_id = ?");
+        }
+        sql.append(" GROUP BY DATE_FORMAT(a.applied_at, '%Y-%m') ORDER BY month_key");
         try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql.toString())) {
-            bindAppliedDateRange(statement, fromDate, toDate);
+            int index = bindAppliedDateRange(statement, fromDate, toDate);
+            if (jobOwnerId != null) {
+                statement.setInt(index, jobOwnerId);
+            }
             try (ResultSet resultSet = statement.executeQuery()) {
                 Map<String, Long> result = new LinkedHashMap<>();
                 while (resultSet.next()) {
@@ -259,6 +320,115 @@ public class ApplicationDAO extends DaoSupport {
         }
     }
 
+    public long countDistinctCandidates(LocalDate fromDate, LocalDate toDate, Integer companyId) throws SQLException {
+        return countDistinct("a.candidate_id", fromDate, toDate, companyId);
+    }
+
+    public long countDistinctJobs(LocalDate fromDate, LocalDate toDate, Integer companyId) throws SQLException {
+        return countDistinct("a.job_id", fromDate, toDate, companyId);
+    }
+
+    private long countDistinct(String column, LocalDate fromDate, LocalDate toDate, Integer companyId)
+            throws SQLException {
+        StringBuilder sql = new StringBuilder("SELECT COUNT(DISTINCT " + column + ") FROM applications a");
+        if (companyId != null) sql.append(" JOIN jobs j ON j.id = a.job_id");
+        sql.append(" WHERE 1 = 1");
+        appendAppliedDateRange(sql, fromDate, toDate);
+        if (companyId != null) sql.append(" AND j.company_id = ?");
+        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql.toString())) {
+            int index = bindAppliedDateRange(statement, fromDate, toDate);
+            if (companyId != null) statement.setInt(index, companyId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                resultSet.next();
+                return resultSet.getLong(1);
+            }
+        }
+    }
+
+    public BigDecimal averageMatchScore(LocalDate fromDate, LocalDate toDate, Integer companyId) throws SQLException {
+        StringBuilder sql = new StringBuilder("SELECT COALESCE(AVG(a.match_score),0) FROM applications a");
+        if (companyId != null) sql.append(" JOIN jobs j ON j.id = a.job_id");
+        sql.append(" WHERE 1 = 1");
+        appendAppliedDateRange(sql, fromDate, toDate);
+        if (companyId != null) sql.append(" AND j.company_id = ?");
+        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql.toString())) {
+            int index = bindAppliedDateRange(statement, fromDate, toDate);
+            if (companyId != null) statement.setInt(index, companyId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                resultSet.next();
+                BigDecimal value = resultSet.getBigDecimal(1);
+                return value == null ? BigDecimal.ZERO : value.setScale(1, java.math.RoundingMode.HALF_UP);
+            }
+        }
+    }
+
+    public List<JobPerformance> findTopJobs(LocalDate fromDate, LocalDate toDate, Integer companyId, int limit)
+            throws SQLException {
+        StringBuilder sql = new StringBuilder("SELECT j.id AS job_id,j.job_code,j.title,j.company_id,c.name AS company_name,"
+                + "COUNT(a.id) AS applications,"
+                + "SUM(a.status='SHORTLISTED') AS shortlisted,"
+                + "SUM(a.status IN ('INTERVIEW_SCHEDULED','INTERVIEWED','OFFERED','HIRED')) AS interviews,"
+                + "SUM(a.status IN ('OFFERED','HIRED')) AS offers,SUM(a.status='HIRED') AS hires,"
+                + "COALESCE(AVG(a.match_score),0) AS average_match_score "
+                + "FROM applications a JOIN jobs j ON j.id=a.job_id JOIN companies c ON c.id=j.company_id WHERE 1=1");
+        appendAppliedDateRange(sql, fromDate, toDate);
+        if (companyId != null) sql.append(" AND j.company_id = ?");
+        sql.append(" GROUP BY j.id,j.job_code,j.title,j.company_id,c.name "
+                + "ORDER BY applications DESC,hires DESC,average_match_score DESC LIMIT ?");
+        List<JobPerformance> result = new ArrayList<>();
+        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql.toString())) {
+            int index = bindAppliedDateRange(statement, fromDate, toDate);
+            if (companyId != null) statement.setInt(index++, companyId);
+            statement.setInt(index, Math.max(1, Math.min(limit, 20)));
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    JobPerformance item = new JobPerformance();
+                    item.setJobId(resultSet.getInt("job_id"));
+                    item.setJobCode(resultSet.getString("job_code"));
+                    item.setTitle(resultSet.getString("title"));
+                    item.setCompanyId(resultSet.getInt("company_id"));
+                    item.setCompanyName(resultSet.getString("company_name"));
+                    item.setApplications(resultSet.getLong("applications"));
+                    item.setShortlisted(resultSet.getLong("shortlisted"));
+                    item.setInterviews(resultSet.getLong("interviews"));
+                    item.setOffers(resultSet.getLong("offers"));
+                    item.setHires(resultSet.getLong("hires"));
+                    item.setAverageMatchScore(resultSet.getBigDecimal("average_match_score"));
+                    result.add(item);
+                }
+            }
+        }
+        return result;
+    }
+
+    public Map<String, Long> countByDepartment(LocalDate fromDate, LocalDate toDate, Integer companyId)
+            throws SQLException {
+        return countByDimension("d.name", "JOIN departments d ON d.id=j.department_id", fromDate, toDate, companyId);
+    }
+
+    public Map<String, Long> countByLocation(LocalDate fromDate, LocalDate toDate, Integer companyId)
+            throws SQLException {
+        return countByDimension("j.location", "", fromDate, toDate, companyId);
+    }
+
+    private Map<String, Long> countByDimension(String dimension, String extraJoin, LocalDate fromDate,
+                                                LocalDate toDate, Integer companyId) throws SQLException {
+        StringBuilder sql = new StringBuilder("SELECT " + dimension + " AS label,COUNT(*) AS total "
+                + "FROM applications a JOIN jobs j ON j.id=a.job_id " + extraJoin + " WHERE 1=1");
+        appendAppliedDateRange(sql, fromDate, toDate);
+        if (companyId != null) sql.append(" AND j.company_id=?");
+        sql.append(" GROUP BY ").append(dimension).append(" ORDER BY total DESC,label LIMIT 8");
+        Map<String, Long> result = new LinkedHashMap<>();
+        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql.toString())) {
+            int index = bindAppliedDateRange(statement, fromDate, toDate);
+            if (companyId != null) statement.setInt(index, companyId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) result.put(resultSet.getString("label"), resultSet.getLong("total"));
+            }
+        }
+        return result;
+    }
+
     public int create(Application application) throws SQLException {
         try (Connection connection = openConnection()) {
             return create(connection, application);
@@ -266,13 +436,14 @@ public class ApplicationDAO extends DaoSupport {
     }
 
     public int create(Connection connection, Application application) throws SQLException {
-        String sql = "INSERT INTO applications (job_id, candidate_id, resume_id, status, match_score) VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO applications (job_id, candidate_id, resume_id, status, match_score, cover_letter) VALUES (?, ?, ?, ?, ?, ?)";
         try (PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             statement.setInt(1, application.getJobId());
             statement.setInt(2, application.getCandidateId());
             statement.setInt(3, application.getResumeId());
             statement.setString(4, application.getStatus());
             statement.setBigDecimal(5, application.getMatchScore());
+            statement.setString(6, application.getCoverLetter());
             statement.executeUpdate();
             try (ResultSet keys = statement.getGeneratedKeys()) {
                 if (keys.next()) {
@@ -301,6 +472,15 @@ public class ApplicationDAO extends DaoSupport {
         }
     }
 
+    /** Applications that currently reserve one recruitment slot. */
+    public long countActiveByJobId(Connection connection, int jobId) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT COUNT(*) FROM applications WHERE job_id=? AND status NOT IN ('REJECTED','WITHDRAWN')")) {
+            statement.setInt(1,jobId);
+            try (ResultSet resultSet=statement.executeQuery()) { resultSet.next(); return resultSet.getLong(1); }
+        }
+    }
+
     public boolean updateStatus(int applicationId, String status) throws SQLException {
         try (Connection connection = openConnection()) {
             return updateStatus(connection, applicationId, status);
@@ -316,10 +496,6 @@ public class ApplicationDAO extends DaoSupport {
         }
     }
 
-    /**
-     * Prevents a stale workflow request from overwriting a status that another transaction
-     * has already advanced.
-     */
     public boolean updateStatusIfCurrent(Connection connection, int applicationId, String targetStatus,
                                          String expectedStatus) throws SQLException {
         String sql = "UPDATE applications SET status = ? WHERE id = ? AND status = ?";
@@ -341,7 +517,7 @@ public class ApplicationDAO extends DaoSupport {
     }
 
     private void appendFilters(StringBuilder sql, List<Object> parameters, String keyword, Integer jobId, String status,
-                               BigDecimal minMatchScore, String ignored) {
+                               BigDecimal minMatchScore, Integer jobOwnerId) {
         if (keyword != null && !keyword.isBlank()) {
             sql.append(" AND (LOWER(u.full_name) LIKE ? OR LOWER(u.email) LIKE ? OR LOWER(j.title) LIKE ?)");
             String value = '%' + keyword.trim().toLowerCase() + '%';
@@ -360,6 +536,10 @@ public class ApplicationDAO extends DaoSupport {
         if (minMatchScore != null) {
             sql.append(" AND a.match_score >= ?");
             parameters.add(minMatchScore);
+        }
+        if (jobOwnerId != null && jobOwnerId > 0) {
+            sql.append(" AND j.company_id = ?");
+            parameters.add(jobOwnerId);
         }
     }
 
@@ -385,14 +565,15 @@ public class ApplicationDAO extends DaoSupport {
         }
     }
 
-    private void bindAppliedDateRange(PreparedStatement statement, LocalDate fromDate, LocalDate toDate) throws SQLException {
+    private int bindAppliedDateRange(PreparedStatement statement, LocalDate fromDate, LocalDate toDate) throws SQLException {
         int index = 1;
         if (fromDate != null) {
             statement.setTimestamp(index++, Timestamp.valueOf(fromDate.atStartOfDay()));
         }
         if (toDate != null) {
-            statement.setTimestamp(index, Timestamp.valueOf(toDate.plusDays(1).atStartOfDay()));
+            statement.setTimestamp(index++, Timestamp.valueOf(toDate.plusDays(1).atStartOfDay()));
         }
+        return index;
     }
 
     private List<Application> mapList(ResultSet resultSet) throws SQLException {
@@ -411,6 +592,7 @@ public class ApplicationDAO extends DaoSupport {
         application.setResumeId(resultSet.getInt("resume_id"));
         application.setStatus(resultSet.getString("status"));
         application.setMatchScore(resultSet.getBigDecimal("match_score"));
+        application.setCoverLetter(resultSet.getString("cover_letter"));
         application.setAppliedAt(resultSet.getTimestamp("applied_at"));
         application.setUpdatedAt(resultSet.getTimestamp("updated_at"));
         application.setJobCode(resultSet.getString("job_code"));

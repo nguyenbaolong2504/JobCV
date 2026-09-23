@@ -3,8 +3,7 @@
         <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
             <c:set var="currentPath" value="${pageContext.request.requestURI}" />
             <aside class="app-sidebar">
-                <a class="sidebar-brand" href="${pageContext.request.contextPath}/admin/dashboard"><span
-                        class="sidebar-brand-mark">R</span>RecruitFlow</a>
+                <a class="sidebar-brand" href="${pageContext.request.contextPath}/admin/dashboard"><img class="jobcv-brand-logo jobcv-brand-logo-sidebar" src="${pageContext.request.contextPath}/assets/images/jobcv-logo.png" alt="JobCV"></a>
                 <p class="sidebar-label">Quản trị hệ thống</p>
                 <nav class="sidebar-nav">
                     <a class="${fn:endsWith(currentPath, '/admin/dashboard') ? 'active' : ''}"
@@ -22,6 +21,9 @@
                     <a class="${fn:contains(currentPath, '/admin/job-categories') ? 'active' : ''}"
                         href="${pageContext.request.contextPath}/admin/job-categories"><i class="bi bi-diagram-3"></i>
                         Danh mục nghề nghiệp</a>
+                    <a class="${fn:contains(currentPath, '/admin/home-banners') ? 'active' : ''}"
+                        href="${pageContext.request.contextPath}/admin/home-banners"><i class="bi bi-images"></i>
+                        Banner trang chủ</a>
                     <a class="${fn:contains(currentPath, '/admin/audit-logs') ? 'active' : ''}"
                         href="${pageContext.request.contextPath}/admin/audit-logs"><i class="bi bi-journal-text"></i>
                         Nhật ký hệ thống</a>

@@ -14,6 +14,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class AuthSessionTest {
     @Test
@@ -43,6 +44,22 @@ class AuthSessionTest {
         assertEquals("/hr/dashboard", AuthSession.landingPath("HR"));
         assertEquals("/interviewer/dashboard", AuthSession.landingPath("INTERVIEWER"));
         assertEquals("/admin/dashboard", AuthSession.landingPath("ADMIN"));
+    }
+
+    @Test
+    void acceptsOnlyCompleteVersionedPrincipals() {
+        SessionProbe session = new SessionProbe();
+        session.attributes.put("userId", 9);
+        session.attributes.put("role", "CANDIDATE");
+
+        assertFalse(AuthSession.isAuthenticated(session.session()));
+        assertTrue(AuthSession.hasPrincipalAttributes(session.session()));
+
+        session.attributes.put(AuthSession.SESSION_VERSION_ATTRIBUTE, 0);
+        assertTrue(AuthSession.isAuthenticated(session.session()));
+
+        session.attributes.put("role", "UNKNOWN");
+        assertFalse(AuthSession.isAuthenticated(session.session()));
     }
 
     private HttpServletRequest requestReturning(HttpSession previous, HttpSession fresh) {

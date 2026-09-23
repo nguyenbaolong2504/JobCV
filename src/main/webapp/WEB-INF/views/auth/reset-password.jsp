@@ -1,11 +1,11 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<c:set var="pageTitle" value="Tạo mật khẩu mới | RecruitFlow" scope="request" />
+<c:set var="pageTitle" value="Tạo mật khẩu mới | JobCV" scope="request" />
 <jsp:include page="/WEB-INF/views/common/header.jsp" />
 
 <main class="auth-simple-page">
     <section class="auth-simple-card">
-        <a class="auth-brand auth-brand-dark justify-content-center mb-4" href="${pageContext.request.contextPath}/home"><span class="rf-brand-mark">J</span><span>JobCV</span></a>
+        <a class="auth-brand auth-brand-dark justify-content-center mb-4" href="${pageContext.request.contextPath}/home"><img class="jobcv-brand-logo jobcv-brand-logo-auth-dark" src="${pageContext.request.contextPath}/assets/images/jobcv-logo.png" alt="JobCV"></a>
         <div class="auth-icon"><i class="bi bi-key-fill"></i></div>
         <h1>Tạo mật khẩu mới</h1>
         <p class="text-muted">Chọn mật khẩu mạnh mà bạn chưa dùng ở nơi khác.</p>

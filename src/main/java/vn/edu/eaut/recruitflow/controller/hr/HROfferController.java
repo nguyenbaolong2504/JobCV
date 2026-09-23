@@ -31,10 +31,11 @@ public class HROfferController extends BaseController {
             Date expiryDate = RequestUtil.text(request, "expiryDate").isEmpty()
                     ? null : Date.valueOf(RequestUtil.date(request, "expiryDate", "Ngày hết hạn"));
             request.setAttribute("offers", offerService.searchForHr(
-                    RequestUtil.text(request, "keyword"), status, expiryDate));
+                    RequestUtil.text(request, "keyword"), status, expiryDate,
+                    RequestUtil.currentUserId(request)));
         } catch (BusinessException | IllegalArgumentException ex) {
             request.setAttribute("error", ex.getMessage());
         }
-        view(request, response, "/WEB-INF/views/hr/offers.jsp", "Offer Management | RecruitFlow");
+        view(request, response, "/WEB-INF/views/hr/offers.jsp", "Quản lý thư mời | JobCV");
     }
 }

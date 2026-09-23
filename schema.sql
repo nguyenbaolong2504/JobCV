@@ -29,8 +29,6 @@ CREATE TABLE IF NOT EXISTS users (
     full_name VARCHAR(150) NOT NULL,
     role_id INT NOT NULL,
     status ENUM('ACTIVE', 'LOCKED', 'INACTIVE') NOT NULL DEFAULT 'ACTIVE',
-    -- Increased whenever a password changes, invalidating all browser sessions created before it.
-    session_version INT UNSIGNED NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
@@ -38,6 +36,42 @@ CREATE TABLE IF NOT EXISTS users (
     KEY idx_users_role_status (role_id, status),
     KEY idx_users_status_created_at (status, created_at),
     CONSTRAINT fk_users_role FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS companies (
+    id INT NOT NULL AUTO_INCREMENT, name VARCHAR(150) NOT NULL, logo_path VARCHAR(500) NULL,
+    industry VARCHAR(150) NULL, company_size VARCHAR(100) NULL, address VARCHAR(255) NULL,
+    website VARCHAR(255) NULL, description TEXT NULL,
+    status ENUM('ACTIVE','INACTIVE') NOT NULL DEFAULT 'ACTIVE',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id), UNIQUE KEY uk_companies_name (name), KEY idx_companies_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS home_banners (
+    id INT NOT NULL AUTO_INCREMENT,
+    image_path VARCHAR(255) NOT NULL,
+    title VARCHAR(120) NULL,
+    subtitle VARCHAR(300) NULL,
+    target_url VARCHAR(500) NULL,
+    display_order INT NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_home_banners_active_order (is_active, display_order, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS company_members (
+    company_id INT NOT NULL, user_id INT NOT NULL,
+    member_role ENUM('HR','INTERVIEWER') NOT NULL, job_title VARCHAR(150) NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (company_id,user_id), UNIQUE KEY uk_company_members_user (user_id),
+    KEY idx_company_members_company_role (company_id,member_role,is_active),
+    CONSTRAINT fk_company_members_company FOREIGN KEY (company_id) REFERENCES companies(id),
+    CONSTRAINT fk_company_members_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS candidate_profiles (
@@ -51,6 +85,13 @@ CREATE TABLE IF NOT EXISTS candidate_profiles (
     experience_years INT NOT NULL DEFAULT 0,
     skills TEXT NULL,
     summary TEXT NULL,
+    avatar_path VARCHAR(255) NULL,
+    phone VARCHAR(20) NULL,
+    target_position VARCHAR(150) NULL,
+    target_location VARCHAR(100) NULL,
+    expected_salary DECIMAL(15,2) NULL,
+    career_goal TEXT NULL,
+    certificates TEXT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
@@ -58,107 +99,6 @@ CREATE TABLE IF NOT EXISTS candidate_profiles (
     KEY idx_candidate_profiles_university_major (university, major),
     CONSTRAINT chk_candidate_profiles_experience_years CHECK (experience_years >= 0),
     CONSTRAINT fk_candidate_profiles_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Action-level permissions: role membership opens a workspace, while these grants decide
--- which modules the role can use. The records are managed by Admin after the initial seed.
-CREATE TABLE IF NOT EXISTS permissions (
-    id INT NOT NULL AUTO_INCREMENT,
-    permission_code VARCHAR(100) NOT NULL,
-    module VARCHAR(100) NOT NULL,
-    display_name VARCHAR(150) NOT NULL,
-    description VARCHAR(500) NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (id),
-    UNIQUE KEY uq_permissions_code (permission_code),
-    KEY idx_permissions_module (module)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS role_permissions (
-    role_id INT NOT NULL,
-    permission_id INT NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (role_id, permission_id),
-    CONSTRAINT fk_role_permissions_role FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE,
-    CONSTRAINT fk_role_permissions_permission FOREIGN KEY (permission_id) REFERENCES permissions (id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Public career taxonomy. A category is either a top-level group or one direct child of a group.
--- parent_scope_id makes names unique even for root categories (where parent_id is NULL).
-CREATE TABLE IF NOT EXISTS job_categories (
-    id INT NOT NULL AUTO_INCREMENT,
-    parent_id INT NULL,
-    parent_scope_id INT GENERATED ALWAYS AS (COALESCE(parent_id, 0)) STORED,
-    name VARCHAR(120) NOT NULL,
-    description VARCHAR(500) NULL,
-    display_order INT NOT NULL DEFAULT 0,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (id),
-    UNIQUE KEY uq_job_categories_parent_name (parent_scope_id, name),
-    KEY idx_job_categories_parent_active_order (parent_id, is_active, display_order, name),
-    CONSTRAINT chk_job_categories_display_order CHECK (display_order >= 0),
-    CONSTRAINT fk_job_categories_parent FOREIGN KEY (parent_id) REFERENCES job_categories (id) ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Recruiter accounts are created INACTIVE and these fields let an Admin review the request before activation.
-CREATE TABLE IF NOT EXISTS recruiter_profiles (
-    id INT NOT NULL AUTO_INCREMENT,
-    user_id INT NOT NULL,
-    organization_name VARCHAR(150) NOT NULL,
-    job_title VARCHAR(100) NOT NULL,
-    work_phone VARCHAR(30) NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (id),
-    UNIQUE KEY uq_recruiter_profiles_user_id (user_id),
-    CONSTRAINT fk_recruiter_profiles_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- OTP values are BCrypt hashes. Raw codes, mail credentials and OAuth tokens are never stored.
-CREATE TABLE IF NOT EXISTS password_reset_otps (
-    id BIGINT NOT NULL AUTO_INCREMENT,
-    user_id INT NOT NULL,
-    otp_hash VARCHAR(60) NOT NULL,
-    expires_at TIMESTAMP NOT NULL,
-    attempt_count TINYINT UNSIGNED NOT NULL DEFAULT 0,
-    consumed_at TIMESTAMP NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (id),
-    KEY idx_password_reset_otps_user_active (user_id, consumed_at, expires_at),
-    KEY idx_password_reset_otps_created_at (created_at),
-    CONSTRAINT chk_password_reset_otps_attempt_count CHECK (attempt_count <= 5),
-    CONSTRAINT fk_password_reset_otps_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS login_verification_otps (
-    id BIGINT NOT NULL AUTO_INCREMENT,
-    user_id INT NOT NULL,
-    otp_hash VARCHAR(60) NOT NULL,
-    expires_at TIMESTAMP NOT NULL,
-    attempt_count TINYINT UNSIGNED NOT NULL DEFAULT 0,
-    consumed_at TIMESTAMP NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (id),
-    KEY idx_login_verification_otps_user_active (user_id, consumed_at, expires_at),
-    KEY idx_login_verification_otps_created_at (created_at),
-    CONSTRAINT chk_login_verification_otps_attempt_count CHECK (attempt_count <= 5),
-    CONSTRAINT fk_login_verification_otps_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Only a provider's stable subject is stored, never the Google access token, refresh token or ID token.
-CREATE TABLE IF NOT EXISTS oauth_accounts (
-    id BIGINT NOT NULL AUTO_INCREMENT,
-    user_id INT NOT NULL,
-    provider VARCHAR(30) NOT NULL,
-    provider_subject VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    last_login_at TIMESTAMP NULL,
-    PRIMARY KEY (id),
-    UNIQUE KEY uq_oauth_accounts_provider_subject (provider, provider_subject),
-    UNIQUE KEY uq_oauth_accounts_user_provider (user_id, provider),
-    CONSTRAINT fk_oauth_accounts_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS resumes (
@@ -185,7 +125,6 @@ CREATE TABLE IF NOT EXISTS jobs (
     job_code VARCHAR(50) NOT NULL,
     title VARCHAR(255) NOT NULL,
     department_id INT NOT NULL,
-    category_id INT NULL,
     location VARCHAR(255) NOT NULL,
     employment_type ENUM('FULL_TIME', 'PART_TIME', 'INTERNSHIP', 'CONTRACT', 'REMOTE') NOT NULL,
     number_of_positions INT NOT NULL,
@@ -193,26 +132,29 @@ CREATE TABLE IF NOT EXISTS jobs (
     salary_max DECIMAL(15,2) NOT NULL DEFAULT 0.00,
     description TEXT NOT NULL,
     requirements TEXT NOT NULL,
+    benefits TEXT NOT NULL,
     experience_required INT NOT NULL DEFAULT 0,
     deadline DATE NOT NULL,
     status ENUM('DRAFT', 'PUBLISHED', 'CLOSED', 'ARCHIVED') NOT NULL DEFAULT 'DRAFT',
+    auto_closed BOOLEAN NOT NULL DEFAULT FALSE,
     created_by INT NOT NULL,
+    company_id INT NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE KEY uq_jobs_job_code (job_code),
     KEY idx_jobs_status_deadline (status, deadline),
     KEY idx_jobs_department_status (department_id, status),
-    KEY idx_jobs_category_status (category_id, status),
     KEY idx_jobs_location_type_status (location, employment_type, status),
     KEY idx_jobs_created_by (created_by),
+    KEY idx_jobs_company_status (company_id, status, deadline),
     CONSTRAINT chk_jobs_positions CHECK (number_of_positions > 0),
     CONSTRAINT chk_jobs_salary_min CHECK (salary_min >= 0),
     CONSTRAINT chk_jobs_salary_range CHECK (salary_max >= salary_min),
     CONSTRAINT chk_jobs_experience_required CHECK (experience_required >= 0),
     CONSTRAINT fk_jobs_department FOREIGN KEY (department_id) REFERENCES departments (id) ON DELETE RESTRICT,
-    CONSTRAINT fk_jobs_category FOREIGN KEY (category_id) REFERENCES job_categories (id) ON DELETE SET NULL,
-    CONSTRAINT fk_jobs_created_by FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE RESTRICT
+    CONSTRAINT fk_jobs_created_by FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE RESTRICT,
+    CONSTRAINT fk_jobs_company FOREIGN KEY (company_id) REFERENCES companies (id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS job_skills (
@@ -228,6 +170,37 @@ CREATE TABLE IF NOT EXISTS job_skills (
     CONSTRAINT fk_job_skills_job FOREIGN KEY (job_id) REFERENCES jobs (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS saved_jobs (
+    candidate_id INT NOT NULL,
+    job_id INT NOT NULL,
+    saved_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (candidate_id, job_id),
+    KEY idx_saved_jobs_candidate_saved_at (candidate_id, saved_at),
+    KEY idx_saved_jobs_job (job_id),
+    CONSTRAINT fk_saved_jobs_candidate FOREIGN KEY (candidate_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_saved_jobs_job FOREIGN KEY (job_id) REFERENCES jobs (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS job_alerts (
+    id INT NOT NULL AUTO_INCREMENT,
+    candidate_id INT NOT NULL,
+    name VARCHAR(80) NOT NULL,
+    keyword VARCHAR(150) NULL,
+    department_id INT NULL,
+    location VARCHAR(100) NULL,
+    employment_type ENUM('FULL_TIME', 'PART_TIME', 'INTERNSHIP', 'CONTRACT', 'REMOTE') NULL,
+    frequency ENUM('DAILY', 'WEEKLY') NOT NULL DEFAULT 'DAILY',
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    last_notified_at TIMESTAMP NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_job_alerts_candidate_active (candidate_id, is_active),
+    KEY idx_job_alerts_department (department_id),
+    CONSTRAINT fk_job_alerts_candidate FOREIGN KEY (candidate_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_job_alerts_department FOREIGN KEY (department_id) REFERENCES departments (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS applications (
     id INT NOT NULL AUTO_INCREMENT,
     job_id INT NOT NULL,
@@ -235,6 +208,7 @@ CREATE TABLE IF NOT EXISTS applications (
     resume_id INT NOT NULL,
     status ENUM('SUBMITTED', 'SCREENING', 'SHORTLISTED', 'INTERVIEW_SCHEDULED', 'INTERVIEWED', 'OFFERED', 'HIRED', 'REJECTED', 'WITHDRAWN') NOT NULL DEFAULT 'SUBMITTED',
     match_score DECIMAL(5,2) NOT NULL DEFAULT 0.00,
+    cover_letter VARCHAR(2000) NULL,
     applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
@@ -386,121 +360,71 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     CONSTRAINT fk_audit_logs_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Development seed data. It is insert-only: re-running this schema must never reset real
--- passwords, roles, account states, or HR-maintained demo records.
--- The BCrypt hash below has been generated and verified for password: 123456.
-INSERT IGNORE INTO roles (role_name, description) VALUES
+-- Development seed data. The BCrypt hash below has been generated and verified for password: 123456.
+INSERT INTO roles (role_name, description) VALUES
     ('ADMIN', 'System Administrator'),
     ('HR', 'Human Resources Manager'),
     ('INTERVIEWER', 'Technical or culture interviewer'),
-    ('CANDIDATE', 'Job applicant');
+    ('CANDIDATE', 'Job applicant')
+ON DUPLICATE KEY UPDATE description = VALUES(description);
 
--- Baseline RBAC matrix. INSERT IGNORE preserves any later changes made by an Admin.
-INSERT IGNORE INTO permissions (permission_code, module, display_name, description) VALUES
-    ('ADMIN_DASHBOARD_VIEW', 'Quản trị', 'Xem tổng quan quản trị', 'Xem dashboard hệ thống'),
-    ('ADMIN_USERS_MANAGE', 'Quản trị', 'Quản lý người dùng', 'Xem, khóa, kích hoạt và gán vai trò người dùng'),
-    ('ADMIN_PERMISSIONS_MANAGE', 'Quản trị', 'Quản lý phân quyền', 'Cấu hình ma trận quyền theo vai trò'),
-    ('ADMIN_DEPARTMENTS_MANAGE', 'Quản trị', 'Quản lý phòng ban', 'Tạo, sửa và lưu trữ phòng ban'),
-    ('ADMIN_CATEGORIES_MANAGE', 'Quản trị', 'Quản lý danh mục', 'Quản lý danh mục nghề nghiệp và danh mục con'),
-    ('ADMIN_AUDIT_VIEW', 'Quản trị', 'Xem nhật ký', 'Xem nhật ký audit hệ thống'),
-    ('HR_DASHBOARD_VIEW', 'Tuyển dụng', 'Xem dashboard HR', 'Xem số liệu tuyển dụng'),
-    ('HR_JOBS_MANAGE', 'Tuyển dụng', 'Quản lý tin tuyển', 'Tạo, sửa, publish, đóng và lưu trữ tin tuyển'),
-    ('HR_APPLICATIONS_MANAGE', 'Tuyển dụng', 'Quản lý hồ sơ', 'Sàng lọc và quản lý hồ sơ ứng tuyển'),
-    ('HR_INTERVIEWS_MANAGE', 'Tuyển dụng', 'Quản lý phỏng vấn', 'Lên lịch, đổi lịch và hủy phỏng vấn'),
-    ('HR_OFFERS_MANAGE', 'Tuyển dụng', 'Quản lý offer', 'Tạo, gửi và quản lý offer'),
-    ('HR_ONBOARDING_MANAGE', 'Tuyển dụng', 'Quản lý onboarding', 'Theo dõi và giao việc onboarding'),
-    ('HR_REPORTS_VIEW', 'Tuyển dụng', 'Xem báo cáo', 'Xem và xuất báo cáo tuyển dụng'),
-    ('HR_NOTIFICATIONS_VIEW', 'Tuyển dụng', 'Xem thông báo HR', 'Đọc và cập nhật thông báo HR'),
-    ('INTERVIEWER_DASHBOARD_VIEW', 'Phỏng vấn', 'Xem dashboard Interviewer', 'Xem tổng quan các lịch được phân công'),
-    ('INTERVIEWER_INTERVIEWS_VIEW', 'Phỏng vấn', 'Xem lịch được phân công', 'Xem lịch và hồ sơ ứng viên được phân công'),
-    ('INTERVIEWER_FEEDBACK_SUBMIT', 'Phỏng vấn', 'Gửi đánh giá', 'Gửi feedback cho lịch phỏng vấn đã kết thúc'),
-    ('INTERVIEWER_NOTIFICATIONS_VIEW', 'Phỏng vấn', 'Xem thông báo Interviewer', 'Đọc và cập nhật thông báo phỏng vấn'),
-    ('CANDIDATE_JOBS_VIEW', 'Ứng viên', 'Tìm việc', 'Xem và tìm kiếm tin tuyển dụng'),
-    ('CANDIDATE_PROFILE_MANAGE', 'Ứng viên', 'Quản lý hồ sơ cá nhân', 'Cập nhật hồ sơ ứng viên'),
-    ('CANDIDATE_RESUMES_MANAGE', 'Ứng viên', 'Quản lý CV', 'Tạo, tải lên, tải xuống và chọn CV'),
-    ('CANDIDATE_APPLICATIONS_MANAGE', 'Ứng viên', 'Quản lý ứng tuyển', 'Ứng tuyển, xem và rút đơn của bản thân'),
-    ('CANDIDATE_INTERVIEWS_VIEW', 'Ứng viên', 'Xem lịch phỏng vấn', 'Xem lịch phỏng vấn của bản thân'),
-    ('CANDIDATE_OFFERS_RESPOND', 'Ứng viên', 'Phản hồi offer', 'Xem và phản hồi offer của bản thân'),
-    ('CANDIDATE_ONBOARDING_MANAGE', 'Ứng viên', 'Thực hiện onboarding', 'Cập nhật công việc onboarding của bản thân'),
-    ('CANDIDATE_NOTIFICATIONS_VIEW', 'Ứng viên', 'Xem thông báo ứng viên', 'Đọc và cập nhật thông báo cá nhân');
-
-INSERT IGNORE INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id
-FROM roles r
-JOIN permissions p
-WHERE r.role_name = 'ADMIN'
-   OR (r.role_name = 'HR' AND LEFT(p.permission_code, 3) = 'HR_')
-   OR (r.role_name = 'INTERVIEWER' AND LEFT(p.permission_code, 12) = 'INTERVIEWER_')
-   OR (r.role_name = 'CANDIDATE' AND LEFT(p.permission_code, 10) = 'CANDIDATE_');
-
-INSERT IGNORE INTO departments (name, description) VALUES
+INSERT INTO departments (name, description) VALUES
     ('Information Technology', 'IT and Software Engineering'),
     ('Human Resources', 'HR and Recruitment'),
     ('Marketing', 'Marketing and PR'),
     ('Finance', 'Finance and Accounting'),
-    ('Sales', 'Sales and Account Management');
+    ('Sales', 'Sales and Account Management'),
+    ('Customer Service', 'Customer care and customer success'),
+    ('Design', 'Graphic, product and motion design'),
+    ('Construction', 'Construction, civil engineering and site management'),
+    ('Operations', 'Business operations and project coordination')
+ON DUPLICATE KEY UPDATE description = VALUES(description);
 
--- Default navigation taxonomy. Admin can add, reorder or hide groups and their child categories.
-INSERT IGNORE INTO job_categories (parent_id, name, description, display_order, is_active) VALUES
-    (NULL, 'Công nghệ thông tin', 'Việc làm công nghệ, phần mềm và dữ liệu.', 10, TRUE),
-    (NULL, 'Kinh doanh & Bán hàng', 'Việc làm phát triển khách hàng và doanh thu.', 20, TRUE),
-    (NULL, 'Marketing & Truyền thông', 'Việc làm thương hiệu, nội dung và tăng trưởng.', 30, TRUE),
-    (NULL, 'Tài chính & Kế toán', 'Việc làm kế toán, kiểm toán và tài chính.', 40, TRUE),
-    (NULL, 'Nhân sự & Hành chính', 'Việc làm nhân sự, tuyển dụng và vận hành văn phòng.', 50, TRUE);
-
-INSERT IGNORE INTO job_categories (parent_id, name, description, display_order, is_active)
-SELECT id, 'Phát triển phần mềm', 'Backend, frontend, mobile và nền tảng phần mềm.', 10, TRUE
-FROM job_categories WHERE parent_id IS NULL AND name = 'Công nghệ thông tin';
-INSERT IGNORE INTO job_categories (parent_id, name, description, display_order, is_active)
-SELECT id, 'Kiểm thử phần mềm', 'QA, QC và kiểm thử tự động.', 20, TRUE
-FROM job_categories WHERE parent_id IS NULL AND name = 'Công nghệ thông tin';
-INSERT IGNORE INTO job_categories (parent_id, name, description, display_order, is_active)
-SELECT id, 'Phân tích nghiệp vụ', 'Business Analyst, Product Analyst và hệ thống.', 30, TRUE
-FROM job_categories WHERE parent_id IS NULL AND name = 'Công nghệ thông tin';
-INSERT IGNORE INTO job_categories (parent_id, name, description, display_order, is_active)
-SELECT id, 'Phát triển kinh doanh', 'Sales, Account Executive và tư vấn giải pháp.', 10, TRUE
-FROM job_categories WHERE parent_id IS NULL AND name = 'Kinh doanh & Bán hàng';
-INSERT IGNORE INTO job_categories (parent_id, name, description, display_order, is_active)
-SELECT id, 'Chăm sóc khách hàng', 'Customer Success, support và chăm sóc khách hàng.', 20, TRUE
-FROM job_categories WHERE parent_id IS NULL AND name = 'Kinh doanh & Bán hàng';
-INSERT IGNORE INTO job_categories (parent_id, name, description, display_order, is_active)
-SELECT id, 'Digital Marketing', 'Performance, SEO, social media và quảng cáo số.', 10, TRUE
-FROM job_categories WHERE parent_id IS NULL AND name = 'Marketing & Truyền thông';
-INSERT IGNORE INTO job_categories (parent_id, name, description, display_order, is_active)
-SELECT id, 'Nội dung & sáng tạo', 'Content, thiết kế và truyền thông thương hiệu.', 20, TRUE
-FROM job_categories WHERE parent_id IS NULL AND name = 'Marketing & Truyền thông';
-INSERT IGNORE INTO job_categories (parent_id, name, description, display_order, is_active)
-SELECT id, 'Kế toán', 'Kế toán tổng hợp, thuế và công nợ.', 10, TRUE
-FROM job_categories WHERE parent_id IS NULL AND name = 'Tài chính & Kế toán';
-INSERT IGNORE INTO job_categories (parent_id, name, description, display_order, is_active)
-SELECT id, 'Tuyển dụng', 'Talent acquisition và employer branding.', 10, TRUE
-FROM job_categories WHERE parent_id IS NULL AND name = 'Nhân sự & Hành chính';
-
-INSERT IGNORE INTO users (email, password_hash, full_name, role_id, status)
+INSERT INTO users (email, password_hash, full_name, role_id, status)
 SELECT 'admin@recruitflow.com', '$2a$12$v5qHyl5qQU5TBVS4ZNOclulg2e9nBQ7D91WZ/bIayPjPK2ACDA3xe', 'System Admin', id, 'ACTIVE'
-FROM roles WHERE role_name = 'ADMIN';
-INSERT IGNORE INTO users (email, password_hash, full_name, role_id, status)
+FROM roles WHERE role_name = 'ADMIN'
+ON DUPLICATE KEY UPDATE password_hash = VALUES(password_hash), full_name = VALUES(full_name), role_id = VALUES(role_id), status = VALUES(status);
+INSERT INTO users (email, password_hash, full_name, role_id, status)
 SELECT 'hr@recruitflow.com', '$2a$12$v5qHyl5qQU5TBVS4ZNOclulg2e9nBQ7D91WZ/bIayPjPK2ACDA3xe', 'HR Manager', id, 'ACTIVE'
-FROM roles WHERE role_name = 'HR';
-INSERT IGNORE INTO users (email, password_hash, full_name, role_id, status)
+FROM roles WHERE role_name = 'HR'
+ON DUPLICATE KEY UPDATE password_hash = VALUES(password_hash), full_name = VALUES(full_name), role_id = VALUES(role_id), status = VALUES(status);
+INSERT INTO users (email, password_hash, full_name, role_id, status)
 SELECT 'interviewer@recruitflow.com', '$2a$12$v5qHyl5qQU5TBVS4ZNOclulg2e9nBQ7D91WZ/bIayPjPK2ACDA3xe', 'Lead Interviewer', id, 'ACTIVE'
-FROM roles WHERE role_name = 'INTERVIEWER';
-INSERT IGNORE INTO users (email, password_hash, full_name, role_id, status)
+FROM roles WHERE role_name = 'INTERVIEWER'
+ON DUPLICATE KEY UPDATE password_hash = VALUES(password_hash), full_name = VALUES(full_name), role_id = VALUES(role_id), status = VALUES(status);
+INSERT INTO users (email, password_hash, full_name, role_id, status)
 SELECT 'candidate@recruitflow.com', '$2a$12$v5qHyl5qQU5TBVS4ZNOclulg2e9nBQ7D91WZ/bIayPjPK2ACDA3xe', 'Candidate User', id, 'ACTIVE'
-FROM roles WHERE role_name = 'CANDIDATE';
+FROM roles WHERE role_name = 'CANDIDATE'
+ON DUPLICATE KEY UPDATE password_hash = VALUES(password_hash), full_name = VALUES(full_name), role_id = VALUES(role_id), status = VALUES(status);
 
-INSERT IGNORE INTO candidate_profiles (user_id, experience_years, skills, summary)
+INSERT INTO candidate_profiles (user_id, experience_years, skills, summary)
 SELECT id, 0, 'Java, JDBC, MySQL, Git', 'Seed candidate account for RecruitFlow demonstrations.'
-FROM users WHERE email = 'candidate@recruitflow.com';
+FROM users WHERE email = 'candidate@recruitflow.com'
+ON DUPLICATE KEY UPDATE skills = VALUES(skills), summary = VALUES(summary);
 
-INSERT IGNORE INTO jobs (job_code, title, department_id, category_id, location, employment_type, number_of_positions, salary_min, salary_max, description, requirements, experience_required, deadline, status, created_by) VALUES
-    ('JOB-001', 'Java Backend Intern', (SELECT id FROM departments WHERE name = 'Information Technology'), (SELECT c.id FROM job_categories c JOIN job_categories p ON p.id = c.parent_id WHERE p.name = 'Công nghệ thông tin' AND c.name = 'Phát triển phần mềm'), 'Hanoi', 'INTERNSHIP', 3, 3000000, 5000000, 'Support the backend team in building reliable Java services.', 'Basic Java, OOP, JDBC, MySQL and Git.', 0, '2027-12-31', 'PUBLISHED', (SELECT id FROM users WHERE email = 'hr@recruitflow.com')),
-    ('JOB-002', 'Java Developer', (SELECT id FROM departments WHERE name = 'Information Technology'), (SELECT c.id FROM job_categories c JOIN job_categories p ON p.id = c.parent_id WHERE p.name = 'Công nghệ thông tin' AND c.name = 'Phát triển phần mềm'), 'Hanoi', 'FULL_TIME', 2, 15000000, 30000000, 'Develop and maintain Java backend services.', 'Java, JDBC, MySQL, REST API and Git.', 2, '2027-12-31', 'PUBLISHED', (SELECT id FROM users WHERE email = 'hr@recruitflow.com')),
-    ('JOB-003', 'Frontend Developer', (SELECT id FROM departments WHERE name = 'Information Technology'), (SELECT c.id FROM job_categories c JOIN job_categories p ON p.id = c.parent_id WHERE p.name = 'Công nghệ thông tin' AND c.name = 'Phát triển phần mềm'), 'Ho Chi Minh City', 'FULL_TIME', 1, 15000000, 25000000, 'Build responsive web interfaces.', 'HTML, CSS, JavaScript and Git.', 1, '2027-12-31', 'PUBLISHED', (SELECT id FROM users WHERE email = 'hr@recruitflow.com')),
-    ('JOB-004', 'Software Tester', (SELECT id FROM departments WHERE name = 'Information Technology'), (SELECT c.id FROM job_categories c JOIN job_categories p ON p.id = c.parent_id WHERE p.name = 'Công nghệ thông tin' AND c.name = 'Kiểm thử phần mềm'), 'Da Nang', 'FULL_TIME', 2, 10000000, 20000000, 'Execute manual and automation test plans.', 'Manual testing, SQL, API testing and Git.', 1, '2027-12-31', 'PUBLISHED', (SELECT id FROM users WHERE email = 'hr@recruitflow.com')),
-    ('JOB-005', 'Business Analyst Intern', (SELECT id FROM departments WHERE name = 'Information Technology'), (SELECT c.id FROM job_categories c JOIN job_categories p ON p.id = c.parent_id WHERE p.name = 'Công nghệ thông tin' AND c.name = 'Phân tích nghiệp vụ'), 'Hanoi', 'INTERNSHIP', 2, 3000000, 5000000, 'Assist with requirement analysis and documentation.', 'Communication, UML, SQL and documentation.', 0, '2027-12-31', 'PUBLISHED', (SELECT id FROM users WHERE email = 'hr@recruitflow.com'));
+INSERT INTO companies (name,industry,company_size,address,website,description)
+VALUES ('JobCV Technologies','Công nghệ thông tin','50 - 200 nhân sự','Hà Nội','https://jobcv.vn','Nền tảng kết nối ứng viên và nhà tuyển dụng.')
+ON DUPLICATE KEY UPDATE name=VALUES(name);
+INSERT INTO company_members(company_id,user_id,member_role,job_title)
+SELECT c.id,u.id,'HR','HR Manager' FROM companies c JOIN users u ON u.email='hr@recruitflow.com' WHERE c.name='JobCV Technologies'
+ON DUPLICATE KEY UPDATE company_id=VALUES(company_id),member_role=VALUES(member_role);
+INSERT INTO company_members(company_id,user_id,member_role,job_title)
+SELECT c.id,u.id,'INTERVIEWER','Lead Interviewer' FROM companies c JOIN users u ON u.email='interviewer@recruitflow.com' WHERE c.name='JobCV Technologies'
+ON DUPLICATE KEY UPDATE company_id=VALUES(company_id),member_role=VALUES(member_role);
 
-INSERT IGNORE INTO job_skills (job_id, skill_name, weight, is_required) VALUES
+INSERT INTO jobs (job_code, title, department_id, location, employment_type, number_of_positions, salary_min, salary_max, description, requirements, benefits, experience_required, deadline, status, created_by, company_id) VALUES
+    ('JOB-001', 'Java Backend Intern', (SELECT id FROM departments WHERE name = 'Information Technology'), 'Hanoi', 'INTERNSHIP', 3, 3000000, 5000000, 'Support the backend team in building reliable Java services.', 'Basic Java, OOP, JDBC, MySQL and Git.', 'Đào tạo, phụ cấp và cơ hội trở thành nhân viên chính thức.', 0, '2027-12-31', 'PUBLISHED', (SELECT id FROM users WHERE email = 'hr@recruitflow.com'), (SELECT id FROM companies WHERE name='JobCV Technologies')),
+    ('JOB-002', 'Java Developer', (SELECT id FROM departments WHERE name = 'Information Technology'), 'Hanoi', 'FULL_TIME', 2, 15000000, 30000000, 'Develop and maintain Java backend services.', 'Java, JDBC, MySQL, REST API and Git.', 'Bảo hiểm đầy đủ, thưởng hiệu suất và đào tạo chuyên môn.', 2, '2027-12-31', 'PUBLISHED', (SELECT id FROM users WHERE email = 'hr@recruitflow.com'), (SELECT id FROM companies WHERE name='JobCV Technologies')),
+    ('JOB-003', 'Frontend Developer', (SELECT id FROM departments WHERE name = 'Information Technology'), 'Ho Chi Minh City', 'FULL_TIME', 1, 15000000, 25000000, 'Build responsive web interfaces.', 'HTML, CSS, JavaScript and Git.', 'Bảo hiểm đầy đủ, thưởng hiệu suất và đào tạo chuyên môn.', 1, '2027-12-31', 'PUBLISHED', (SELECT id FROM users WHERE email = 'hr@recruitflow.com'), (SELECT id FROM companies WHERE name='JobCV Technologies')),
+    ('JOB-004', 'Software Tester', (SELECT id FROM departments WHERE name = 'Information Technology'), 'Da Nang', 'FULL_TIME', 2, 10000000, 20000000, 'Execute manual and automation test plans.', 'Manual testing, SQL, API testing and Git.', 'Bảo hiểm đầy đủ, thưởng hiệu suất và đào tạo chuyên môn.', 1, '2027-12-31', 'PUBLISHED', (SELECT id FROM users WHERE email = 'hr@recruitflow.com'), (SELECT id FROM companies WHERE name='JobCV Technologies')),
+    ('JOB-005', 'Business Analyst Intern', (SELECT id FROM departments WHERE name = 'Information Technology'), 'Hanoi', 'INTERNSHIP', 2, 3000000, 5000000, 'Assist with requirement analysis and documentation.', 'Communication, UML, SQL and documentation.', 'Đào tạo, phụ cấp và cơ hội trở thành nhân viên chính thức.', 0, '2027-12-31', 'PUBLISHED', (SELECT id FROM users WHERE email = 'hr@recruitflow.com'), (SELECT id FROM companies WHERE name='JobCV Technologies'))
+ON DUPLICATE KEY UPDATE
+    title = VALUES(title), department_id = VALUES(department_id), location = VALUES(location), employment_type = VALUES(employment_type),
+    number_of_positions = VALUES(number_of_positions), salary_min = VALUES(salary_min), salary_max = VALUES(salary_max),
+    description = VALUES(description), requirements = VALUES(requirements), benefits = VALUES(benefits), experience_required = VALUES(experience_required), deadline = VALUES(deadline),
+    status = VALUES(status), created_by = VALUES(created_by), company_id = VALUES(company_id);
+
+INSERT INTO job_skills (job_id, skill_name, weight, is_required) VALUES
     ((SELECT id FROM jobs WHERE job_code = 'JOB-001'), 'Java', 5, TRUE),
     ((SELECT id FROM jobs WHERE job_code = 'JOB-001'), 'JDBC', 4, TRUE),
     ((SELECT id FROM jobs WHERE job_code = 'JOB-001'), 'MySQL', 4, TRUE),
@@ -515,4 +439,5 @@ INSERT IGNORE INTO job_skills (job_id, skill_name, weight, is_required) VALUES
     ((SELECT id FROM jobs WHERE job_code = 'JOB-004'), 'Manual Testing', 5, TRUE),
     ((SELECT id FROM jobs WHERE job_code = 'JOB-004'), 'SQL', 3, TRUE),
     ((SELECT id FROM jobs WHERE job_code = 'JOB-005'), 'Communication', 5, TRUE),
-    ((SELECT id FROM jobs WHERE job_code = 'JOB-005'), 'UML', 4, TRUE);
+    ((SELECT id FROM jobs WHERE job_code = 'JOB-005'), 'UML', 4, TRUE)
+ON DUPLICATE KEY UPDATE weight = VALUES(weight), is_required = VALUES(is_required);

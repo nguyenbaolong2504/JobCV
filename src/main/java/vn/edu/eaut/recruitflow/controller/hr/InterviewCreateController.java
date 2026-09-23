@@ -32,14 +32,15 @@ public class InterviewCreateController extends BaseController {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         try {
+            int actorId = RequestUtil.currentUserId(request);
             String applicationId = RequestUtil.text(request, "applicationId");
             if (!applicationId.isEmpty()) {
                 request.setAttribute("application", applicationService.getForHr(
-                        RequestUtil.requiredPositiveInt(request, "applicationId", "Đơn ứng tuyển")));
+                        RequestUtil.requiredPositiveInt(request, "applicationId", "Đơn ứng tuyển"), actorId));
             }
-            request.setAttribute("applications", applicationService.findShortlisted());
-            request.setAttribute("interviewers", interviewService.getInterviewers());
-            view(request, response, "/WEB-INF/views/hr/interview-form.jsp", "Lên lịch phỏng vấn | RecruitFlow");
+            request.setAttribute("applications", applicationService.findShortlisted(actorId));
+            request.setAttribute("interviewers", interviewService.getInterviewers(RequestUtil.currentUserId(request)));
+            view(request, response, "/WEB-INF/views/hr/interview-form.jsp", "Lên lịch phỏng vấn | JobCV");
         } catch (BusinessException | IllegalArgumentException ex) {
             redirectWithError(request, response, "/hr/interviews", ex.getMessage());
         }

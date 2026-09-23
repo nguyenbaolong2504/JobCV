@@ -1,7 +1,7 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
-<c:set var="pageTitle" value="Quản lý tin tuyển dụng | RecruitFlow" />
+<c:set var="pageTitle" value="Quản lý tin tuyển dụng | JobCV" />
 <jsp:include page="/WEB-INF/views/common/header.jsp" />
 
 <div class="container-fluid p-0">
@@ -27,7 +27,7 @@
                     <div class="card-body">
                         <form class="row gy-2 gx-3 align-items-end" method="get" action="${pageContext.request.contextPath}/hr/jobs">
                             <div class="col-lg-4"><label class="form-label small text-muted">Từ khóa</label><input class="form-control" name="keyword" value="<c:out value='${param.keyword}'/>" placeholder="Mã hoặc tiêu đề công việc"></div>
-                            <div class="col-lg-3"><label class="form-label small text-muted">Phòng ban</label><select class="form-select" name="department"><option value="">Tất cả phòng ban</option><c:forEach var="department" items="${departments}"><option value="${department.id}" <c:if test="${param.department eq department.id}">selected</c:if>><c:out value="${department.name}" /></option></c:forEach></select></div>
+                            <div class="col-lg-3"><label class="form-label small text-muted">Phòng ban</label><select class="form-select" name="department"><option value="">Tất cả phòng ban</option><c:forEach var="department" items="${departments}"><option value="${department.id}" <c:if test="${param.department eq department.id}">selected</c:if>><c:out value="${department.displayName}" /></option></c:forEach></select></div>
                             <div class="col-lg-3"><label class="form-label small text-muted">Trạng thái</label><select class="form-select" name="status"><option value="">Tất cả trạng thái</option><option value="DRAFT" <c:if test="${param.status eq 'DRAFT'}">selected</c:if>>Bản nháp</option><option value="PUBLISHED" <c:if test="${param.status eq 'PUBLISHED'}">selected</c:if>>Đã đăng</option><option value="CLOSED" <c:if test="${param.status eq 'CLOSED'}">selected</c:if>>Đã đóng</option><option value="ARCHIVED" <c:if test="${param.status eq 'ARCHIVED'}">selected</c:if>>Lưu trữ</option></select></div>
                             <div class="col-lg-2 d-flex gap-2"><button class="btn btn-outline-primary flex-grow-1" type="submit"><i class="bi bi-search"></i> Lọc</button><a class="btn btn-light" href="${pageContext.request.contextPath}/hr/jobs" aria-label="Xóa bộ lọc"><i class="bi bi-arrow-counterclockwise"></i></a></div>
                         </form>
@@ -43,16 +43,16 @@
                                 <c:forEach var="job" items="${jobs}">
                                     <tr>
                                         <td class="ps-4"><span class="badge text-bg-light border"><c:out value="${job.jobCode}" /></span></td>
-                                        <td><div class="fw-semibold"><c:out value="${job.title}" /></div><small class="text-muted"><c:out value="${job.location}" /> · <c:out value="${job.employmentType}" /></small></td>
+                                        <td><div class="fw-semibold"><c:out value="${job.title}" /></div><small class="text-muted"><c:out value="${job.location}" /> · <span data-enum-label="${job.employmentType}"><c:out value="${job.employmentType}" /></span></small></td>
                                         <td><c:out value="${job.departmentName}" /></td>
                                         <td><c:out value="${job.deadline}" /></td>
-                                        <td><c:choose><c:when test="${job.status eq 'PUBLISHED'}"><span class="badge text-bg-success">Đã đăng</span></c:when><c:when test="${job.status eq 'DRAFT'}"><span class="badge text-bg-warning">Bản nháp</span></c:when><c:when test="${job.status eq 'CLOSED'}"><span class="badge text-bg-danger">Đã đóng</span></c:when><c:otherwise><span class="badge text-bg-secondary">Lưu trữ</span></c:otherwise></c:choose></td>
+                                        <td><c:choose><c:when test="${job.status eq 'PUBLISHED'}"><span class="badge text-bg-success">Đã đăng</span></c:when><c:when test="${job.status eq 'DRAFT'}"><span class="badge text-bg-warning">Bản nháp</span></c:when><c:when test="${job.status eq 'CLOSED' and job.autoClosed}"><span class="badge text-bg-primary">Đã tuyển đủ</span><small class="d-block text-muted mt-1">0/${job.numberOfPositions} chỗ trống</small></c:when><c:when test="${job.status eq 'CLOSED'}"><span class="badge text-bg-danger">Đã đóng</span></c:when><c:otherwise><span class="badge text-bg-secondary">Lưu trữ</span></c:otherwise></c:choose></td>
                                         <td class="text-end pe-4">
                                             <div class="dropdown">
                                                 <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" type="button">Thao tác</button>
                                                 <ul class="dropdown-menu dropdown-menu-end">
                                                     <li><a class="dropdown-item" href="${pageContext.request.contextPath}/hr/jobs/edit?id=${job.id}"><i class="bi bi-pencil me-2"></i>Chỉnh sửa</a></li>
-                                                    <c:if test="${job.status eq 'DRAFT' or job.status eq 'CLOSED'}"><li><form action="${pageContext.request.contextPath}/hr/jobs/status" method="post"><input type="hidden" name="jobId" value="${job.id}"><input type="hidden" name="status" value="PUBLISHED"><button class="dropdown-item text-success" type="submit"><i class="bi bi-globe2 me-2"></i>Đăng tin</button></form></li></c:if>
+                                                    <c:if test="${job.status eq 'DRAFT' or (job.status eq 'CLOSED' and not job.autoClosed)}"><li><form action="${pageContext.request.contextPath}/hr/jobs/status" method="post"><input type="hidden" name="jobId" value="${job.id}"><input type="hidden" name="status" value="PUBLISHED"><button class="dropdown-item text-success" type="submit"><i class="bi bi-globe2 me-2"></i>Đăng tin</button></form></li></c:if>
                                                     <c:if test="${job.status eq 'PUBLISHED'}"><li><form action="${pageContext.request.contextPath}/hr/jobs/status" method="post"><input type="hidden" name="jobId" value="${job.id}"><input type="hidden" name="status" value="CLOSED"><button class="dropdown-item text-warning" type="submit"><i class="bi bi-pause-circle me-2"></i>Đóng tin</button></form></li></c:if>
                                                     <li><hr class="dropdown-divider"></li>
                                                     <li><form action="${pageContext.request.contextPath}/hr/jobs/status" method="post"><input type="hidden" name="jobId" value="${job.id}"><input type="hidden" name="status" value="ARCHIVED"><button class="dropdown-item text-danger" type="submit"><i class="bi bi-archive me-2"></i>Lưu trữ</button></form></li>

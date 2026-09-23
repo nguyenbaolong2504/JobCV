@@ -12,6 +12,7 @@ public class Application {
     private int resumeId;
     private String status;
     private BigDecimal matchScore;
+    private String coverLetter;
     private Timestamp appliedAt;
     private Timestamp updatedAt;
     private String jobCode;
@@ -32,6 +33,8 @@ public class Application {
     public void setStatus(String status) { this.status = status; }
     public BigDecimal getMatchScore() { return matchScore; }
     public void setMatchScore(BigDecimal matchScore) { this.matchScore = matchScore; }
+    public String getCoverLetter() { return coverLetter; }
+    public void setCoverLetter(String coverLetter) { this.coverLetter = coverLetter; }
     public Timestamp getAppliedAt() { return appliedAt; }
     public void setAppliedAt(Timestamp appliedAt) { this.appliedAt = appliedAt; }
     public Timestamp getUpdatedAt() { return updatedAt; }

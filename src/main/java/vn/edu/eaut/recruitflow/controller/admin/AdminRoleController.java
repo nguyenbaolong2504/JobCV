@@ -29,6 +29,6 @@ public class AdminRoleController extends BaseController {
         } catch (BusinessException exception) {
             request.setAttribute("error", exception.getMessage());
         }
-        view(request, response, "/WEB-INF/views/admin/roles.jsp", "Phân quyền | RecruitFlow");
+        view(request, response, "/WEB-INF/views/admin/roles.jsp", "Phân quyền | JobCV");
     }
 }

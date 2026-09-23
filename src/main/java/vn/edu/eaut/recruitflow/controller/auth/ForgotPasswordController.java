@@ -28,7 +28,7 @@ public class ForgotPasswordController extends BaseController {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         request.setAttribute("passwordResetAvailable", passwordResetService.isAvailable());
-        view(request, response, "/WEB-INF/views/auth/forgot-password.jsp", "Quên mật khẩu | RecruitFlow");
+        view(request, response, "/WEB-INF/views/auth/forgot-password.jsp", "Quên mật khẩu | JobCV");
     }
 
     @Override

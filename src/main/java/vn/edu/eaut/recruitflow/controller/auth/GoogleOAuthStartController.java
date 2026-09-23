@@ -26,8 +26,7 @@ public class GoogleOAuthStartController extends BaseController {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
         HttpSession session = request.getSession(false);
-        if (session != null && session.getAttribute("userId") instanceof Integer
-                && session.getAttribute("role") instanceof String) {
+        if (AuthSession.isAuthenticated(session)) {
             redirect(request, response, AuthSession.landingPath((String) session.getAttribute("role")));
             return;
         }

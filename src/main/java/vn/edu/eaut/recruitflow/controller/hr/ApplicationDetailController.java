@@ -33,9 +33,10 @@ public class ApplicationDetailController extends BaseController {
             throws ServletException, IOException {
         try {
             int applicationId = RequestUtil.requiredPositiveInt(request, "id", "Đơn ứng tuyển");
-            request.setAttribute("application", applicationService.getForHr(applicationId));
-            request.setAttribute("history", applicationService.getHistory(applicationId));
-            List<Interview> interviews = applicationService.getInterviews(applicationId);
+            int actorId = RequestUtil.currentUserId(request);
+            request.setAttribute("application", applicationService.getForHr(applicationId, actorId));
+            request.setAttribute("history", applicationService.getHistoryForHr(applicationId, actorId));
+            List<Interview> interviews = applicationService.getInterviewsForHr(applicationId, actorId);
             Map<Integer, InterviewFeedback> feedbackByInterview = new LinkedHashMap<>();
             for (Interview interview : interviews) {
                 InterviewFeedback feedback = interviewService.getFeedback(interview.getId());
@@ -45,9 +46,9 @@ public class ApplicationDetailController extends BaseController {
             }
             request.setAttribute("interviews", interviews);
             request.setAttribute("feedbackByInterview", feedbackByInterview);
-            var offer = applicationService.getOffer(applicationId);
+            var offer = applicationService.getOfferForHr(applicationId, actorId);
             request.setAttribute("offers", offer == null ? List.of() : List.of(offer));
-            view(request, response, "/WEB-INF/views/hr/application-detail.jsp", "Hồ sơ ứng viên | RecruitFlow");
+            view(request, response, "/WEB-INF/views/hr/application-detail.jsp", "Hồ sơ ứng viên | JobCV");
         } catch (BusinessException | IllegalArgumentException ex) {
             redirectWithError(request, response, "/hr/applications", ex.getMessage());
         }

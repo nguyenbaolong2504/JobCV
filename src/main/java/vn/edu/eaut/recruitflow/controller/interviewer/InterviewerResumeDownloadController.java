@@ -37,7 +37,8 @@ public class InterviewerResumeDownloadController extends BaseController {
             int interviewId = RequestUtil.requiredPositiveInt(request, "interviewId", "Buổi phỏng vấn");
             int interviewerId = RequestUtil.currentUserId(request);
             Interview interview = interviewService.getForInterviewer(interviewId, interviewerId);
-            Application application = applicationService.getForHr(interview.getApplicationId());
+            Application application = applicationService.getForInterviewer(
+                    interview.getApplicationId(), interviewerId);
             Resume resume = resumeService.getResumeForStaff(application.getResumeId());
             ResumeDownloadUtil.stream(getServletContext(), resume, response);
         } catch (BusinessException | IllegalArgumentException exception) {

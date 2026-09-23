@@ -1,5 +1,5 @@
 -- RECRUITFLOW_SAFE_ADDITIVE_MIGRATION
--- Additive migration for an existing RecruitFlow-compatible installation.
+-- Additive migration for an existing JobCV-compatible installation.
 -- Target: MySQL 8.0.16+. Run it against the schema selected in MySQL Workbench or by the dev runner.
 -- Make a database backup before applying any schema migration.
 -- This file only creates missing tables and indexes; it never deletes, truncates, or seeds data.

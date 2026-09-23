@@ -28,12 +28,17 @@ public class HRReportsController extends BaseController {
         try {
             LocalDate fromDate = optionalDate(request, "fromDate", "Từ ngày");
             LocalDate toDate = optionalDate(request, "toDate", "Đến ngày");
-            Map<String, Object> report = reportService.getRecruitmentReport(fromDate, toDate);
+            if (fromDate == null && toDate == null) {
+                toDate = LocalDate.now();
+                fromDate = toDate.minusYears(5).withDayOfMonth(1);
+            }
+            Map<String, Object> report = reportService.getRecruitmentReport(
+                    fromDate, toDate, RequestUtil.currentUserId(request));
             request.setAttribute("report", report);
         } catch (BusinessException | IllegalArgumentException ex) {
             request.setAttribute("error", ex.getMessage());
         }
-        view(request, response, "/WEB-INF/views/hr/reports.jsp", "Báo cáo tuyển dụng | RecruitFlow");
+        view(request, response, "/WEB-INF/views/hr/reports.jsp", "Báo cáo tuyển dụng | JobCV");
     }
 
     private LocalDate optionalDate(HttpServletRequest request, String field, String label) throws BusinessException {

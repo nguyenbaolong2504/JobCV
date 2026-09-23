@@ -4,6 +4,7 @@ import static vn.edu.eaut.recruitflow.util.VietnameseTextUtil.repairLegacyMojiba
 
 import java.sql.Date;
 import java.sql.Timestamp;
+import java.math.BigDecimal;
 
 public class CandidateProfile {
     private int id;
@@ -16,6 +17,13 @@ public class CandidateProfile {
     private int experienceYears;
     private String skills;
     private String summary;
+    private String avatarPath;
+    private String phone;
+    private String targetPosition;
+    private String targetLocation;
+    private BigDecimal expectedSalary;
+    private String careerGoal;
+    private String certificates;
     private Timestamp createdAt;
     private Timestamp updatedAt;
     private String fullName;
@@ -41,6 +49,20 @@ public class CandidateProfile {
     public void setSkills(String skills) { this.skills = skills; }
     public String getSummary() { return repairLegacyMojibake(summary); }
     public void setSummary(String summary) { this.summary = summary; }
+    public String getAvatarPath() { return avatarPath; }
+    public void setAvatarPath(String avatarPath) { this.avatarPath = avatarPath; }
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
+    public String getTargetPosition() { return targetPosition; }
+    public void setTargetPosition(String targetPosition) { this.targetPosition = targetPosition; }
+    public String getTargetLocation() { return targetLocation; }
+    public void setTargetLocation(String targetLocation) { this.targetLocation = targetLocation; }
+    public BigDecimal getExpectedSalary() { return expectedSalary; }
+    public void setExpectedSalary(BigDecimal expectedSalary) { this.expectedSalary = expectedSalary; }
+    public String getCareerGoal() { return careerGoal; }
+    public void setCareerGoal(String careerGoal) { this.careerGoal = careerGoal; }
+    public String getCertificates() { return certificates; }
+    public void setCertificates(String certificates) { this.certificates = certificates; }
     public Timestamp getCreatedAt() { return createdAt; }
     public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
     public Timestamp getUpdatedAt() { return updatedAt; }

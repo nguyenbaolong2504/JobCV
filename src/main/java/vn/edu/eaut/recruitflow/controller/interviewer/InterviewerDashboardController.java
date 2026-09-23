@@ -30,6 +30,6 @@ public class InterviewerDashboardController extends BaseController {
             redirectWithError(request, response, "/login", ex.getMessage());
             return;
         }
-        view(request, response, "/WEB-INF/views/interviewer/dashboard.jsp", "Interviewer Dashboard | RecruitFlow");
+        view(request, response, "/WEB-INF/views/interviewer/dashboard.jsp", "Bảng điều khiển phỏng vấn | JobCV");
     }
 }

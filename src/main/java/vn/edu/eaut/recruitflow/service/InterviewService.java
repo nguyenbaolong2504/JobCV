@@ -4,6 +4,7 @@ import vn.edu.eaut.recruitflow.dao.ApplicationDAO;
 import vn.edu.eaut.recruitflow.dao.InterviewDAO;
 import vn.edu.eaut.recruitflow.dao.InterviewFeedbackDAO;
 import vn.edu.eaut.recruitflow.dao.UserDAO;
+import vn.edu.eaut.recruitflow.dao.CompanyDAO;
 import vn.edu.eaut.recruitflow.enums.ApplicationStatus;
 import vn.edu.eaut.recruitflow.enums.InterviewStatus;
 import vn.edu.eaut.recruitflow.enums.InterviewType;
@@ -36,6 +37,7 @@ public class InterviewService {
     private final UserDAO userDAO;
     private final ApplicationService applicationService;
     private final NotificationService notificationService;
+    private final CompanyDAO companyDAO = new CompanyDAO();
 
     public InterviewService() {
         this(new InterviewDAO(), new InterviewFeedbackDAO(), new ApplicationDAO(), new UserDAO(),
@@ -53,8 +55,9 @@ public class InterviewService {
     }
 
     public void create(Interview interview, int actorId) throws BusinessException {
-        validateHrActor(actorId);
+        User actor = requireHrActor(actorId);
         validateInterview(interview);
+        applicationService.getForHr(interview.getApplicationId(), actorId);
         try (Connection connection = DBUtil.getConnection()) {
             boolean originalAutoCommit = connection.getAutoCommit();
             connection.setAutoCommit(false);
@@ -73,7 +76,7 @@ public class InterviewService {
                 if (interviewDAO.hasActiveInterviewForApplication(connection, interview.getApplicationId(), null)) {
                     throw new BusinessException("Ứng viên đã có lịch phỏng vấn đang chờ xử lý. Vui lòng cập nhật hoặc hủy lịch hiện tại thay vì tạo lịch mới.");
                 }
-                validateInterviewer(connection, interview.getInterviewerId());
+                validateInterviewer(connection, interview.getInterviewerId(), companyIdFor(actor));
                 if (interviewDAO.checkScheduleConflict(connection, interview.getInterviewerId(), interview.getInterviewDate(),
                         interview.getStartTime(), interview.getEndTime(), null)) {
                     throw new BusinessException("Interviewer đã có lịch phỏng vấn trùng thời gian này.");
@@ -104,7 +107,7 @@ public class InterviewService {
     }
 
     public void update(Interview submitted, int actorId) throws BusinessException {
-        validateHrActor(actorId);
+        User actor = requireHrActor(actorId);
         validateInterview(submitted);
         try (Connection connection = DBUtil.getConnection()) {
             boolean originalAutoCommit = connection.getAutoCommit();
@@ -117,11 +120,12 @@ public class InterviewService {
                 if (existing == null) {
                     throw new BusinessException("Không tìm thấy lịch phỏng vấn.");
                 }
+                applicationService.getForHr(existing.getApplicationId(), actorId);
                 if (InterviewStatus.COMPLETED.name().equals(existing.getStatus()) || InterviewStatus.CANCELLED.name().equals(existing.getStatus())) {
                     throw new BusinessException("Không thể sửa lịch phỏng vấn đã hoàn tất hoặc bị hủy.");
                 }
                 submitted.setApplicationId(existing.getApplicationId());
-                validateInterviewer(connection, submitted.getInterviewerId());
+                validateInterviewer(connection, submitted.getInterviewerId(), companyIdFor(actor));
                 if (interviewDAO.checkScheduleConflict(connection, submitted.getInterviewerId(), submitted.getInterviewDate(),
                         submitted.getStartTime(), submitted.getEndTime(), submitted.getId())) {
                     throw new BusinessException("Interviewer đã có lịch phỏng vấn trùng thời gian này.");
@@ -170,6 +174,7 @@ public class InterviewService {
                 if (interview == null) {
                     throw new BusinessException("Không tìm thấy lịch phỏng vấn.");
                 }
+                applicationService.getForHr(interview.getApplicationId(), actorId);
                 if (InterviewStatus.COMPLETED.name().equals(interview.getStatus())) {
                     throw new BusinessException("Không thể hủy lịch phỏng vấn đã hoàn tất.");
                 }
@@ -273,7 +278,23 @@ public class InterviewService {
         }
     }
 
-    public Interview getForHr(int interviewId) throws BusinessException {
+    public List<Interview> searchForHr(String keyword, Date date, String status, int actorId) throws BusinessException {
+        User actor = requireHrActor(actorId);
+        Integer ownerId = companyIdFor(actor);
+        try {
+            return interviewDAO.search(keyword, date, status, ownerId);
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể tải danh sách lịch phỏng vấn.", exception);
+        }
+    }
+
+    public Interview getForHr(int interviewId, int actorId) throws BusinessException {
+        Interview interview = loadInterview(interviewId);
+        applicationService.getForHr(interview.getApplicationId(), actorId);
+        return interview;
+    }
+
+    private Interview loadInterview(int interviewId) throws BusinessException {
         try {
             Interview interview = interviewDAO.findById(interviewId);
             if (interview == null) throw new BusinessException("Không tìm thấy lịch phỏng vấn.");
@@ -284,7 +305,7 @@ public class InterviewService {
     }
 
     public Interview getForInterviewer(int interviewId, int interviewerId) throws BusinessException {
-        Interview interview = getForHr(interviewId);
+        Interview interview = loadInterview(interviewId);
         if (interview.getInterviewerId() != interviewerId) {
             throw new BusinessException("Bạn không có quyền xem lịch phỏng vấn này.");
         }
@@ -307,9 +328,31 @@ public class InterviewService {
         }
     }
 
+    /** HR may only assign interviewers employed by the same company tenant. */
+    public List<User> getInterviewers(int actorId) throws BusinessException {
+        User actor = requireHrActor(actorId);
+        if ("ADMIN".equals(actor.getRoleName())) return getInterviewers();
+        try {
+            return companyDAO.findActiveInterviewers(companyIdFor(actor));
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể tải interviewer của công ty.", exception);
+        }
+    }
+
     public List<Interview> findUpcomingForHr(int limit) throws BusinessException {
         try {
             List<Interview> interviews = interviewDAO.findUpcoming();
+            return interviews.subList(0, Math.min(Math.max(0, limit), interviews.size()));
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể tải lịch phỏng vấn sắp tới.", exception);
+        }
+    }
+
+    public List<Interview> findUpcomingForHr(int limit, int actorId) throws BusinessException {
+        User actor = requireHrActor(actorId);
+        try {
+            Integer ownerId = companyIdFor(actor);
+            List<Interview> interviews = interviewDAO.findUpcoming(ownerId);
             return interviews.subList(0, Math.min(Math.max(0, limit), interviews.size()));
         } catch (SQLException exception) {
             throw new BusinessException("Không thể tải lịch phỏng vấn sắp tới.", exception);
@@ -425,23 +468,42 @@ public class InterviewService {
     }
 
     private void validateHrActor(int actorId) throws BusinessException {
+        requireHrActor(actorId);
+    }
+
+    private User requireHrActor(int actorId) throws BusinessException {
         try {
             User user = userDAO.findById(actorId);
             if (user == null || !("HR".equals(user.getRoleName()) || "ADMIN".equals(user.getRoleName()))) {
                 throw new BusinessException("Chỉ HR hoặc Admin được phép quản lý lịch phỏng vấn.");
             }
+            return user;
         } catch (SQLException exception) {
             throw new BusinessException("Không thể xác thực quyền người dùng.", exception);
         }
     }
 
-    private void validateInterviewer(Connection connection, int interviewerId) throws SQLException, BusinessException {
+    private void validateInterviewer(Connection connection, int interviewerId, Integer companyId) throws SQLException, BusinessException {
         if (!userDAO.lockById(connection, interviewerId)) {
             throw new BusinessException("Không tìm thấy interviewer được chọn.");
         }
         User interviewer = userDAO.findById(connection, interviewerId);
         if (interviewer == null || !"INTERVIEWER".equals(interviewer.getRoleName()) || !"ACTIVE".equals(interviewer.getStatus())) {
             throw new BusinessException("Người được chọn không phải interviewer đang hoạt động.");
+        }
+        if (companyId != null && !companyDAO.isActiveMember(connection, interviewerId, companyId, "INTERVIEWER")) {
+            throw new BusinessException("Chỉ có thể phân công interviewer thuộc cùng công ty.");
+        }
+    }
+
+    private Integer companyIdFor(User actor) throws BusinessException {
+        if (actor != null && "ADMIN".equals(actor.getRoleName())) return null;
+        try {
+            Integer companyId = actor == null ? null : companyDAO.findCompanyIdByUserId(actor.getId());
+            if (companyId == null) throw new BusinessException("Tài khoản HR chưa được liên kết với công ty.");
+            return companyId;
+        } catch (SQLException exception) {
+            throw new BusinessException("Không thể xác thực công ty của HR.", exception);
         }
     }
 }

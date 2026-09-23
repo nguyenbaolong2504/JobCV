@@ -142,11 +142,27 @@ public class ResumeDAO extends DaoSupport {
     }
 
     public boolean delete(int resumeId, int candidateId) throws SQLException {
+        try (Connection connection = openConnection()) {
+            return delete(connection, resumeId, candidateId);
+        }
+    }
+
+    public boolean delete(Connection connection, int resumeId, int candidateId) throws SQLException {
         String sql = "DELETE FROM resumes WHERE id = ? AND candidate_id = ?";
-        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setInt(1, resumeId);
             statement.setInt(2, candidateId);
             return statement.executeUpdate() == 1;
+        }
+    }
+
+    public Resume findNewestByCandidateId(Connection connection, int candidateId) throws SQLException {
+        String sql = SELECT_RESUME + "WHERE candidate_id = ? ORDER BY uploaded_at DESC, id DESC LIMIT 1";
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, candidateId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next() ? map(resultSet) : null;
+            }
         }
     }
 

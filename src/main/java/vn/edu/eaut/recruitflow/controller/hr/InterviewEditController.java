@@ -28,10 +28,11 @@ public class InterviewEditController extends BaseController {
             throws ServletException, IOException {
         try {
             int interviewId = RequestUtil.requiredPositiveInt(request, "id", "Lịch phỏng vấn");
-            request.setAttribute("interview", interviewService.getForHr(interviewId));
-            request.setAttribute("applications", applicationService.findShortlisted());
-            request.setAttribute("interviewers", interviewService.getInterviewers());
-            view(request, response, "/WEB-INF/views/hr/interview-form.jsp", "Đổi lịch phỏng vấn | RecruitFlow");
+            int actorId = RequestUtil.currentUserId(request);
+            request.setAttribute("interview", interviewService.getForHr(interviewId, actorId));
+            request.setAttribute("applications", applicationService.findShortlisted(actorId));
+            request.setAttribute("interviewers", interviewService.getInterviewers(RequestUtil.currentUserId(request)));
+            view(request, response, "/WEB-INF/views/hr/interview-form.jsp", "Đổi lịch phỏng vấn | JobCV");
         } catch (BusinessException | IllegalArgumentException ex) {
             redirectWithError(request, response, "/hr/interviews", ex.getMessage());
         }

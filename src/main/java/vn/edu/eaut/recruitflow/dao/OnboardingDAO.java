@@ -74,6 +74,16 @@ public class OnboardingDAO extends DaoSupport {
         }
     }
 
+    public List<Onboarding> findByJobOwner(int jobOwnerId) throws SQLException {
+        String sql = SELECT_ONBOARDING + "WHERE j.company_id = ? ORDER BY o.created_at DESC";
+        try (Connection connection = openConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, jobOwnerId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return mapList(resultSet);
+            }
+        }
+    }
+
     public List<Onboarding> search(String keyword, String status, int page, int pageSize) throws SQLException {
         StringBuilder sql = new StringBuilder(SELECT_ONBOARDING + "WHERE 1 = 1");
         List<String> values = new ArrayList<>();

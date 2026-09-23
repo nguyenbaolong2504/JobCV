@@ -21,6 +21,16 @@
 | Login email OTP | Only enforced when SMTP is configured and `RECRUITFLOW_AUTH_OTP_REQUIRED=true`; account state is rechecked when the code is verified. |
 | Google sign-in | State-protected OAuth code flow; only creates or links verified-email Candidate accounts, never HR/Admin. |
 
+## Company tenant boundary
+
+- `companies` là thực thể doanh nghiệp độc lập; không dùng tài khoản HR làm định danh công ty.
+- `company_members` liên kết mỗi HR/Interviewer với đúng một công ty đang làm việc. Một công ty có thể có nhiều HR và nhiều Interviewer.
+- `jobs.company_id` xác định doanh nghiệp sở hữu tin; `jobs.created_by` chỉ ghi nhận HR đã đăng để audit.
+- Candidate luôn thấy tên/logo công ty ở danh sách và chi tiết việc làm, có thể mở trang công ty cùng các vị trí đang tuyển.
+- HR xem và xử lý toàn bộ job/application/interview/offer/onboarding thuộc `company_id` của mình, không xem dữ liệu công ty khác.
+- Khi xếp lịch, danh sách Interviewer và kiểm tra transaction đều giới hạn ở cùng công ty. Interviewer sau đó chỉ xem/feedback lịch có `interviewer_id` là chính mình.
+- HR cập nhật hồ sơ/logo dùng chung tại `/hr/company`; Admin gán HR/Interviewer vào công ty tại `/admin/users`.
+
 ## Luồng tuyển dụng
 
 ~~~mermaid
@@ -44,6 +54,13 @@ flowchart LR
 
 Các nhánh kết thúc: SUBMITTED → WITHDRAWN; SCREENING/SHORTLISTED/INTERVIEW_SCHEDULED/INTERVIEWED → REJECTED; OFFERED → REJECTED khi Candidate decline theo workflow hiện tại.
 
+### Chỉ tiêu và tự động đóng/mở tin
+
+- Mỗi application chưa `REJECTED`/`WITHDRAWN` giữ một trong `jobs.number_of_positions` vị trí.
+- Apply khóa job trong transaction, đếm lại số đơn hiệu lực rồi mới insert, vì vậy không nhận vượt chỉ tiêu khi có request đồng thời.
+- Khi số đơn hiệu lực đạt chỉ tiêu, hệ thống đặt `CLOSED` và `auto_closed=TRUE`. Public/candidate không còn thấy tin; HR thấy nhãn **Đã tuyển đủ**.
+- Khi một đơn chuyển `REJECTED` hoặc `WITHDRAWN`, hệ thống mở lại `PUBLISHED` nếu tin được tự đóng và deadline chưa qua. `CLOSED` thủ công giữ nguyên.
+
 ## Job status
 
 | Status | Ý nghĩa |
@@ -52,6 +69,22 @@ Các nhánh kết thúc: SUBMITTED → WITHDRAWN; SCREENING/SHORTLISTED/INTERVIE
 | PUBLISHED | Hiển thị public/candidate và có thể apply nếu còn hạn. |
 | CLOSED | Dừng nhận hồ sơ. |
 | ARCHIVED | Lưu trữ job thay cho hard delete. |
+
+## Career Agent
+
+Endpoint `/assistant` chỉ đọc và điều phối các service hiện có:
+
+- Candidate: đọc CV mặc định, loại job hết hạn/tuyển đủ, tính match, giải thích kỹ năng khớp/thiếu; tìm job theo câu tự nhiên và nghiên cứu job của công ty.
+- HR: tổng hợp job đang mở, hồ sơ mới, shortlist, lịch sắp tới và offer nháp trong đúng company tenant.
+- Interviewer: chỉ tổng hợp lịch gắn với `interviewer_id` của chính tài khoản.
+- Agent luôn trả link để người dùng tự thao tác; không tự apply/reject/hire/send offer.
+
+## Trang chủ người tìm việc và banner
+
+1. Candidate vào `/home`; hệ thống lấy CV mặc định, chỉ xét job `PUBLISHED`, chưa quá hạn và còn chỗ.
+2. `MatchingService.recommend` tính weighted skill match, sắp xếp giảm dần và chỉ trả tối đa 4 job trong khối **Công việc phù hợp**.
+3. Các job đang mở không nằm trong tập đề xuất được hiển thị ở **Công việc khác**. Candidate tự nhấn xem chi tiết, lưu hoặc mở modal ứng tuyển; không có thao tác tự apply.
+4. Admin tải một/nhiều banner ở `/admin/home-banners`, đặt thứ tự, trạng thái hiển thị, text và link nội bộ. Chỉ banner `is_active=TRUE` được stream ra `/home-banner`; ảnh đã xóa sẽ bị xóa khỏi storage sau khi row DB bị xóa thành công.
 
 ## Application state machine
 

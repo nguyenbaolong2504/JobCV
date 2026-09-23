@@ -8,16 +8,13 @@ import vn.edu.eaut.recruitflow.service.CvBuilderService;
 import vn.edu.eaut.recruitflow.service.UserService;
 import vn.edu.eaut.recruitflow.util.BusinessException;
 import vn.edu.eaut.recruitflow.util.RequestUtil;
+import vn.edu.eaut.recruitflow.util.ResumeStorageUtil;
 
-import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 /** Candidate-facing CV builder that produces a normal DOCX resume usable in the apply flow. */
 @WebServlet(name = "CandidateCvBuilderController", urlPatterns = {
@@ -55,7 +52,7 @@ public class CandidateCvBuilderController extends CandidateBaseController {
             redirectWithError(request, response, "/candidate/resumes", exception.getMessage());
             return;
         }
-        view(request, response, "/WEB-INF/views/candidate/cv-builder.jsp", "Tạo CV theo mẫu | RecruitFlow");
+        view(request, response, "/WEB-INF/views/candidate/cv-builder.jsp", "Tạo CV theo mẫu | JobCV");
     }
 
     @Override
@@ -68,7 +65,8 @@ public class CandidateCvBuilderController extends CandidateBaseController {
         try {
             int candidateId = currentCandidateId(request);
             CvBuilderData data = bind(request);
-            cvBuilderService.generate(candidateId, data, resolveUploadDirectory());
+            cvBuilderService.generate(candidateId, data,
+                    ResumeStorageUtil.resolveUploadDirectory(getServletContext()));
             redirectWithSuccess(request, response, "/candidate/resumes",
                     "Đã tạo CV DOCX theo mẫu. Bạn có thể tải xuống hoặc dùng CV này để ứng tuyển.");
         } catch (BusinessException exception) {
@@ -94,29 +92,4 @@ public class CandidateCvBuilderController extends CandidateBaseController {
         return data;
     }
 
-    private Path resolveUploadDirectory() throws BusinessException {
-        try {
-            String catalinaBase = System.getProperty("catalina.base");
-            Path directory;
-            if (catalinaBase != null && !catalinaBase.isBlank()) {
-                directory = Path.of(catalinaBase, "recruitflow-uploads", "resumes");
-            } else {
-                String webInf = getServletContext().getRealPath("/WEB-INF");
-                if (webInf != null) {
-                    directory = Path.of(webInf, "uploads", "resumes");
-                } else {
-                    Object tempDirectory = getServletContext().getAttribute(ServletContext.TEMPDIR);
-                    if (!(tempDirectory instanceof File)) {
-                        throw new BusinessException("Chưa thể xác định thư mục lưu CV an toàn.");
-                    }
-                    directory = ((File) tempDirectory).toPath().resolve("recruitflow").resolve("resumes");
-                }
-            }
-            Path normalized = directory.toAbsolutePath().normalize();
-            Files.createDirectories(normalized);
-            return normalized;
-        } catch (IOException | SecurityException | IllegalArgumentException exception) {
-            throw new BusinessException("Không thể chuẩn bị thư mục lưu CV.", exception);
-        }
-    }
 }

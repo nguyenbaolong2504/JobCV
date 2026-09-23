@@ -31,21 +31,26 @@ public class HRApplicationController extends BaseController {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         try {
+            boolean boardView = !"list".equalsIgnoreCase(RequestUtil.text(request, "view"));
             ApplicationStatus status = optionalStatus(RequestUtil.text(request, "status"));
             PageResult<Application> applicationPage = applicationService.searchForHr(
                     RequestUtil.text(request, "keyword"),
                     optionalPositiveInt(request, "jobId", "Tin tuyển dụng"),
                     status == null ? null : status.name(),
                     optionalDecimal(request, "minMatchScore", "Match score"),
-                    RequestUtil.page(request),
-                    RequestUtil.pageSize(request)
+                    boardView ? 1 : RequestUtil.page(request),
+                    boardView ? 500 : RequestUtil.pageSize(request),
+                    RequestUtil.currentUserId(request)
             );
+            request.setAttribute("boardView", boardView);
             request.setAttribute("applicationPage", applicationPage);
-            request.setAttribute("jobs", jobService.getAllJobs());
+            request.setAttribute("jobs", jobService.searchForHr(
+                    null, null, null, null, null, "newest", 1, 100,
+                    RequestUtil.currentUserId(request)).getItems());
         } catch (BusinessException | IllegalArgumentException ex) {
             request.setAttribute("error", ex.getMessage());
         }
-        view(request, response, "/WEB-INF/views/hr/applications.jsp", "Đơn ứng tuyển | RecruitFlow");
+        view(request, response, "/WEB-INF/views/hr/applications.jsp", "Đơn ứng tuyển | JobCV");
     }
 
     private Integer optionalPositiveInt(HttpServletRequest request, String field, String label) throws BusinessException {

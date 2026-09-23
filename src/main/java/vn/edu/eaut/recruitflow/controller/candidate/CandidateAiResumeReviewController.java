@@ -1,12 +1,14 @@
 package vn.edu.eaut.recruitflow.controller.candidate;
 
 import vn.edu.eaut.recruitflow.model.CvReviewResult;
+import vn.edu.eaut.recruitflow.model.Resume;
 import vn.edu.eaut.recruitflow.service.AiCvCoachService;
 import vn.edu.eaut.recruitflow.service.ResumeService;
 import vn.edu.eaut.recruitflow.util.AiReviewException;
 import vn.edu.eaut.recruitflow.util.BusinessException;
 import vn.edu.eaut.recruitflow.util.RequestUtil;
 import vn.edu.eaut.recruitflow.util.SimpleJson;
+import vn.edu.eaut.recruitflow.util.ResumeStorageUtil;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -61,9 +63,11 @@ public class CandidateAiResumeReviewController extends CandidateBaseController {
             }
 
             // No state was changed, so forwarding preserves the review for non-JavaScript users.
-            request.setAttribute("resumes", resumeService.getResumes(candidateId));
+            List<Resume> resumes = resumeService.getResumes(candidateId);
+            ResumeStorageUtil.refreshAvailability(getServletContext(), resumes);
+            request.setAttribute("resumes", resumes);
             request.setAttribute("aiReview", review);
-            view(request, response, "/WEB-INF/views/candidate/resumes.jsp", "CV của tôi | RecruitFlow");
+            view(request, response, "/WEB-INF/views/candidate/resumes.jsp", "CV của tôi | JobCV");
         } catch (AiReviewException exception) {
             handleKnownError(request, response, json, exception.getHttpStatus(), "invalid_review_request",
                     exception.getMessage());

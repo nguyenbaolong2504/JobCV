@@ -77,7 +77,7 @@ public class CandidateApplicationController extends CandidateBaseController {
             request.setAttribute("error", ex.getMessage());
         }
 
-        view(request, response, "/WEB-INF/views/candidate/applications.jsp", "Đơn ứng tuyển | RecruitFlow");
+        view(request, response, "/WEB-INF/views/candidate/applications.jsp", "Đơn ứng tuyển | JobCV");
     }
 
     private void showDetail(HttpServletRequest request, HttpServletResponse response)
@@ -91,7 +91,7 @@ public class CandidateApplicationController extends CandidateBaseController {
             request.setAttribute("history", applicationService.getHistoryForCandidate(candidateId, applicationId));
             request.setAttribute("interviews", applicationService.getInterviewsForCandidate(candidateId, applicationId));
             request.setAttribute("offer", applicationService.getOfferForCandidate(candidateId, applicationId));
-            view(request, response, "/WEB-INF/views/candidate/application-detail.jsp", "Chi tiết đơn ứng tuyển | RecruitFlow");
+            view(request, response, "/WEB-INF/views/candidate/application-detail.jsp", "Chi tiết đơn ứng tuyển | JobCV");
         } catch (BusinessException | IllegalArgumentException ex) {
             redirectWithError(request, response, "/candidate/applications", ex.getMessage());
         }
@@ -101,7 +101,12 @@ public class CandidateApplicationController extends CandidateBaseController {
         try {
             int candidateId = currentCandidateId(request);
             int jobId = RequestUtil.requiredPositiveInt(request, "jobId", "Tin tuyển dụng");
-            applicationService.apply(candidateId, jobId, (Integer) null);
+            String resumeValue = RequestUtil.text(request, "resumeId");
+            Integer resumeId = resumeValue.isEmpty()
+                    ? null
+                    : RequestUtil.requiredPositiveInt(request, "resumeId", "CV ứng tuyển");
+            String coverLetter = boundedText(request, "coverLetter", "Lời giới thiệu", 2000);
+            applicationService.apply(candidateId, jobId, resumeId, coverLetter);
             redirectWithSuccess(request, response, "/candidate/applications", "Đã nộp đơn ứng tuyển thành công.");
         } catch (BusinessException | IllegalArgumentException ex) {
             redirectWithError(request, response, "/candidate/jobs", ex.getMessage());

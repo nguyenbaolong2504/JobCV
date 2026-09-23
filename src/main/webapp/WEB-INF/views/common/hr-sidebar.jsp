@@ -3,8 +3,7 @@
         <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
             <c:set var="currentPath" value="${pageContext.request.requestURI}" />
             <aside class="app-sidebar">
-                <a class="sidebar-brand" href="${pageContext.request.contextPath}/hr/dashboard"><span
-                        class="sidebar-brand-mark">R</span>RecruitFlow</a>
+                <a class="sidebar-brand" href="${pageContext.request.contextPath}/hr/dashboard"><img class="jobcv-brand-logo jobcv-brand-logo-sidebar" src="${pageContext.request.contextPath}/assets/images/jobcv-logo.png" alt="JobCV"></a>
                 <p class="sidebar-label">Nhân sự</p>
                 <nav class="sidebar-nav">
                     <a class="${fn:endsWith(currentPath, '/hr/dashboard') ? 'active' : ''}"
@@ -13,6 +12,8 @@
                     <a class="${fn:contains(currentPath, '/hr/jobs') ? 'active' : ''}"
                         href="${pageContext.request.contextPath}/hr/jobs"><i class="bi bi-briefcase"></i> Tin tuyển
                         dụng</a>
+                    <a class="${fn:contains(currentPath, '/hr/company') ? 'active' : ''}"
+                        href="${pageContext.request.contextPath}/hr/company"><i class="bi bi-buildings"></i> Công ty</a>
                     <a class="${fn:contains(currentPath, '/hr/applications') ? 'active' : ''}"
                         href="${pageContext.request.contextPath}/hr/applications"><i class="bi bi-people"></i> Ứng
                         viên</a>
@@ -21,13 +22,10 @@
                         Phỏng vấn</a>
                     <a class="${fn:contains(currentPath, '/hr/offers') ? 'active' : ''}"
                         href="${pageContext.request.contextPath}/hr/offers"><i class="bi bi-envelope-paper"></i>
-                        Offer</a>
+                        Thư mời nhận việc</a>
                     <a class="${fn:contains(currentPath, '/hr/onboarding') ? 'active' : ''}"
                         href="${pageContext.request.contextPath}/hr/onboarding"><i class="bi bi-rocket-takeoff"></i>
-                        Onboarding</a>
-                    <a class="${fn:contains(currentPath, '/hr/notifications') ? 'active' : ''}"
-                        href="${pageContext.request.contextPath}/hr/notifications"><i class="bi bi-bell"></i>
-                        Thông báo</a>
+                        Tiếp nhận nhân sự</a>
                     <a class="${fn:contains(currentPath, '/hr/reports') ? 'active' : ''}"
                         href="${pageContext.request.contextPath}/hr/reports"><i class="bi bi-bar-chart"></i> Báo cáo</a>
                 </nav>

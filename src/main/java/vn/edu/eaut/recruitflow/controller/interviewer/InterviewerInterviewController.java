@@ -30,6 +30,6 @@ public class InterviewerInterviewController extends BaseController {
             redirectWithError(request, response, "/login", ex.getMessage());
             return;
         }
-        view(request, response, "/WEB-INF/views/interviewer/interviews.jsp", "Lịch phỏng vấn của tôi | RecruitFlow");
+        view(request, response, "/WEB-INF/views/interviewer/interviews.jsp", "Lịch phỏng vấn của tôi | JobCV");
     }
 }
