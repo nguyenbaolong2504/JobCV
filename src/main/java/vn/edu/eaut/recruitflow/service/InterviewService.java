@@ -403,14 +403,18 @@ public class InterviewService {
                 .toList();
     }
 
-    private void validateInterview(Interview interview) throws BusinessException {
+    void validateInterview(Interview interview) throws BusinessException {
         if (interview == null || interview.getApplicationId() <= 0 || interview.getInterviewerId() <= 0
                 || interview.getInterviewDate() == null || interview.getStartTime() == null || interview.getEndTime() == null) {
             throw new BusinessException("Thông tin lịch phỏng vấn chưa đầy đủ.");
         }
+        InterviewType interviewType;
         try {
-            InterviewType.fromValue(interview.getInterviewType());
+            interviewType = InterviewType.fromValue(interview.getInterviewType());
         } catch (IllegalArgumentException exception) {
+            throw new BusinessException("Hình thức phỏng vấn không hợp lệ.");
+        }
+        if (interviewType == null) {
             throw new BusinessException("Hình thức phỏng vấn không hợp lệ.");
         }
         if (!interview.getStartTime().before(interview.getEndTime())) {
@@ -423,8 +427,19 @@ public class InterviewService {
                 || (scheduledDate.isEqual(today) && !interview.getStartTime().toLocalTime().isAfter(now))) {
             throw new BusinessException("Thời gian bắt đầu phỏng vấn phải ở tương lai.");
         }
-        if (InterviewType.ONLINE.name().equals(interview.getInterviewType()) && (interview.getMeetingUrl() == null || interview.getMeetingUrl().isBlank())) {
+        if (interviewType == InterviewType.OFFLINE
+                && (interview.getLocation() == null || interview.getLocation().isBlank())) {
+            throw new BusinessException("Địa điểm phỏng vấn trực tiếp là bắt buộc.");
+        }
+        if (interviewType == InterviewType.ONLINE
+                && (interview.getMeetingUrl() == null || interview.getMeetingUrl().isBlank())) {
             throw new BusinessException("Phỏng vấn online cần có đường dẫn cuộc họp.");
+        }
+        if (interview.getLocation() != null && interview.getLocation().length() > 255) {
+            throw new BusinessException("Địa điểm phỏng vấn không được vượt quá 255 ký tự.");
+        }
+        if (interview.getMeetingUrl() != null && interview.getMeetingUrl().length() > 255) {
+            throw new BusinessException("Liên kết cuộc họp không được vượt quá 255 ký tự.");
         }
     }
 

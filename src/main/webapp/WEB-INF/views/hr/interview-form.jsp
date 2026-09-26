@@ -10,6 +10,7 @@
         <main class="col-md-10 offset-md-2 bg-light min-vh-100">
             <div class="topbar"><div><p class="text-muted small mb-1">Tuyển dụng</p><h4 class="mb-0">${isEdit ? 'Đổi lịch phỏng vấn' : 'Lên lịch phỏng vấn'}</h4></div><a class="btn btn-outline-secondary" href="${pageContext.request.contextPath}/hr/interviews"><i class="bi bi-arrow-left me-1"></i> Quay lại</a></div>
             <div class="main-content">
+                <jsp:include page="/WEB-INF/views/common/flash.jsp" />
                 <c:if test="${not empty error}"><div class="alert alert-danger"><c:out value="${error}" /></div></c:if>
                 <section class="card"><div class="card-body p-4 p-lg-5">
                     <form class="row g-3" method="post" action="${pageContext.request.contextPath}${isEdit ? '/hr/interviews/update' : '/hr/interviews/create'}">
@@ -38,8 +39,8 @@
                         <div class="col-md-4"><label class="form-label fw-semibold" for="interviewDate">Ngày phỏng vấn <span class="text-danger">*</span></label><input class="form-control" id="interviewDate" type="date" name="interviewDate" required value="<c:out value='${interview.interviewDate}'/>"></div>
                         <div class="col-md-2"><label class="form-label fw-semibold" for="startTime">Bắt đầu <span class="text-danger">*</span></label><input class="form-control" id="startTime" type="time" name="startTime" required value="<c:out value='${interview.startTime}'/>"></div>
                         <div class="col-md-2"><label class="form-label fw-semibold" for="endTime">Kết thúc <span class="text-danger">*</span></label><input class="form-control" id="endTime" type="time" name="endTime" required value="<c:out value='${interview.endTime}'/>"></div>
-                        <div class="col-md-6"><label class="form-label fw-semibold" for="location">Địa điểm</label><input class="form-control" id="location" name="location" maxlength="255" value="<c:out value='${interview.location}'/>" placeholder="Phòng họp hoặc địa chỉ văn phòng"></div>
-                        <div class="col-md-6"><label class="form-label fw-semibold" for="meetingUrl">Liên kết cuộc họp</label><input class="form-control" id="meetingUrl" name="meetingUrl" type="url" maxlength="255" value="<c:out value='${interview.meetingUrl}'/>" placeholder="https://..."></div>
+                        <div class="col-md-6"><label class="form-label fw-semibold" for="location">Địa điểm <span id="locationRequiredMark" class="text-danger d-none">*</span></label><input class="form-control" id="location" name="location" maxlength="255" value="<c:out value='${interview.location}'/>" placeholder="Phòng họp hoặc địa chỉ văn phòng" aria-describedby="locationHelp"><div class="form-text" id="locationHelp">Bắt buộc khi chọn hình thức phỏng vấn trực tiếp.</div></div>
+                        <div class="col-md-6"><label class="form-label fw-semibold" for="meetingUrl">Liên kết cuộc họp <span id="meetingUrlRequiredMark" class="text-danger d-none">*</span></label><input class="form-control" id="meetingUrl" name="meetingUrl" type="url" maxlength="255" value="<c:out value='${interview.meetingUrl}'/>" placeholder="https://..." aria-describedby="meetingUrlHelp"><div class="form-text" id="meetingUrlHelp">Bắt buộc khi chọn hình thức phỏng vấn trực tuyến.</div></div>
                         <div class="col-12"><label class="form-label fw-semibold" for="note">Ghi chú cho buổi phỏng vấn</label><textarea class="form-control" id="note" name="note" rows="4"><c:out value="${interview.note}" /></textarea></div>
                         <div class="col-12"><div class="alert alert-info mb-0"><i class="bi bi-info-circle me-1"></i> Hệ thống sẽ kiểm tra lịch trùng của người phỏng vấn và chỉ cho phép thời gian bắt đầu trước thời gian kết thúc.</div></div>
                         <div class="col-12 d-flex justify-content-end gap-2 pt-2"><a class="btn btn-light" href="${pageContext.request.contextPath}/hr/interviews">Hủy</a><button class="btn btn-primary px-4" type="submit"><i class="bi bi-calendar-check me-1"></i> ${isEdit ? 'Lưu lịch mới' : 'Tạo lịch phỏng vấn'}</button></div>
@@ -49,5 +50,28 @@
         </main>
     </div>
 </div>
+<script>
+    (function () {
+        const typeField = document.getElementById('interviewType');
+        const locationField = document.getElementById('location');
+        const meetingUrlField = document.getElementById('meetingUrl');
+        const locationMark = document.getElementById('locationRequiredMark');
+        const meetingUrlMark = document.getElementById('meetingUrlRequiredMark');
+        if (!typeField || !locationField || !meetingUrlField) return;
+
+        function updateRequiredFields() {
+            const isOffline = typeField.value === 'OFFLINE';
+            locationField.required = isOffline;
+            meetingUrlField.required = !isOffline;
+            locationField.setAttribute('aria-required', String(isOffline));
+            meetingUrlField.setAttribute('aria-required', String(!isOffline));
+            if (locationMark) locationMark.classList.toggle('d-none', !isOffline);
+            if (meetingUrlMark) meetingUrlMark.classList.toggle('d-none', isOffline);
+        }
+
+        typeField.addEventListener('change', updateRequiredFields);
+        updateRequiredFields();
+    }());
+</script>
 <jsp:include page="/WEB-INF/views/common/footer.jsp" />
 

@@ -2903,6 +2903,13 @@ body {
 .report-topbar > div > span { color: #64748b; font-size: .8rem; }
 .report-eyebrow { color: #00a849; font-size: .64rem; font-weight: 850; letter-spacing: .09em; }
 .report-filter-card, .report-panel, .report-kpi { background: #fff; border: 1px solid #e2e8e5; border-radius: 1rem; box-shadow: 0 .35rem 1.25rem rgba(15, 45, 35, .045); }
+.report-section-nav { align-items: center; background: rgba(255,255,255,.96); border: 1px solid #dfe8e3; border-radius: .9rem; box-shadow: 0 .35rem 1rem rgba(15,45,35,.05); display: flex; gap: .35rem; margin-bottom: 1rem; overflow-x: auto; padding: .5rem; position: sticky; scrollbar-width: thin; top: .75rem; z-index: 20; }
+.report-section-nav-label { align-items: center; color: #52615b; display: inline-flex; flex: 0 0 auto; font-size: .68rem; font-weight: 800; gap: .4rem; padding: .55rem .65rem; }
+.report-section-nav a { align-items: center; border-radius: .65rem; color: #5f7069; display: inline-flex; flex: 0 0 auto; font-size: .68rem; font-weight: 720; gap: .38rem; padding: .58rem .75rem; text-decoration: none; transition: background-color .18s ease, color .18s ease, box-shadow .18s ease; }
+.report-section-nav a:hover { background: #f0faf4; color: #008f40; }
+.report-section-nav a.active { background: #00a849; box-shadow: 0 .35rem .8rem rgba(0,168,73,.18); color: #fff; }
+.report-page-section { animation: report-section-enter .24s ease both; min-height: 10rem; }
+@keyframes report-section-enter { from { opacity: 0; transform: translateY(.35rem); } to { opacity: 1; transform: translateY(0); } }
 .report-filter-card { margin-bottom: 1.4rem; padding: 1.2rem 1.35rem .95rem; }
 .report-filter-card .form-label { color: #34433e; font-size: .72rem; font-weight: 750; }
 .report-date-input { position: relative; }
@@ -2951,6 +2958,7 @@ body {
 .report-panel-header-row { align-items: center; }
 .report-ranking-table thead th { background: #f7faf8; border-color: #edf1ef; color: #718078; font-size: .62rem; font-weight: 750; padding-bottom: .75rem; padding-top: .75rem; text-transform: uppercase; }
 .report-ranking-table tbody td { border-color: #edf1ef; color: #53635d; font-size: .7rem; padding-bottom: .75rem; padding-top: .75rem; }
+.report-ranking-table-compact th:last-child, .report-ranking-table-compact td:last-child { width: 11rem; }
 .report-rank { align-items: center; background: #f0f3f2; border-radius: .55rem; color: #64748b; display: inline-flex; font-weight: 800; height: 1.8rem; justify-content: center; width: 1.8rem; }
 .report-rank.is-top { background: #fff2d8; color: #c56b00; }
 .report-job-cell { align-items: center; display: flex; gap: .7rem; min-width: 16rem; }
@@ -2977,6 +2985,8 @@ body {
 @media (max-width: 767.98px) {
     .report-topbar { align-items: flex-start; gap: .8rem; }
     .report-topbar > div > span { display: none; }
+    .report-section-nav { border-radius: .75rem; margin-left: -.25rem; margin-right: -.25rem; top: .35rem; }
+    .report-section-nav-label { display: none; }
     .report-kpi-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
     .report-highlight { display: none; }
     .report-funnel-row { grid-template-columns: 7.3rem 1fr 2.5rem; }

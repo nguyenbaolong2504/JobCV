@@ -27,7 +27,7 @@
                         href="${pageContext.request.contextPath}/hr/onboarding"><i class="bi bi-rocket-takeoff"></i>
                         Tiếp nhận nhân sự</a>
                     <a class="${fn:contains(currentPath, '/hr/reports') ? 'active' : ''}"
-                        href="${pageContext.request.contextPath}/hr/reports"><i class="bi bi-bar-chart"></i> Báo cáo</a>
+                        href="${pageContext.request.contextPath}/hr/reports/overview"><i class="bi bi-bar-chart"></i> Báo cáo</a>
                 </nav>
                 <div class="sidebar-account">
                     <span class="avatar">

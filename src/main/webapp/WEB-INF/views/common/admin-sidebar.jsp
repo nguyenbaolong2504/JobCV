@@ -15,9 +15,6 @@
                     <a class="${fn:contains(currentPath, '/admin/roles') or fn:contains(currentPath, '/admin/permissions') ? 'active' : ''}"
                         href="${pageContext.request.contextPath}/admin/permissions"><i class="bi bi-shield-lock"></i> Phân
                         quyền</a>
-                    <a class="${fn:contains(currentPath, '/admin/departments') ? 'active' : ''}"
-                        href="${pageContext.request.contextPath}/admin/departments"><i class="bi bi-building"></i> Phòng
-                        ban</a>
                     <a class="${fn:contains(currentPath, '/admin/job-categories') ? 'active' : ''}"
                         href="${pageContext.request.contextPath}/admin/job-categories"><i class="bi bi-diagram-3"></i>
                         Danh mục nghề nghiệp</a>

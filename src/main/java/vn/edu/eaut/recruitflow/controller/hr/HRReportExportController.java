@@ -74,13 +74,11 @@ public class HRReportExportController extends BaseController {
                 Object topJobs = report.get("topJobs");
                 if (topJobs instanceof Iterable<?> jobs) {
                     writer.println();
-                    writer.println("Job code,Job title,Company,Applications,Average match score,Interviews,Offers,Hires,Hire rate (%)");
+                    writer.println("Job code,Job title,Company,Applications");
                     for (Object item : jobs) {
                         if (!(item instanceof JobPerformance job)) continue;
                         writer.println(csv(job.getJobCode()) + "," + csv(job.getTitle()) + ","
-                                + csv(job.getCompanyName()) + "," + job.getApplications() + ","
-                                + job.getAverageMatchScore() + "," + job.getInterviews() + ","
-                                + job.getOffers() + "," + job.getHires() + "," + job.getHireRate());
+                                + csv(job.getCompanyName()) + "," + job.getApplications());
                     }
                 }
             }
